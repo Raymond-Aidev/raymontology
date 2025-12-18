@@ -17,8 +17,8 @@ class Settings(BaseSettings):
     - PORT
     """
 
-    # Database (Railway 자동 주입)
-    database_url: str
+    # Database (Railway 자동 주입, 없으면 기본값 사용)
+    database_url: str = "postgresql://localhost/raymontology"
     redis_url: Optional[str] = None
     port: int = 8000
 
@@ -37,8 +37,8 @@ class Settings(BaseSettings):
     r2_bucket_name: Optional[str] = None
     r2_endpoint_url: Optional[str] = None
 
-    # Security
-    secret_key: str
+    # Security (default key for development - CHANGE IN PRODUCTION)
+    secret_key: str = "dev-secret-key-change-in-production-please"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
 
@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     environment: str = "development"
     debug: bool = False
     frontend_url: str = "http://localhost:5173"
+
+    # CORS - allow all origins during deployment testing
+    cors_allow_all: bool = True
 
     # Monitoring & Observability
     sentry_dsn: Optional[str] = None
@@ -65,6 +68,8 @@ class Settings(BaseSettings):
     @property
     def allowed_origins(self) -> list[str]:
         """CORS allowed origins"""
+        if self.cors_allow_all:
+            return ["*"]
         if self.is_production:
             return [self.frontend_url]
         return [
