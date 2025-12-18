@@ -20,12 +20,8 @@ COPY . .
 # Create necessary directories
 RUN mkdir -p /app/logs /app/data
 
-# Expose port
-EXPOSE 8000
+# Expose port (Railway uses dynamic PORT)
+EXPOSE ${PORT:-8000}
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD python -c "import httpx; httpx.get('http://localhost:8000/health', timeout=5)" || exit 1
-
-# Run uvicorn
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run uvicorn with dynamic PORT from Railway
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
