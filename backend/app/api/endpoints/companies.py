@@ -1,0 +1,516 @@
+"""
+회사 검색 및 조회 API 엔드포인트
+
+회사 목록, 검색, 상세 정보 조회
+"""
+from typing import Optional, List
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
+from datetime import datetime
+
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, or_, func, and_
+
+from app.database import AsyncSessionLocal
+from app.models import Company, ConvertibleBond, Officer
+import logging
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/companies", tags=["companies"])
+
+
+# Response Models
+class CompanyListItem(BaseModel):
+    """회사 목록 항목"""
+    id: str
+    name: str
+    ticker: Optional[str]
+    corp_code: Optional[str]  # DART 기업코드 추가
+    sector: Optional[str]
+    market: Optional[str]
+    market_cap: Optional[float] = None
+    cb_count: int = 0
+    officer_count: int = 0
+
+
+class CompanyDetailResponse(BaseModel):
+    """회사 상세 정보"""
+    id: str
+    name: str
+    ticker: Optional[str]
+    corp_code: Optional[str]
+    name_en: Optional[str]
+    business_number: Optional[str]
+    sector: Optional[str]
+    industry: Optional[str]
+    market: Optional[str]
+    cb_count: int
+    officer_count: int
+    created_at: str
+    updated_at: str
+
+
+class CompanySearchResponse(BaseModel):
+    """회사 검색 응답"""
+    total: int
+    page: int
+    page_size: int
+    items: List[CompanyListItem]
+
+
+class CompanyCBListItem(BaseModel):
+    """회사 CB 발행 항목"""
+    id: str
+    bond_name: str
+    issue_date: Optional[str]
+    issue_amount: Optional[int]
+    subscribers_count: int
+
+
+class CompanyOfficerListItem(BaseModel):
+    """회사 임원 항목"""
+    id: str
+    name: str
+    position: Optional[str]
+    influence_score: Optional[float]
+
+
+# Dependencies
+async def get_db():
+    """Database session 제공"""
+    async with AsyncSessionLocal() as session:
+        yield session
+
+
+# Endpoints
+@router.get("/", response_model=CompanySearchResponse)
+async def list_companies(
+    page: int = Query(1, ge=1, description="페이지 번호"),
+    page_size: int = Query(20, ge=1, le=100, description="페이지 크기"),
+    sort_by: str = Query("name", description="정렬 기준 (name, ticker, market)"),
+    order: str = Query("asc", description="정렬 순서 (asc, desc)"),
+    sector: Optional[str] = Query(None, description="업종 필터"),
+    has_cb: Optional[bool] = Query(None, description="CB 발행 여부"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    회사 목록 조회
+
+    - 페이지네이션 지원
+    - 업종 필터링
+    - CB 발행 여부 필터링
+    - 다양한 정렬 옵션
+    """
+    try:
+        # 기본 쿼리
+        query = select(Company)
+
+        # 필터링
+        if sector:
+            query = query.where(Company.sector == sector)
+
+        if has_cb is not None:
+            if has_cb:
+                # CB가 있는 회사만
+                query = query.join(ConvertibleBond, Company.id == ConvertibleBond.company_id, isouter=False)
+            # has_cb=False는 나중에 서브쿼리로 처리
+
+        # 전체 개수 조회
+        count_query = select(func.count()).select_from(query.subquery())
+        total_result = await db.execute(count_query)
+        total = total_result.scalar()
+
+        # 정렬
+        sort_columns = {
+            "name": Company.name,
+            "ticker": Company.ticker,
+            "market": Company.market,
+        }
+
+        sort_column = sort_columns.get(sort_by, Company.name)
+        if order == "desc":
+            sort_column = sort_column.desc()
+
+        query = query.order_by(sort_column)
+
+        # 페이지네이션
+        offset = (page - 1) * page_size
+        query = query.offset(offset).limit(page_size)
+
+        # 실행
+        result = await db.execute(query)
+        companies = result.scalars().unique().all()
+
+        # CB 및 임원 개수 조회 (배치)
+        company_ids = [str(c.id) for c in companies]
+
+        cb_counts = {}
+        officer_counts = {}
+
+        if company_ids:
+            # CB 개수
+            cb_count_query = select(
+                ConvertibleBond.company_id,
+                func.count(ConvertibleBond.id).label('count')
+            ).where(
+                ConvertibleBond.company_id.in_(company_ids)
+            ).group_by(ConvertibleBond.company_id)
+
+            cb_result = await db.execute(cb_count_query)
+            cb_counts = {str(row[0]): row[1] for row in cb_result.all()}
+
+            # 임원 개수
+            officer_count_query = select(
+                Officer.current_company_id,
+                func.count(Officer.id).label('count')
+            ).where(
+                Officer.current_company_id.in_(company_ids)
+            ).group_by(Officer.current_company_id)
+
+            officer_result = await db.execute(officer_count_query)
+            officer_counts = {str(row[0]): row[1] for row in officer_result.all()}
+
+        # 응답 생성
+        company_items = [
+            CompanyListItem(
+                id=str(c.id),
+                name=c.name,
+                ticker=c.ticker,
+                corp_code=c.corp_code,
+                sector=c.sector,
+                market=c.market,
+                market_cap=c.market_cap,
+                cb_count=cb_counts.get(str(c.id), 0),
+                officer_count=officer_counts.get(str(c.id), 0)
+            )
+            for c in companies
+        ]
+
+        return CompanySearchResponse(
+            total=total,
+            page=page,
+            page_size=page_size,
+            items=company_items
+        )
+
+    except Exception as e:
+        logger.error(f"Error listing companies: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/search", response_model=CompanySearchResponse)
+async def search_companies(
+    q: str = Query(..., min_length=1, description="검색어 (회사명 또는 종목코드)"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    회사 검색
+
+    - 회사명 또는 종목코드로 검색
+    - 부분 일치 지원
+    """
+    try:
+        # 검색 쿼리 최적화
+        search_pattern = f"%{q}%"
+
+        # Build search conditions (인덱스 활용)
+        conditions = [
+            Company.name.ilike(search_pattern),
+            Company.ticker.ilike(search_pattern),
+        ]
+
+        # name_en은 NULL 체크 후 추가 (성능 최적화)
+        if len(q) >= 2:  # 영문 검색은 최소 2자 이상
+            conditions.append(
+                and_(
+                    Company.name_en.isnot(None),
+                    Company.name_en.ilike(search_pattern)
+                )
+            )
+
+        query = select(Company).where(or_(*conditions))
+
+        # 전체 개수 (간단한 COUNT 쿼리로 변경)
+        count_query = select(func.count(Company.id)).where(or_(*conditions))
+        total_result = await db.execute(count_query)
+        total = total_result.scalar() or 0
+
+        # 페이지네이션
+        offset = (page - 1) * page_size
+        query = query.order_by(Company.name).offset(offset).limit(page_size)
+
+        # 실행
+        result = await db.execute(query)
+        companies = result.scalars().all()
+
+        # CB 및 임원 개수 조회
+        company_ids = [str(c.id) for c in companies]
+
+        cb_counts = {}
+        officer_counts = {}
+
+        if company_ids:
+            # CB 개수
+            cb_count_query = select(
+                ConvertibleBond.company_id,
+                func.count(ConvertibleBond.id).label('count')
+            ).where(
+                ConvertibleBond.company_id.in_(company_ids)
+            ).group_by(ConvertibleBond.company_id)
+
+            cb_result = await db.execute(cb_count_query)
+            cb_counts = {str(row[0]): row[1] for row in cb_result.all()}
+
+            # 임원 개수
+            officer_count_query = select(
+                Officer.current_company_id,
+                func.count(Officer.id).label('count')
+            ).where(
+                Officer.current_company_id.in_(company_ids)
+            ).group_by(Officer.current_company_id)
+
+            officer_result = await db.execute(officer_count_query)
+            officer_counts = {str(row[0]): row[1] for row in officer_result.all()}
+
+        # 응답 생성
+        company_items = [
+            CompanyListItem(
+                id=str(c.id),
+                name=c.name,
+                ticker=c.ticker,
+                corp_code=c.corp_code,
+                sector=c.sector,
+                market=c.market,
+                market_cap=c.market_cap,
+                cb_count=cb_counts.get(str(c.id), 0),
+                officer_count=officer_counts.get(str(c.id), 0)
+            )
+            for c in companies
+        ]
+
+        return CompanySearchResponse(
+            total=total,
+            page=page,
+            page_size=page_size,
+            items=company_items
+        )
+
+    except Exception as e:
+        logger.error(f"Error searching companies: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{company_id}", response_model=CompanyDetailResponse)
+async def get_company_detail(
+    company_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    회사 상세 정보 조회
+
+    - 기본 정보
+    - CB 발행 건수
+    - 임원 수
+    - company_id: UUID 또는 corp_code로 검색
+    """
+    try:
+        import uuid
+
+        company = None
+
+        # UUID 형식인지 확인 후 조회
+        try:
+            uuid.UUID(company_id)  # UUID 형식 검증
+            result = await db.execute(
+                select(Company).where(Company.id == company_id)
+            )
+            company = result.scalar_one_or_none()
+        except ValueError:
+            pass  # UUID 형식이 아니면 건너뜀
+
+        # UUID로 못 찾으면 corp_code로 조회
+        if not company:
+            result = await db.execute(
+                select(Company).where(Company.corp_code == company_id)
+            )
+            company = result.scalar_one_or_none()
+
+        # 그래도 못 찾으면 ticker로 조회
+        if not company:
+            result = await db.execute(
+                select(Company).where(Company.ticker == company_id)
+            )
+            company = result.scalar_one_or_none()
+
+        if not company:
+            raise HTTPException(status_code=404, detail="Company not found")
+
+        # 실제 회사 ID 사용 (company_id 파라미터가 corp_code나 ticker일 수 있으므로)
+        actual_company_id = str(company.id)
+
+        # CB 개수
+        cb_count_query = select(func.count(ConvertibleBond.id)).where(
+            ConvertibleBond.company_id == actual_company_id
+        )
+        cb_count_result = await db.execute(cb_count_query)
+        cb_count = cb_count_result.scalar() or 0
+
+        # 임원 개수
+        officer_count_query = select(func.count(Officer.id)).where(
+            Officer.current_company_id == actual_company_id
+        )
+        officer_count_result = await db.execute(officer_count_query)
+        officer_count = officer_count_result.scalar() or 0
+
+        return CompanyDetailResponse(
+            id=str(company.id),
+            name=company.name,
+            ticker=company.ticker,
+            corp_code=company.corp_code,
+            name_en=company.name_en,
+            business_number=company.business_number,
+            sector=company.sector,
+            industry=company.industry,
+            market=company.market,
+            cb_count=cb_count,
+            officer_count=officer_count,
+            created_at=company.created_at.isoformat() if company.created_at else datetime.utcnow().isoformat(),
+            updated_at=company.updated_at.isoformat() if company.updated_at else datetime.utcnow().isoformat()
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting company detail: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{company_id}/convertible-bonds", response_model=List[CompanyCBListItem])
+async def get_company_convertible_bonds(
+    company_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    회사의 CB 발행 목록 조회
+
+    - 발행일 최신순
+    """
+    try:
+        # 회사 존재 확인
+        result = await db.execute(
+            select(Company).where(Company.id == company_id)
+        )
+        company = result.scalar_one_or_none()
+
+        if not company:
+            raise HTTPException(status_code=404, detail="Company not found")
+
+        # CB 목록 조회
+        cb_query = select(ConvertibleBond).where(
+            ConvertibleBond.company_id == company_id
+        ).order_by(ConvertibleBond.issue_date.desc())
+
+        cb_result = await db.execute(cb_query)
+        cbs = cb_result.scalars().all()
+
+        # 인수자 수 조회 (JSON 배열 길이)
+        import json
+        cb_items = []
+        for cb in cbs:
+            subscribers_count = 0
+            if cb.subscribers:
+                try:
+                    subscribers = json.loads(cb.subscribers) if isinstance(cb.subscribers, str) else cb.subscribers
+                    subscribers_count = len(subscribers) if isinstance(subscribers, list) else 0
+                except (json.JSONDecodeError, TypeError) as e:
+                    logger.warning(f"Failed to parse subscribers JSON for CB {cb.id}: {e}")
+                    subscribers_count = 0
+
+            cb_items.append(CompanyCBListItem(
+                id=str(cb.id),
+                bond_name=cb.bond_name or "전환사채",
+                issue_date=cb.issue_date.isoformat() if cb.issue_date else None,
+                issue_amount=cb.issue_amount,
+                subscribers_count=subscribers_count
+            ))
+
+        return cb_items
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting company CBs: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{company_id}/officers", response_model=List[CompanyOfficerListItem])
+async def get_company_officers(
+    company_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    회사의 임원 목록 조회
+
+    - 등기임원 우선 정렬
+    """
+    try:
+        # 회사 존재 확인
+        result = await db.execute(
+            select(Company).where(Company.id == company_id)
+        )
+        company = result.scalar_one_or_none()
+
+        if not company:
+            raise HTTPException(status_code=404, detail="Company not found")
+
+        # 임원 목록 조회
+        officer_query = select(Officer).where(
+            Officer.current_company_id == company_id
+        ).order_by(Officer.influence_score.desc().nulls_last(), Officer.name)
+
+        officer_result = await db.execute(officer_query)
+        officers = officer_result.scalars().all()
+
+        return [
+            CompanyOfficerListItem(
+                id=str(officer.id),
+                name=officer.name,
+                position=officer.position,
+                influence_score=officer.influence_score
+            )
+            for officer in officers
+        ]
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting company officers: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/sectors/list", response_model=List[str])
+async def list_sectors(
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    업종 목록 조회
+
+    - 중복 제거
+    - 알파벳 순 정렬
+    """
+    try:
+        query = select(Company.sector).where(
+            Company.sector.isnot(None)
+        ).distinct().order_by(Company.sector)
+
+        result = await db.execute(query)
+        sectors = [row[0] for row in result.all()]
+
+        return sectors
+
+    except Exception as e:
+        logger.error(f"Error listing sectors: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))

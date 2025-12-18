@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Raymontology</string>
+    <string name="app_description">기업 관계 네트워크 분석</string>
+
+    <!-- Error messages -->
+    <string name="error_title">연결할 수 없습니다</string>
+    <string name="error_message">인터넷 연결을 확인하고 다시 시도해주세요</string>
+    <string name="error_icon">오류 아이콘</string>
+    <string name="retry">다시 시도</string>
+
+    <!-- Loading -->
+    <string name="loading">로딩 중...</string>
+</resources>

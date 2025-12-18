@@ -1,0 +1,305 @@
+# Raymontology 프로젝트 - Claude Code 필수 규칙
+
+## 상태: 서비스 운영 중 (2025-12-17)
+전체 11개 테이블 데이터 적재 완료. 프론트엔드/백엔드 연동 정상.
+
+### 최근 수정 (2025-12-17)
+- **임원-회사 매칭 데이터 정제**: 7,277건 잘못된 데이터 삭제
+- 원본 공시와 비교 검증 스크립트: `scripts/verify_officer_company_match.py`
+- Neo4j 임원 네트워크 재구축 완료
+
+### 이전 수정 (2025-12-16)
+- 스키마 레지스트리 도입: `scripts/SCHEMA_REGISTRY.md`
+- 표준 작업 프로세스 도입: `scripts/STANDARD_PROCESS.md`
+- 테이블명 검증 유틸리티: `scripts/utils/schema_validator.py`
+
+## 과거 경고: 반복된 실패 이력 (개선 중)
+- 완료 보고 후 데이터 없음 반복 발생
+- 테이블명 혼동으로 데이터 못 찾는 문제 발생
+- 중복 제거 후 실제 데이터 삭제 문제 발생
+- **해결책**: 아래 규칙 및 표준 프로세스 준수 필수
+
+---
+
+## 핵심 참조 문서 (필수 확인)
+
+| 문서 | 용도 | 경로 |
+|------|------|------|
+| 스키마 레지스트리 | 모든 테이블명/컬럼명 참조 | `scripts/SCHEMA_REGISTRY.md` |
+| 표준 작업 프로세스 | 모든 DB 작업 체크리스트 | `scripts/STANDARD_PROCESS.md` |
+| 파싱 상태 | 상세 파싱 진행 상황 | `scripts/PARSING_STATUS.md` |
+
+---
+
+## 테이블명 규칙 (필수)
+
+### 테이블명은 반드시 SCHEMA_REGISTRY.md 참조 후 사용
+
+```
+금지: 테이블명 추측 또는 직접 타이핑
+필수: SCHEMA_REGISTRY.md에서 복사-붙여넣기
+```
+
+### 자주 혼동되는 테이블명
+
+| 틀린 이름 | 올바른 이름 |
+|----------|------------|
+| company | **companies** |
+| officer | **officers** |
+| position | **officer_positions** |
+| cb | **convertible_bonds** |
+| subscriber | **cb_subscribers** |
+
+### 프로그래밍 시 검증
+
+```python
+from scripts.utils.schema_validator import validate_table_name
+
+# 테이블명 검증 (오류 시 ValueError 발생)
+table = validate_table_name("companies")  # OK
+table = validate_table_name("company")    # ValueError!
+```
+
+---
+
+## 표준 작업 프로세스 (필수)
+
+모든 DB 작업은 `scripts/STANDARD_PROCESS.md` 체크리스트 준수:
+
+```
+[작업 전]
+1. DB 현재 상태 COUNT 확인 및 기록
+2. SCHEMA_REGISTRY.md에서 테이블명 확인
+3. 작업 내용 및 예상 결과 기록
+
+[작업 중]
+4. 포그라운드 실행 (백그라운드 금지)
+5. 에러 메시지 전체 확인
+6. 부분 성공 기록
+
+[작업 후]
+7. DB 상태 재확인 (동일 COUNT 쿼리)
+8. 증감분 계산: "X건 → Y건 (+Z건)"
+9. PARSING_STATUS.md 업데이트
+```
+
+---
+
+## 절대 금지 사항
+
+### 1. 백그라운드 실행 금지
+```
+금지: python script.py &
+금지: python script.py 2>&1 &
+필수: python script.py (포그라운드에서 완료까지 대기)
+```
+
+### 2. "시작했습니다" 보고 금지
+```
+금지: "파싱을 시작했습니다"
+금지: "스크립트를 실행했습니다"
+금지: "백그라운드에서 실행 중입니다"
+```
+
+### 3. 검증 없는 완료 보고 금지
+```
+금지: 스크립트 실행만 하고 "완료"
+금지: DB COUNT 확인 없이 성공 주장
+```
+
+---
+
+## 필수 작업 프로세스
+
+### 모든 DB 작업 시 반드시:
+
+1. **작업 전 COUNT 확인**
+```sql
+SELECT 'officers' as tbl, COUNT(*) FROM officers
+UNION ALL SELECT 'disclosures', COUNT(*) FROM disclosures
+...
+```
+
+2. **포그라운드 실행** (완료까지 대기)
+
+3. **에러 확인** (출력 전체 확인)
+
+4. **작업 후 COUNT 확인**
+
+5. **증가분 보고** (필수 형식):
+```
+officers: 0건 → 1,234건 (+1,234건)
+disclosures: 0건 → 5,678건 (+5,678건)
+```
+
+---
+
+## 현재 DB 상태 (2025-12-17 기준)
+
+| 테이블 | 레코드 수 | 상태 | 비고 |
+|--------|----------|------|------|
+| companies | 3,922 | ✅ 완료 | |
+| officers | 42,263 | ✅ 완료 | |
+| officer_positions | 267,771 | ✅ 완료 | 7,298건 정제됨 |
+| disclosures | 213,304 | ✅ 완료 | |
+| convertible_bonds | 1,140 | ✅ 완료 | |
+| cb_subscribers | 5,479 | ✅ 완료 | |
+| financial_statements | 9,432 | ✅ 완료 | |
+| risk_signals | 1,412 | ✅ 완료 | |
+| risk_scores | 3,912 | ✅ 완료 | |
+| major_shareholders | 60,926 | ✅ 완료 | |
+| affiliates | 973 | ✅ 완료 | 지분율 321건(33%) |
+
+---
+
+## 임원 임기(term) 정보 규칙 (2025-12-16 확정)
+
+### 상장사/비상장사 구분
+- **상장사** (KOSPI, KOSDAQ, KONEX): 임기 정보(term_start_date, term_end_date) 파싱
+- **비상장사** (ETF 등): 임기 정보 NULL (파싱하지 않음)
+
+### 현재 적재 현황 (상장사만)
+| 시장 | 총 레코드 | 임기 있음 | 적재율 |
+|------|----------|----------|--------|
+| KOSDAQ | 167,497 | 19,490 | 11.6% |
+| KOSPI | 88,633 | 6,547 | 7.4% |
+| KONEX | 3,156 | 326 | 10.3% |
+| **합계** | **259,286** | **26,363** | **10.2%** |
+
+### 수정된 파일
+- `scripts/parse_officers_from_local.py`: `is_listed_company()` 메서드 추가, 비상장사 term NULL 처리
+- ETF 기존 데이터 12,227건 NULL 처리 완료
+
+### 임기 파싱 패턴 (SH5_PER 필드)
+```
+지원 패턴:
+- YYYY.MM ~ (예: 2017.02 ~)
+- YYYY-MM-DD ~ (예: 2017-02-01 ~)
+- YYYY/MM ~ (예: 2017/02 ~)
+- YYYY년 MM월 ~ (예: 2017년 02월 ~)
+- YYYY.MM.DD ~ (예: 2017.02.01 ~)
+
+미지원 패턴 (향후 개선 필요):
+- 20.03 ~ (2자리 연도)
+- 2020년 3월 ~ (한글 월)
+```
+
+---
+
+## 상세 파싱 상태 파일
+
+**상세 파싱 계획 및 진행 상황**: `backend/scripts/PARSING_STATUS.md`
+
+---
+
+## 원시 데이터 위치
+
+### 로컬 다운로드 완료 (API 호출 불필요)
+- **DART 공시**: `backend/data/dart/` (9.2GB, 228,395 ZIP 파일)
+  - 2022년: 30,973개
+  - 2023년: 51,565개
+  - 2024년: 84,655개
+  - 2025년: 61,202개
+- **CB 공시 JSON**: `backend/data/cb_disclosures_by_company_full.json`
+  - 전체: 4,913건
+  - 전환사채 발행결정: 1,686건 (필터 대상)
+- **회사 목록**: DB companies 테이블 (3,922개)
+
+---
+
+## DB 접속 정보
+
+```bash
+PGPASSWORD=dev_password psql -h localhost -U postgres -d raymontology_dev
+```
+
+---
+
+## 세션 시작 시 필수 확인
+
+매 세션 시작 시 아래 쿼리로 현재 상태 확인:
+```sql
+SELECT 'companies' as tbl, COUNT(*) FROM companies
+UNION ALL SELECT 'officers', COUNT(*) FROM officers
+UNION ALL SELECT 'officer_positions', COUNT(*) FROM officer_positions
+UNION ALL SELECT 'disclosures', COUNT(*) FROM disclosures
+UNION ALL SELECT 'convertible_bonds', COUNT(*) FROM convertible_bonds
+UNION ALL SELECT 'cb_subscribers', COUNT(*) FROM cb_subscribers
+UNION ALL SELECT 'financial_statements', COUNT(*) FROM financial_statements
+UNION ALL SELECT 'risk_signals', COUNT(*) FROM risk_signals
+UNION ALL SELECT 'risk_scores', COUNT(*) FROM risk_scores
+UNION ALL SELECT 'major_shareholders', COUNT(*) FROM major_shareholders
+UNION ALL SELECT 'affiliates', COUNT(*) FROM affiliates
+ORDER BY 1;
+```
+
+---
+
+## 스크립트 실행 규칙
+
+### 타임아웃 설정
+- 짧은 작업: 2분
+- 긴 작업: 10분 (timeout 600000)
+
+### 실행 예시
+```bash
+# 올바른 방법
+PYTHONPATH=/Users/jaejoonpark/raymontology/backend python3 scripts/parse_cb_disclosures.py --limit 100
+
+# 틀린 방법 (백그라운드)
+PYTHONPATH=/Users/jaejoonpark/raymontology/backend python3 scripts/parse_cb_disclosures.py &
+```
+
+---
+
+## 아키텍처 규칙 (중요)
+
+### 데이터 흐름
+```
+원시 파일 (DART) → PostgreSQL (마스터) → Neo4j (파생)
+                        ↑
+                   절대 삭제 금지
+```
+
+### PostgreSQL = 마스터 데이터
+- 모든 파싱 결과는 PostgreSQL에 저장
+- Neo4j는 PostgreSQL 기반으로 재생성 가능
+- PostgreSQL 데이터 삭제 시 복구 불가
+
+### Neo4j = 파생 데이터
+- PostgreSQL 데이터로 언제든 재구축 가능
+- Neo4j 초기화해도 PostgreSQL에 영향 없음
+
+---
+
+## 실행 금지 스크립트 (PostgreSQL 삭제됨)
+
+다음 스크립트는 **절대 실행 금지**:
+
+| 스크립트 | 위험 | 이유 |
+|---------|------|------|
+| `sync_neo4j_to_postgres.py` | TRUNCATE CASCADE | PostgreSQL 전체 삭제 |
+| `init_database.py` | DROP TABLE CASCADE | 모든 테이블 삭제 |
+| `db_migrate.py --action=reset` | drop_all | 전체 리셋 |
+
+**경고**: 위 스크립트들은 `scripts/_deprecated/`로 이동됨
+
+---
+
+## 안전한 Neo4j 재구축 방법
+
+Neo4j만 초기화하려면:
+```bash
+# Neo4j만 초기화 (PostgreSQL 영향 없음)
+cypher-shell -u neo4j -p password "MATCH (n) DETACH DELETE n"
+
+# PostgreSQL → Neo4j 동기화 (안전)
+python3 scripts/neo4j_cb_network.py  # CB 네트워크만 재구축
+```
+
+---
+
+## 이 파일의 목적
+
+Claude Code는 세션 간 메모리가 없음.
+이 파일을 통해 매 세션마다 동일한 규칙을 적용.

@@ -1,0 +1,603 @@
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
+import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom'
+import * as d3 from 'd3'
+import { ForceGraph, NodeDetailPanel, GraphControls, NavigationButtons, Breadcrumb } from '../components/graph'
+import type { ForceGraphRef } from '../components/graph'
+import type { GraphNode, GraphData, NodeType } from '../types/graph'
+import { NODE_LIMIT, DEFAULT_DEPTH, type DateRangeParams } from '../api/graph'
+import { DateRangePicker, type DateRange } from '../components/common'
+import { useGraphQuery } from '../hooks/useGraphQuery'
+import { useGraphStore, selectCanGoBack, selectCanGoForward } from '../store'
+
+// URL 파라미터에서 날짜 파싱
+function parseDateFromUrl(dateStr: string | null): Date | null {
+  if (!dateStr) return null
+  const date = new Date(dateStr)
+  return isNaN(date.getTime()) ? null : date
+}
+
+// 날짜를 URL 파라미터 형식으로 변환
+function formatDateForUrl(date: Date | string | null): string | null {
+  if (!date) return null
+  // 문자열인 경우 (localStorage에서 복원된 경우)
+  if (typeof date === 'string') {
+    return date.split('T')[0]
+  }
+  // Date 객체인 경우
+  if (date instanceof Date && !isNaN(date.getTime())) {
+    return date.toISOString().split('T')[0]
+  }
+  return null
+}
+
+function GraphPage() {
+  const { companyId } = useParams<{ companyId: string }>()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
+
+  // URL에서 초기값 읽기
+  const initialDepth = parseInt(searchParams.get('depth') || String(DEFAULT_DEPTH), 10)
+  const initialDateFrom = parseDateFromUrl(searchParams.get('from'))
+  const initialDateTo = parseDateFromUrl(searchParams.get('to'))
+
+  // Zustand UI 상태
+  const {
+    selectedNodeId,
+    visibleNodeTypes,
+    dateRange: storedDateRange,
+    navigationHistory,
+    navigationIndex,
+    selectNode,
+    toggleNodeType,
+    setDateRange: setStoredDateRange,
+    pushNavigation,
+    goBack: storeGoBack,
+    goForward: storeGoForward,
+    navigateToIndex,
+  } = useGraphStore()
+
+  const canGoBack = useGraphStore(selectCanGoBack)
+  const canGoForward = useGraphStore(selectCanGoForward)
+
+  // 로컬 상태 (URL 파라미터 연동)
+  const [depth, setDepth] = useState(initialDepth)
+  const [dateRange, setDateRange] = useState<DateRange>({
+    startDate: initialDateFrom ?? storedDateRange.startDate,
+    endDate: initialDateTo ?? storedDateRange.endDate,
+    reportYears: storedDateRange.reportYears,  // store에서 reportYears 가져오기
+  })
+
+  // refs
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [dimensions, setDimensions] = useState({ width: 800, height: 600 })
+  const svgRef = useRef<SVGSVGElement | null>(null)
+  const forceGraphRef = useRef<ForceGraphRef>(null)
+
+  // 날짜를 YYYY-MM-DD 형식으로 변환
+  const formatDateParam = (date: Date | string | null | undefined): string | undefined => {
+    if (!date) return undefined
+    // Date 객체인 경우
+    if (date instanceof Date) {
+      return isNaN(date.getTime()) ? undefined : date.toISOString().split('T')[0]
+    }
+    // 문자열인 경우 (이미 YYYY-MM-DD 형식)
+    if (typeof date === 'string') {
+      return date.split('T')[0]
+    }
+    return undefined
+  }
+
+  // 날짜 범위 파라미터 생성 (report_years 기반)
+  const dateRangeParams: DateRangeParams | undefined = useMemo(() => {
+    // reportYears가 있으면 우선 사용 (사업보고서 연도 기반)
+    if (dateRange.reportYears && dateRange.reportYears.length > 0) {
+      return { report_years: dateRange.reportYears }
+    }
+    // 기존 날짜 범위 방식 (fallback)
+    const date_from = formatDateParam(dateRange.startDate)
+    const date_to = formatDateParam(dateRange.endDate)
+    if (!date_from && !date_to) return undefined
+    return { date_from, date_to }
+  }, [dateRange])
+
+  // React Query - 그래프 데이터 fetch
+  const {
+    data: graphData,
+    isLoading,
+    error,
+    refetch,
+  } = useGraphQuery(companyId, depth, dateRangeParams)
+
+  // 실제 그래프 데이터 (로딩 중 빈 데이터)
+  const actualGraphData: GraphData = graphData ?? { nodes: [], links: [] }
+  const isNodeLimited = graphData?.isLimited ?? false
+  const originalNodeCount = graphData?.originalCount ?? 0
+
+  // 선택된 노드 객체
+  const selectedNode = useMemo(() => {
+    if (!selectedNodeId) return null
+    return actualGraphData.nodes.find(n => n.id === selectedNodeId) ?? null
+  }, [selectedNodeId, actualGraphData.nodes])
+
+  // URL 파라미터 동기화
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (depth !== DEFAULT_DEPTH) {
+      params.set('depth', String(depth))
+    }
+    const fromStr = formatDateForUrl(dateRange.startDate)
+    const toStr = formatDateForUrl(dateRange.endDate)
+    if (fromStr) params.set('from', fromStr)
+    if (toStr) params.set('to', toStr)
+
+    // URL 업데이트 (히스토리에 추가하지 않고 replace)
+    setSearchParams(params, { replace: true })
+  }, [depth, dateRange, setSearchParams])
+
+  // 컨테이너 크기 감지
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect()
+        setDimensions({
+          width: rect.width,
+          height: Math.max(rect.height, 500),
+        })
+      }
+    }
+
+    updateDimensions()
+    window.addEventListener('resize', updateDimensions)
+    return () => window.removeEventListener('resize', updateDimensions)
+  }, [])
+
+  // SVG ref 저장 (줌 컨트롤용)
+  useEffect(() => {
+    const svg = containerRef.current?.querySelector('svg')
+    if (svg) {
+      svgRef.current = svg as SVGSVGElement
+    }
+  }, [dimensions, actualGraphData])
+
+  // 중심 회사 정보 (corp_code 또는 id로 검색)
+  const centerCompany = actualGraphData.nodes.find(n =>
+    n.type === 'company' && (n.corp_code === companyId || n.id === companyId)
+  )
+
+  // 네비게이션 히스토리에 현재 회사 추가
+  useEffect(() => {
+    if (companyId && centerCompany?.name) {
+      pushNavigation(companyId, centerCompany.name)
+    }
+  }, [companyId, centerCompany?.name, pushNavigation])
+
+  // API 연결 상태
+  const isApiConnected = !error && actualGraphData.nodes.length > 0
+
+  // 노드 클릭 핸들러
+  const handleNodeClick = useCallback((node: GraphNode | null) => {
+    selectNode(node?.id ?? null)
+  }, [selectNode])
+
+  // 노드 재중심 핸들러
+  const handleRecenter = useCallback((node: GraphNode) => {
+    forceGraphRef.current?.centerOnNode(node)
+  }, [])
+
+  // 줌 컨트롤
+  const handleZoomIn = useCallback(() => {
+    if (svgRef.current) {
+      const svg = d3.select(svgRef.current)
+      svg.transition().duration(300).call(
+        d3.zoom<SVGSVGElement, unknown>().scaleBy as never,
+        1.3
+      )
+    }
+  }, [])
+
+  const handleZoomOut = useCallback(() => {
+    if (svgRef.current) {
+      const svg = d3.select(svgRef.current)
+      svg.transition().duration(300).call(
+        d3.zoom<SVGSVGElement, unknown>().scaleBy as never,
+        0.7
+      )
+    }
+  }, [])
+
+  const handleReset = useCallback(() => {
+    if (svgRef.current) {
+      const svg = d3.select(svgRef.current)
+      svg.transition().duration(500).call(
+        d3.zoom<SVGSVGElement, unknown>().transform as never,
+        d3.zoomIdentity
+      )
+    }
+  }, [])
+
+  // 재시도 핸들러
+  const handleRetry = useCallback(() => {
+    refetch()
+  }, [refetch])
+
+  // 탐색 깊이 변경 핸들러
+  const handleDepthChange = useCallback((newDepth: number) => {
+    setDepth(Math.max(1, Math.min(3, newDepth)))
+  }, [])
+
+  // 날짜 범위 변경 핸들러
+  const handleDateRangeChange = useCallback((range: DateRange) => {
+    setDateRange(range)
+    setStoredDateRange(range)
+  }, [setStoredDateRange])
+
+  // 노드 타입 토글
+  const handleToggleNodeType = useCallback((type: NodeType) => {
+    toggleNodeType(type)
+  }, [toggleNodeType])
+
+  // 네비게이션 핸들러
+  const handleGoBack = useCallback(() => {
+    const entry = storeGoBack()
+    if (entry) {
+      navigate(`/company/${entry.companyId}/graph`)
+    }
+  }, [storeGoBack, navigate])
+
+  const handleGoForward = useCallback(() => {
+    const entry = storeGoForward()
+    if (entry) {
+      navigate(`/company/${entry.companyId}/graph`)
+    }
+  }, [storeGoForward, navigate])
+
+  // 회사 노드 클릭으로 네비게이션
+  const handleNavigateToCompany = useCallback((node: GraphNode) => {
+    if (node.type === 'company' && node.id !== companyId) {
+      pushNavigation(node.id, node.name)
+      navigate(`/company/${node.id}/graph`)
+    }
+  }, [companyId, pushNavigation, navigate])
+
+  // 브레드크럼에서 특정 위치로 이동
+  const handleBreadcrumbNavigate = useCallback((targetCompanyId: string, _targetCompanyName: string) => {
+    // 히스토리에서 해당 인덱스 찾기
+    const targetIndex = navigationHistory.findIndex(
+      entry => entry.companyId === targetCompanyId
+    )
+    if (targetIndex !== -1) {
+      navigateToIndex(targetIndex)
+      navigate(`/company/${targetCompanyId}/graph`)
+    }
+  }, [navigationHistory, navigateToIndex, navigate])
+
+  // 키보드 단축키 (Alt+← / Alt+→)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey && e.key === 'ArrowLeft' && canGoBack) {
+        e.preventDefault()
+        handleGoBack()
+      }
+      if (e.altKey && e.key === 'ArrowRight' && canGoForward) {
+        e.preventDefault()
+        handleGoForward()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [canGoBack, canGoForward, handleGoBack, handleGoForward])
+
+  // 필터링된 그래프 데이터
+  const filteredGraphData = useMemo(() => {
+    const visibleNodes = actualGraphData.nodes.filter(node =>
+      visibleNodeTypes.has(node.type)
+    )
+    const visibleNodeIds = new Set(visibleNodes.map(n => n.id))
+
+    const visibleLinks = actualGraphData.links.filter(link => {
+      const sourceId = typeof link.source === 'string' ? link.source : (link.source as GraphNode).id
+      const targetId = typeof link.target === 'string' ? link.target : (link.target as GraphNode).id
+      return visibleNodeIds.has(sourceId) && visibleNodeIds.has(targetId)
+    })
+
+    return { nodes: visibleNodes, links: visibleLinks }
+  }, [actualGraphData, visibleNodeTypes])
+
+  // 노드 타입별 카운트
+  const nodeCounts = useMemo(() => {
+    const counts: Record<NodeType, number> = {
+      company: 0,
+      officer: 0,
+      subscriber: 0,
+      cb: 0,
+      shareholder: 0,
+      affiliate: 0,
+    }
+    actualGraphData.nodes.forEach(node => {
+      counts[node.type]++
+    })
+    return counts
+  }, [actualGraphData])
+
+  return (
+    <div className="h-full flex flex-col -mx-4 sm:-mx-6 lg:-mx-8 -my-6">
+      {/* API 연결 상태 배너 */}
+      {!isApiConnected && !isLoading && (
+        <div className="mx-4 sm:mx-6 lg:mx-8 mt-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg flex items-center gap-2 text-amber-400">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span className="text-sm">API 연결 실패 - 더미 데이터를 표시합니다</span>
+        </div>
+      )}
+
+      {/* 노드 수 제한 경고 배너 */}
+      {isNodeLimited && !isLoading && (
+        <div className="mx-4 sm:mx-6 lg:mx-8 mt-4 p-3 bg-accent-info/10 border border-accent-info/30 rounded-lg flex items-center justify-between">
+          <div className="flex items-center gap-2 text-accent-info">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-sm">
+              노드 수가 많아 상위 {NODE_LIMIT}개만 표시합니다 (전체 {originalNodeCount}개)
+            </span>
+          </div>
+          <span className="text-xs text-accent-info/70">
+            중요도(회사 우선, 연결 수)순으로 필터링됨
+          </span>
+        </div>
+      )}
+
+      {/* 상단 네비게이션 */}
+      <div className="px-4 sm:px-6 lg:px-8 py-4 border-b border-dark-border bg-dark-surface/80 backdrop-blur-xl">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link to="/" className="text-accent-primary hover:text-accent-primary/80 flex items-center gap-1 text-sm transition-colors">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              검색으로
+            </Link>
+            <span className="text-dark-border">|</span>
+            {/* 네비게이션 버튼 */}
+            <NavigationButtons
+              canGoBack={canGoBack}
+              canGoForward={canGoForward}
+              onGoBack={handleGoBack}
+              onGoForward={handleGoForward}
+            />
+            <span className="text-dark-border">|</span>
+            <h1 className="text-lg font-semibold text-text-primary">
+              {centerCompany?.name || '회사'} <span className="text-text-muted font-normal">관계도</span>
+            </h1>
+          </div>
+          <Link
+            to={`/company/${companyId}/report`}
+            className="px-4 py-2 bg-purple-500/20 text-purple-400 text-sm font-medium rounded-lg border border-purple-500/30 hover:bg-purple-500/30 hover:border-purple-500/50 transition-all shadow-[0_0_10px_rgba(168,85,247,0.2)] flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            분석 보고서
+          </Link>
+        </div>
+      </div>
+
+      {/* 브레드크럼 (탐색 기록) */}
+      {navigationHistory.length > 1 && (
+        <div className="mx-4 sm:mx-6 lg:mx-8 mt-4 bg-dark-card rounded-lg px-4 py-2 border border-dark-border">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-text-muted flex-shrink-0 uppercase tracking-wide">탐색 경로</span>
+            <Breadcrumb
+              history={navigationHistory}
+              currentIndex={navigationIndex}
+              onNavigate={handleBreadcrumbNavigate}
+              maxVisible={5}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* 필터 영역: 탐색 깊이 + 날짜 범위 */}
+      <div className="mx-4 sm:mx-6 lg:mx-8 mt-4 bg-dark-card rounded-xl border border-dark-border p-4">
+        <div className="flex flex-wrap items-center gap-6">
+          {/* 탐색 깊이 */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-medium text-text-muted uppercase tracking-wide">탐색 깊이</span>
+              {/* 도움말 아이콘 */}
+              <div className="relative group">
+                <svg className="w-4 h-4 text-text-muted cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {/* 툴팁 */}
+                <div className="absolute left-0 top-6 w-72 p-3 bg-dark-surface border border-dark-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                  <p className="text-xs font-semibold text-text-primary mb-2">탐색 깊이 설명</p>
+                  <div className="space-y-2 text-xs text-text-secondary">
+                    <div className="flex gap-2">
+                      <span className="text-cyan-400 font-medium w-12">1단계</span>
+                      <span>임원 + CB 회차</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-cyan-400 font-medium w-12">2단계</span>
+                      <span>1단계 + CB 인수대상자</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-cyan-400 font-medium w-12">3단계</span>
+                      <span>2단계 + 임원의 타 상장사 경력 + 인수자의 타 상장사 CB 투자</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-1">
+              {[1, 2, 3].map(d => {
+                const depthDescriptions: Record<number, string> = {
+                  1: '임원 + CB 회차',
+                  2: '+ CB 인수자',
+                  3: '+ 타사 경력/투자',
+                }
+                return (
+                  <button
+                    key={d}
+                    onClick={() => handleDepthChange(d)}
+                    className={`px-3 py-1.5 text-sm rounded-lg border transition-all font-medium ${
+                      depth === d
+                        ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/50 shadow-[0_0_10px_rgba(34,211,238,0.3)]'
+                        : 'bg-dark-surface text-text-secondary border-dark-border hover:border-cyan-500/30 hover:text-cyan-400 hover:bg-cyan-500/5'
+                    }`}
+                    title={depthDescriptions[d]}
+                  >
+                    {d}단계
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="w-px h-8 bg-dark-border" />
+
+          {/* 날짜 범위 */}
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-medium text-text-muted uppercase tracking-wide">기간 필터</span>
+            <DateRangePicker
+              onChange={handleDateRangeChange}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* 메인 컨텐츠 */}
+      <div className="flex-1 grid grid-cols-4 gap-4 min-h-0 px-4 sm:px-6 lg:px-8 py-4">
+        {/* 그래프 영역 */}
+        <div
+          ref={containerRef}
+          className="col-span-3 bg-dark-card rounded-xl border border-dark-border relative overflow-hidden"
+        >
+          {isLoading ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-dark-bg/50">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-10 h-10 border-2 border-accent-primary border-t-transparent rounded-full animate-spin" />
+                <p className="text-text-secondary text-sm">그래프 로딩 중...</p>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-3 text-center">
+                <div className="w-12 h-12 rounded-full bg-accent-danger/20 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-accent-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <p className="text-text-secondary text-sm">{error.message || '그래프 데이터를 불러오는데 실패했습니다'}</p>
+                <button
+                  onClick={handleRetry}
+                  className="px-4 py-2 bg-blue-500/20 text-blue-400 text-sm font-medium rounded-lg border border-blue-500/30 hover:bg-blue-500/30 hover:border-blue-500/50 transition-all"
+                >
+                  다시 시도
+                </button>
+              </div>
+            </div>
+          ) : filteredGraphData.nodes.length === 0 ? (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-3 text-center">
+                <div className="w-12 h-12 rounded-full bg-dark-hover flex items-center justify-center">
+                  <svg className="w-6 h-6 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
+                <p className="text-text-muted text-sm">관계 데이터가 없습니다</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <ForceGraph
+                ref={forceGraphRef}
+                data={filteredGraphData}
+                width={dimensions.width}
+                height={dimensions.height}
+                onNodeClick={handleNodeClick}
+                selectedNodeId={selectedNode?.id}
+              />
+              <GraphControls
+                onZoomIn={handleZoomIn}
+                onZoomOut={handleZoomOut}
+                onReset={handleReset}
+                visibleNodeTypes={visibleNodeTypes}
+                onToggleNodeType={handleToggleNodeType}
+                nodeCounts={nodeCounts}
+              />
+            </>
+          )}
+        </div>
+
+        {/* 사이드 패널 */}
+        <div className="bg-dark-card rounded-xl border border-dark-border p-4">
+          <NodeDetailPanel
+            node={selectedNode}
+            onClose={() => selectNode(null)}
+            onRecenter={handleRecenter}
+            onNavigateToCompany={handleNavigateToCompany}
+          />
+        </div>
+      </div>
+
+      {/* 하단 통계 */}
+      <div className="mx-4 sm:mx-6 lg:mx-8 mb-4 bg-dark-card rounded-xl border border-dark-border p-4">
+        <div className="flex items-center justify-around text-center">
+          <div>
+            <p className="text-2xl font-bold font-mono text-data-company">
+              {filteredGraphData.nodes.filter(n => n.type === 'company').length}
+              {nodeCounts.company !== filteredGraphData.nodes.filter(n => n.type === 'company').length && (
+                <span className="text-xs text-text-muted font-normal ml-1">/{nodeCounts.company}</span>
+              )}
+            </p>
+            <p className="text-xs text-text-muted uppercase tracking-wide mt-1">관련 회사</p>
+          </div>
+          <div className="w-px h-10 bg-dark-border" />
+          <div>
+            <p className="text-2xl font-bold font-mono text-data-officer">
+              {filteredGraphData.nodes.filter(n => n.type === 'officer').length}
+              {nodeCounts.officer !== filteredGraphData.nodes.filter(n => n.type === 'officer').length && (
+                <span className="text-xs text-text-muted font-normal ml-1">/{nodeCounts.officer}</span>
+              )}
+            </p>
+            <p className="text-xs text-text-muted uppercase tracking-wide mt-1">임원</p>
+          </div>
+          <div className="w-px h-10 bg-dark-border" />
+          <div>
+            <p className="text-2xl font-bold font-mono text-data-subscriber">
+              {filteredGraphData.nodes.filter(n => n.type === 'subscriber').length}
+              {nodeCounts.subscriber !== filteredGraphData.nodes.filter(n => n.type === 'subscriber').length && (
+                <span className="text-xs text-text-muted font-normal ml-1">/{nodeCounts.subscriber}</span>
+              )}
+            </p>
+            <p className="text-xs text-text-muted uppercase tracking-wide mt-1">CB 투자자</p>
+          </div>
+          <div className="w-px h-10 bg-dark-border" />
+          <div>
+            <p className="text-2xl font-bold font-mono text-data-cb">
+              {filteredGraphData.nodes.filter(n => n.type === 'cb').length}
+              {nodeCounts.cb !== filteredGraphData.nodes.filter(n => n.type === 'cb').length && (
+                <span className="text-xs text-text-muted font-normal ml-1">/{nodeCounts.cb}</span>
+              )}
+            </p>
+            <p className="text-xs text-text-muted uppercase tracking-wide mt-1">전환사채</p>
+          </div>
+          <div className="w-px h-10 bg-dark-border" />
+          <div>
+            <p className="text-2xl font-bold font-mono text-text-secondary">
+              {filteredGraphData.links.length}
+              {actualGraphData.links.length !== filteredGraphData.links.length && (
+                <span className="text-xs text-text-muted font-normal ml-1">/{actualGraphData.links.length}</span>
+              )}
+            </p>
+            <p className="text-xs text-text-muted uppercase tracking-wide mt-1">관계 수</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default GraphPage

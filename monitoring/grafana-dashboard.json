@@ -1,0 +1,98 @@
+{
+  "dashboard": {
+    "title": "Raymontology Monitoring",
+    "tags": ["raymontology", "railway", "fastapi"],
+    "timezone": "Asia/Seoul",
+    "panels": [
+      {
+        "id": 1,
+        "title": "HTTP Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[5m])",
+            "legendFormat": "{{method}} {{endpoint}}"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "HTTP Response Time (P95)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "{{endpoint}}"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Error Rate by Status Code",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) by (status)",
+            "legendFormat": "{{status}}"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Database Connection Pool",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sqlalchemy_pool_size",
+            "legendFormat": "Pool Size"
+          },
+          {
+            "expr": "sqlalchemy_pool_checked_out",
+            "legendFormat": "Checked Out"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Celery Task Success Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(celery_task_success_total[5m])",
+            "legendFormat": "{{task}}"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Risk Analysis Count",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "risk_analysis_total"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Active Users",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "active_users"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "DART Crawler Success Rate",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "dart_crawler_success_total / (dart_crawler_success_total + dart_crawler_failure_total)"
+          }
+        ]
+      }
+    ]
+  }
+}
