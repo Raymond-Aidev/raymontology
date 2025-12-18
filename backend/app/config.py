@@ -22,13 +22,13 @@ class Settings(BaseSettings):
     redis_url: Optional[str] = None
     port: int = 8000
 
-    # Neo4j (수동 설정)
-    neo4j_uri: str
+    # Neo4j (optional - only needed for graph visualization)
+    neo4j_uri: Optional[str] = None
     neo4j_user: str = "neo4j"
-    neo4j_password: str
+    neo4j_password: Optional[str] = None
 
-    # External APIs
-    dart_api_key: str
+    # External APIs (optional - only needed for crawling new data)
+    dart_api_key: Optional[str] = None
     dart_data_dir: Path = Path("./data/dart")
 
     # Cloudflare R2 (PDF 저장소) - 선택사항

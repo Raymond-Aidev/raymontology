@@ -164,20 +164,24 @@ async def init_db():
         logger.info("Redis URL not configured. Caching disabled.")
         redis_client = None
 
-    # Neo4j
-    logger.info("Initializing Neo4j...")
-    try:
-        neo4j_driver = AsyncGraphDatabase.driver(
-            settings.neo4j_uri,
-            auth=(settings.neo4j_user, settings.neo4j_password),
-            max_connection_lifetime=3600,
-            max_connection_pool_size=50,
-            connection_acquisition_timeout=60,
-        )
-        await neo4j_driver.verify_connectivity()
-        logger.info("Neo4j connected successfully")
-    except Exception as e:
-        logger.error(f"Neo4j connection failed: {e}")
+    # Neo4j (optional)
+    if settings.neo4j_uri and settings.neo4j_password:
+        logger.info("Initializing Neo4j...")
+        try:
+            neo4j_driver = AsyncGraphDatabase.driver(
+                settings.neo4j_uri,
+                auth=(settings.neo4j_user, settings.neo4j_password),
+                max_connection_lifetime=3600,
+                max_connection_pool_size=50,
+                connection_acquisition_timeout=60,
+            )
+            await neo4j_driver.verify_connectivity()
+            logger.info("Neo4j connected successfully")
+        except Exception as e:
+            logger.warning(f"Neo4j connection failed: {e}. Graph features disabled.")
+            neo4j_driver = None
+    else:
+        logger.info("Neo4j not configured. Graph features disabled.")
         neo4j_driver = None
 
     logger.info("All databases initialized")
