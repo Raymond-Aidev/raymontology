@@ -28,8 +28,17 @@ Base = declarative_base()
 # AsyncAdaptedQueuePool 사용 (비동기 엔진용)
 from sqlalchemy.pool import AsyncAdaptedQueuePool
 
+def get_async_database_url(url: str) -> str:
+    """Convert database URL to async format for asyncpg"""
+    # Railway uses postgres://, we need postgresql+asyncpg://
+    if url.startswith("postgres://"):
+        return url.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif url.startswith("postgresql://"):
+        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    return url
+
 engine = create_async_engine(
-    settings.database_url.replace("postgresql://", "postgresql+asyncpg://"),
+    get_async_database_url(settings.database_url),
     poolclass=AsyncAdaptedQueuePool,  # 비동기 엔진용 풀 클래스
     pool_size=5,            # Railway Hobby: 최대 5개 권장
     max_overflow=10,        # 피크 시 추가 10개 (총 15개)

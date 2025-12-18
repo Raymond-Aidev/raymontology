@@ -110,20 +110,28 @@ async def health_check():
 async def startup_event():
     """애플리케이션 시작"""
     logger.info("Raymontology API starting...")
+    logger.info(f"Environment: {settings.environment}")
 
+    # 데이터베이스 초기화 (필수)
     try:
-        # 데이터베이스 초기화
         await init_db()
         logger.info("Database connections initialized")
-
-        # 배치 스케줄러 시작 (프로덕션 환경에서만)
-        if settings.environment == "production":
-            from app.scheduler import start_scheduler
-            start_scheduler()
-            logger.info("Batch scheduler started")
-
     except Exception as e:
-        logger.error(f"Failed to initialize: {e}")
+        logger.error(f"Database initialization failed: {e}")
+        logger.error(traceback.format_exc())
+        # DB 없이도 앱은 시작 (health check 응답 가능)
+
+    # 배치 스케줄러 시작 (선택사항 - 실패해도 앱 계속 실행)
+    # 현재 Railway 배포에서는 비활성화
+    # if settings.environment == "production":
+    #     try:
+    #         from app.scheduler import start_scheduler
+    #         start_scheduler()
+    #         logger.info("Batch scheduler started")
+    #     except Exception as e:
+    #         logger.warning(f"Scheduler failed to start: {e}")
+
+    logger.info("Raymontology API started successfully")
 
 # Shutdown Event
 @app.on_event("shutdown")
@@ -132,12 +140,6 @@ async def shutdown_event():
     logger.info("Raymontology API shutting down...")
 
     try:
-        # 배치 스케줄러 종료
-        if settings.environment == "production":
-            from app.scheduler import stop_scheduler
-            stop_scheduler()
-            logger.info("Batch scheduler stopped")
-
         # 데이터베이스 연결 종료
         await close_db()
         logger.info("Database connections closed")
