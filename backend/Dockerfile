@@ -20,8 +20,8 @@ COPY . .
 # Create necessary directories
 RUN mkdir -p /app/logs /app/data
 
-# Expose port (Railway uses dynamic PORT)
-EXPOSE ${PORT:-8000}
+# Expose port
+EXPOSE 8000
 
-# Run uvicorn with dynamic PORT from Railway
-CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
+# Run uvicorn - Railway injects PORT env var
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
