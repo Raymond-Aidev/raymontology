@@ -29,8 +29,8 @@ RUN npm run build
 # ===========================================
 FROM nginx:alpine
 
-# Copy custom nginx configuration as template
-COPY nginx.conf /etc/nginx/templates/default.conf.template
+# Copy custom nginx configuration
+COPY nginx.conf /etc/nginx/nginx.template
 
 # Copy built static files
 COPY --from=builder /app/dist /usr/share/nginx/html
@@ -38,6 +38,5 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # Expose port (Railway uses dynamic PORT)
 EXPOSE 80
 
-# Start nginx with envsubst for PORT variable
-# nginx docker image automatically processes templates in /etc/nginx/templates/
-CMD ["sh", "-c", "envsubst '$$PORT' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+# Replace PORT_PLACEHOLDER with actual PORT and start nginx
+CMD ["sh", "-c", "sed \"s/PORT_PLACEHOLDER/${PORT:-80}/g\" /etc/nginx/nginx.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
