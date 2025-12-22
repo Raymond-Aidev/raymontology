@@ -6,12 +6,26 @@ function ContactPage() {
 
   return (
     <div className="min-h-screen bg-theme-bg">
-      {/* Header */}
-      <header className="border-b border-theme-border">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
+      {/* 헤더 */}
+      <header className="sticky top-0 z-50 bg-theme-bg/80 backdrop-blur-lg border-b border-theme-border">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <Link to="/" className="inline-block">
-            <RaymondsRiskLogo size="md" variant="compact" showTagline={false} />
+            <RaymondsRiskLogo size="md" variant="compact" />
           </Link>
+          <div className="flex items-center gap-4">
+            <Link
+              to="/about"
+              className="text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+            >
+              서비스 소개
+            </Link>
+            <Link
+              to="/login"
+              className="px-4 py-2 bg-[#5E6AD2] hover:bg-[#4F5ABF] text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              로그인
+            </Link>
+          </div>
         </div>
       </header>
 

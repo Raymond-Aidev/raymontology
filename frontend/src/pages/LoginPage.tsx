@@ -33,7 +33,7 @@ function LoginPage() {
         {/* 로고 */}
         <div className="flex justify-center mb-8">
           <Link to="/" className="inline-block">
-            <RaymondsRiskLogo size="lg" variant="icon" />
+            <RaymondsRiskLogo size="md" variant="compact" />
           </Link>
         </div>
 

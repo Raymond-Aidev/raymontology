@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import apiClient from '../api/client'
+import RaymondsRiskLogo from '../components/common/RaymondsRiskLogo'
 
 function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -54,13 +55,9 @@ function ForgotPasswordPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-theme-bg p-4">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link to="/">
-            <img
-              src="/logo.png?v=2"
-              alt="Raymond Partners"
-              className="h-14 w-auto object-contain mx-auto"
-            />
+        <div className="flex justify-center mb-8">
+          <Link to="/" className="inline-block">
+            <RaymondsRiskLogo size="md" variant="compact" />
           </Link>
         </div>
 
