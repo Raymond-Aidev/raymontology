@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 
 interface RegisterFormProps {
@@ -6,7 +7,7 @@ interface RegisterFormProps {
   onSwitchToLogin?: () => void
 }
 
-export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) {
+export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
   const { register, isLoading, error, clearError } = useAuthStore()
 
   const [username, setUsername] = useState('')
@@ -16,6 +17,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [agreeTerms, setAgreeTerms] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [touched, setTouched] = useState({
     username: false,
     fullName: false,
@@ -66,10 +68,11 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
       password,
       full_name: fullName || undefined,
     })
-    if (success && onSuccess) {
-      onSuccess()
+    if (success) {
+      // 회원가입 성공 시 모달 표시
+      setShowSuccessModal(true)
     }
-  }, [username, fullName, email, password, isValid, register, clearError, onSuccess])
+  }, [username, fullName, email, password, isValid, register, clearError])
 
   // 비밀번호 강도 표시
   const getPasswordStrength = (pwd: string) => {
@@ -296,10 +299,14 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
           className="mt-1 w-4 h-4 text-accent-primary border-theme-border rounded focus:ring-accent-primary"
         />
         <label htmlFor="agree-terms" className="text-sm text-text-secondary">
-          <span className="text-accent-primary hover:underline cursor-pointer">이용약관</span> 및{' '}
-          <span className="text-accent-primary hover:underline cursor-pointer">개인정보 처리방침</span>에 동의합니다
+          <Link to="/terms" className="text-accent-primary hover:underline">이용약관</Link> 및{' '}
+          <Link to="/privacy" className="text-accent-primary hover:underline">개인정보 처리방침</Link>에 동의합니다
+          <span className="text-accent-danger ml-1">*</span>
         </label>
       </div>
+      {!agreeTerms && touched.confirmPassword && (
+        <p className="text-sm text-accent-danger -mt-3">이용약관에 동의해주세요</p>
+      )}
 
       {/* 회원가입 버튼 */}
       <button
@@ -332,6 +339,45 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
               로그인
             </button>
           </p>
+        </div>
+      )}
+
+      {/* 회원가입 완료 모달 */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-theme-card border border-theme-border rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl animate-scale-in">
+            {/* 성공 아이콘 */}
+            <div className="w-16 h-16 mx-auto mb-4 bg-accent-success/10 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-accent-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+
+            {/* 제목 */}
+            <h3 className="text-xl font-semibold text-text-primary text-center mb-2">
+              회원가입 완료
+            </h3>
+
+            {/* 설명 */}
+            <p className="text-sm text-text-secondary text-center mb-6">
+              회원가입이 완료되었습니다.
+              <br />
+              로그인 페이지에서 로그인해주세요.
+            </p>
+
+            {/* 확인 버튼 */}
+            <Link
+              to="/login"
+              className="block w-full py-3 px-4 bg-accent-primary hover:bg-accent-primary/90 text-white font-medium rounded-xl text-center transition-colors"
+              onClick={() => {
+                setShowSuccessModal(false)
+                // 로그아웃 상태로 전환 (자동 로그인 방지)
+                useAuthStore.getState().logout()
+              }}
+            >
+              로그인하러 가기
+            </Link>
+          </div>
         </div>
       )}
     </form>
