@@ -14,6 +14,7 @@ const MainSearchPage = lazy(() => import('./pages/MainSearchPage'))
 const GraphPage = lazy(() => import('./pages/GraphPage'))
 const ReportPage = lazy(() => import('./pages/ReportPage'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
+const AboutPage = lazy(() => import('./pages/AboutPage'))
 
 function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth)
@@ -28,6 +29,7 @@ function App() {
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/about" element={<AboutPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/oauth/callback" element={<OAuthCallbackPage />} />

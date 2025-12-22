@@ -181,7 +181,7 @@ function LoginPage() {
               </>
             )}
             {' '}또는{' '}
-            <Link to="/" className="text-text-primary font-medium hover:underline">
+            <Link to="/about" className="text-text-primary font-medium hover:underline">
               더 알아보기
             </Link>
           </p>
