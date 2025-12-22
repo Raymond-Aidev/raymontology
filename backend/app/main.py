@@ -15,6 +15,7 @@ from app.database import init_db, close_db
 # Import new API endpoints
 from app.api.endpoints import (
     graph,
+    graph_fallback,
     financials,
     risks,
     companies as companies_api,
@@ -67,6 +68,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 # API Routers
 app.include_router(auth.router)
 app.include_router(graph.router, prefix="/api")
+app.include_router(graph_fallback.router, prefix="/api")
 app.include_router(financials.router, prefix="/api")
 app.include_router(risks.router, prefix="/api")
 app.include_router(companies_api.router, prefix="/api")

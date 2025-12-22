@@ -125,6 +125,11 @@ class RecenterRequest(BaseModel):
 
 
 # Dependencies
+def is_neo4j_available() -> bool:
+    """Neo4j 드라이버 사용 가능 여부 확인"""
+    return db_module.neo4j_driver is not None
+
+
 async def get_neo4j_driver():
     """공유 Neo4j driver 제공 (app.database에서 초기화된 드라이버 사용)"""
     # 동적으로 neo4j_driver 참조 (init_db 이후 업데이트된 값 사용)

@@ -237,16 +237,17 @@ export async function getCompanyNetwork(
   limit: number = NODE_LIMIT,
   dateRange?: DateRangeParams
 ): Promise<GraphData & { isLimited: boolean; originalCount: number }> {
+  const params = {
+    depth,
+    limit: limit + 50, // 여유분 요청 후 클라이언트에서 필터링
+    ...(dateRange?.date_from && { date_from: dateRange.date_from }),
+    ...(dateRange?.date_to && { date_to: dateRange.date_to }),
+    ...(dateRange?.report_years && { report_years: dateRange.report_years.join(',') }),
+  }
+
+  // 1차: Neo4j 기반 Graph API 시도
   try {
-    const response = await apiClient.get<ApiGraphResponse>(`/api/graph/company/${companyId}`, {
-      params: {
-        depth,
-        limit: limit + 50, // 여유분 요청 후 클라이언트에서 필터링
-        ...(dateRange?.date_from && { date_from: dateRange.date_from }),
-        ...(dateRange?.date_to && { date_to: dateRange.date_to }),
-        ...(dateRange?.report_years && { report_years: dateRange.report_years.join(',') }),
-      },
-    })
+    const response = await apiClient.get<ApiGraphResponse>(`/api/graph/company/${companyId}`, { params })
     const fullData = transformApiResponse(response.data)
     const originalCount = fullData.nodes.length
     const limitedData = applyNodeLimit(fullData, limit)
@@ -257,8 +258,23 @@ export async function getCompanyNetwork(
       originalCount,
     }
   } catch (error) {
-    // API 실패 시 빈 데이터 반환 (더미 데이터 사용 안 함)
-    console.warn('Graph API 호출 실패:', error)
+    console.warn('Neo4j Graph API 실패, PostgreSQL 폴백 시도:', error)
+  }
+
+  // 2차: PostgreSQL 기반 폴백 API 시도
+  try {
+    const response = await apiClient.get<ApiGraphResponse>(`/api/graph-fallback/company/${companyId}`, { params })
+    const fullData = transformApiResponse(response.data)
+    const originalCount = fullData.nodes.length
+    const limitedData = applyNodeLimit(fullData, limit)
+
+    return {
+      ...limitedData,
+      isLimited: originalCount > limit,
+      originalCount,
+    }
+  } catch (fallbackError) {
+    console.warn('PostgreSQL 폴백 API도 실패:', fallbackError)
     return {
       nodes: [],
       links: [],

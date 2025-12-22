@@ -4,30 +4,17 @@ plugins {
 }
 
 android {
-    namespace = "com.raymontology.app"
+    namespace = "net.konnectai.app"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.raymontology.app"
+        applicationId = "net.konnectai.app"
         minSdk = 24
         targetSdk = 34
         versionCode = 1
         versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        // WebApp URL - change this for production
-        buildConfigField("String", "WEBAPP_URL", "\"https://raymontology.com\"")
-    }
-
-    signingConfigs {
-        create("release") {
-            // For production: store these in environment variables or local.properties
-            // storeFile = file("keystore/raymontology.jks")
-            // storePassword = System.getenv("KEYSTORE_PASSWORD")
-            // keyAlias = "raymontology"
-            // keyPassword = System.getenv("KEY_PASSWORD")
-        }
     }
 
     buildTypes {
@@ -38,27 +25,20 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Uncomment when signing config is set up
-            // signingConfig = signingConfigs.getByName("release")
-        }
-        debug {
-            isMinifyEnabled = false
-            buildConfigField("String", "WEBAPP_URL", "\"http://10.0.2.2:5173\"")
         }
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
 
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = "1.8"
     }
 
     buildFeatures {
         viewBinding = true
-        buildConfig = true
     }
 }
 
@@ -69,7 +49,7 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation("androidx.webkit:webkit:1.9.0")
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
-
+    
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
