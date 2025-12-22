@@ -34,7 +34,7 @@ function LoginPage() {
             <img
               src="/logo.png"
               alt="Raymond Partners"
-              className="h-10 w-auto object-contain brightness-0 invert"
+              className="h-12 w-auto object-contain"
             />
           </Link>
         </div>
