@@ -6,7 +6,7 @@ import RaymondsRiskLogo from '../components/common/RaymondsRiskLogo'
 function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { isAuthenticated, isLoading: authLoading, login, register, error, clearError } = useAuthStore()
+  const { isAuthenticated, isLoading: authLoading, login, register, clearError } = useAuthStore()
 
   // 로그인 전에 접근하려던 페이지
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/'
@@ -50,14 +50,16 @@ function LoginPage() {
       if (success) {
         navigate(from, { replace: true })
       } else {
-        setLoginError(error || '이메일 또는 비밀번호가 올바르지 않습니다.')
+        // store에서 error 가져오기
+        const storeError = useAuthStore.getState().error
+        setLoginError(storeError || '이메일 또는 비밀번호가 올바르지 않습니다.')
       }
     } catch {
       setLoginError('로그인 중 오류가 발생했습니다.')
     } finally {
       setLoginLoading(false)
     }
-  }, [loginEmail, loginPassword, login, clearError, navigate, from, error])
+  }, [loginEmail, loginPassword, login, clearError, navigate, from])
 
   // 비밀번호 유효성 검사
   const validatePassword = (pwd: string) => {
@@ -100,14 +102,16 @@ function LoginPage() {
         setRegisterUsername('')
         setAgreeTerms(false)
       } else {
-        setRegisterError(error || '회원가입 중 오류가 발생했습니다.')
+        // store에서 error 가져오기
+        const storeError = useAuthStore.getState().error
+        setRegisterError(storeError || '회원가입 중 오류가 발생했습니다.')
       }
     } catch {
       setRegisterError('회원가입 중 오류가 발생했습니다.')
     } finally {
       setRegisterLoading(false)
     }
-  }, [isRegisterValid, register, registerEmail, registerPassword, registerUsername, clearError, error])
+  }, [isRegisterValid, register, registerEmail, registerPassword, registerUsername, clearError])
 
   return (
     <div className="min-h-screen bg-theme-bg py-8 px-4 sm:px-6">

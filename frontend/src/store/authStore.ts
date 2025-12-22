@@ -102,23 +102,13 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null })
 
         try {
-          // 실제 API 호출
-          const response = await apiClient.post('/api/auth/register', data)
-          const { access_token } = response.data
+          // 실제 API 호출 - 회원가입만 수행 (자동 로그인 안 함)
+          await apiClient.post('/api/auth/register', data)
 
-          // 토큰 저장 (localStorage + Zustand)
-          saveToken(access_token)
-          set({ token: access_token })
-
-          // 사용자 정보 조회
-          const userResponse = await apiClient.get('/api/auth/me', {
-            headers: { Authorization: `Bearer ${access_token}` }
-          })
-
+          // 회원가입 성공 - 자동 로그인 안 함 (사용자가 직접 로그인하도록)
           set({
-            user: userResponse.data,
-            isAuthenticated: true,
             isLoading: false,
+            error: null,
           })
           return true
         } catch (err: unknown) {
