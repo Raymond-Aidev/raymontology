@@ -57,7 +57,7 @@ function ForgotPasswordPage() {
         <div className="text-center mb-8">
           <Link to="/">
             <img
-              src="/logo.png"
+              src="/logo.png?v=2"
               alt="Raymond Partners"
               className="h-10 w-auto object-contain mx-auto"
             />

@@ -32,7 +32,7 @@ function LoginPage() {
         <div>
           <Link to="/">
             <img
-              src="/logo.png"
+              src="/logo.png?v=2"
               alt="Raymond Partners"
               className="h-16 w-auto object-contain"
             />
@@ -87,7 +87,7 @@ function LoginPage() {
           <div className="lg:hidden text-center mb-8">
             <Link to="/">
               <img
-                src="/logo.png"
+                src="/logo.png?v=2"
                 alt="Raymond Partners"
                 className="h-14 w-auto object-contain mx-auto"
               />

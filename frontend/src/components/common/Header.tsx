@@ -18,7 +18,7 @@ function Header() {
           <div className="flex items-center gap-4">
             <Link to="/" className="flex items-center group">
               <img
-                src="/logo.png"
+                src="/logo.png?v=2"
                 alt="Raymond Partners"
                 className="h-8 w-auto object-contain"
               />
