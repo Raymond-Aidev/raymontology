@@ -4,13 +4,18 @@
 import logging
 import smtplib
 import ssl
+import asyncio
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Optional
+from concurrent.futures import ThreadPoolExecutor
 
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+# Thread pool for synchronous SMTP operations
+_executor = ThreadPoolExecutor(max_workers=3)
 
 
 class EmailService:
@@ -28,22 +33,14 @@ class EmailService:
         """Gmail SMTP가 설정되어 있는지 확인"""
         return bool(self.smtp_email and self.smtp_password)
 
-    async def send_email(
+    def _send_email_sync(
         self,
         to_email: str,
         subject: str,
         html_content: str,
         plain_content: Optional[str] = None
     ) -> bool:
-        """이메일 발송"""
-        if not self.is_configured:
-            logger.warning("Gmail SMTP not configured. Email not sent.")
-            # 개발 환경에서는 콘솔에 출력
-            logger.info(f"[DEV] Email to: {to_email}")
-            logger.info(f"[DEV] Subject: {subject}")
-            logger.info(f"[DEV] Content: {html_content[:200]}...")
-            return True  # 개발 환경에서는 성공으로 처리
-
+        """동기 이메일 발송 (스레드에서 실행)"""
         try:
             # 이메일 메시지 생성
             message = MIMEMultipart("alternative")
@@ -72,6 +69,32 @@ class EmailService:
         except Exception as e:
             logger.error(f"Error sending email: {e}")
             return False
+
+    async def send_email(
+        self,
+        to_email: str,
+        subject: str,
+        html_content: str,
+        plain_content: Optional[str] = None
+    ) -> bool:
+        """비동기 이메일 발송"""
+        if not self.is_configured:
+            logger.warning("Gmail SMTP not configured. Email not sent.")
+            logger.info(f"[DEV] Email to: {to_email}")
+            logger.info(f"[DEV] Subject: {subject}")
+            logger.info(f"[DEV] Content: {html_content[:200]}...")
+            return True
+
+        # 동기 SMTP 작업을 스레드 풀에서 실행
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            _executor,
+            self._send_email_sync,
+            to_email,
+            subject,
+            html_content,
+            plain_content
+        )
 
     async def send_password_reset_email(self, to_email: str, reset_token: str) -> bool:
         """비밀번호 재설정 이메일 발송"""
