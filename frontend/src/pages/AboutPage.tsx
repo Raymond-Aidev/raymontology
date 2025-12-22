@@ -33,20 +33,12 @@ export default function AboutPage() {
             </Link>
           </nav>
 
-          <div className="flex items-center gap-4">
-            <Link
-              to="/login"
-              className="text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
-            >
-              로그인
-            </Link>
-            <Link
-              to="/login"
-              className="px-4 py-2 bg-[#5E6AD2] hover:bg-[#4F5ABF] text-white text-sm font-medium rounded-lg transition-colors"
-            >
-              무료 체험 시작
-            </Link>
-          </div>
+          <Link
+            to="/login"
+            className="px-4 py-2 bg-[#5E6AD2] hover:bg-[#4F5ABF] text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            로그인
+          </Link>
         </div>
       </header>
 
@@ -72,7 +64,7 @@ export default function AboutPage() {
                 to="/login"
                 className="w-full sm:w-auto px-8 py-3.5 bg-[#5E6AD2] hover:bg-[#4F5ABF] text-white font-medium rounded-lg transition-colors"
               >
-                14일 무료 체험 시작
+                시작하기
               </Link>
               <a
                 href="#features"
@@ -163,8 +155,8 @@ export default function AboutPage() {
               </div>
               <h3 className="text-lg font-semibold text-text-primary mb-2">접근성과 경제성</h3>
               <p className="text-sm text-text-secondary leading-relaxed">
-                월 29,000원(하루 커피 한 잔 가격)으로 기관투자자 수준의 분석 도구를 이용할 수 있으며,
-                14일 무료 체험을 통해 부담 없이 시작할 수 있습니다.
+                합리적인 가격으로 기관투자자 수준의 분석 도구를 이용할 수 있으며,
+                간편하게 시작할 수 있습니다.
               </p>
             </div>
           </div>
@@ -484,26 +476,22 @@ export default function AboutPage() {
             지금 바로 시작하세요
           </h2>
           <p className="text-white/80 mb-8 max-w-2xl mx-auto">
-            14일 무료 체험으로 RaymondsRisk의 모든 기능을 경험해보세요.
-            신용카드 없이 시작할 수 있습니다.
+            RaymondsRisk로 숨겨진 투자 리스크를 발견하세요.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               to="/login"
               className="w-full sm:w-auto px-8 py-3.5 bg-white text-[#5E6AD2] font-medium rounded-lg hover:bg-gray-100 transition-colors"
             >
-              무료 체험 시작
+              시작하기
             </Link>
-            <a
-              href="mailto:contact@konnect-ai.net"
+            <Link
+              to="/contact"
               className="w-full sm:w-auto px-8 py-3.5 border border-white/30 text-white font-medium rounded-lg hover:bg-white/10 transition-colors"
             >
               문의하기
-            </a>
+            </Link>
           </div>
-          <p className="text-white/60 text-sm mt-6">
-            월 29,000원 · 14일 무료 체험 · 언제든 해지 가능
-          </p>
         </div>
       </section>
 
