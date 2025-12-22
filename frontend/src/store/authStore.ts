@@ -42,7 +42,7 @@ interface AuthState {
   login: (credentials: LoginCredentials) => Promise<boolean>
   register: (data: RegisterData) => Promise<boolean>
   logout: () => void
-  checkAuth: () => Promise<void>
+  checkAuth: () => Promise<boolean>
   updateUser: (user: Partial<User>) => void
   clearError: () => void
   setToken: (token: string) => void
@@ -146,7 +146,7 @@ export const useAuthStore = create<AuthState>()(
         const { token } = get()
         if (!token) {
           set({ isAuthenticated: false, user: null })
-          return
+          return false
         }
 
         set({ isLoading: true })
@@ -162,6 +162,7 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false,
           })
+          return true
         } catch {
           // 토큰이 유효하지 않으면 로그아웃
           set({
@@ -170,6 +171,7 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: false,
             isLoading: false,
           })
+          return false
         }
       },
 
@@ -179,7 +181,10 @@ export const useAuthStore = create<AuthState>()(
 
       clearError: () => set({ error: null }),
 
-      setToken: (token: string) => set({ token }),
+      setToken: (token: string) => {
+        saveToken(token)
+        set({ token })
+      },
 
       reset: () => set(initialState),
     }),

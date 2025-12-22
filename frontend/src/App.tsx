@@ -9,6 +9,7 @@ import { useAuthStore } from './store/authStore'
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
+const OAuthCallbackPage = lazy(() => import('./pages/OAuthCallbackPage'))
 const MainSearchPage = lazy(() => import('./pages/MainSearchPage'))
 const GraphPage = lazy(() => import('./pages/GraphPage'))
 const ReportPage = lazy(() => import('./pages/ReportPage'))
@@ -29,6 +30,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
 
         {/* Protected routes */}
         <Route element={

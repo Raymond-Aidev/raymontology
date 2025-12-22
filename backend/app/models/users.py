@@ -22,10 +22,15 @@ class User(Base):
     # 기본 정보
     email = Column(String(255), unique=True, nullable=False, index=True)
     username = Column(String(50), unique=True, nullable=False, index=True)
-    hashed_password = Column(String(255), nullable=False)
+    hashed_password = Column(String(255), nullable=True)  # nullable for OAuth users
 
     # 프로필
     full_name = Column(String(100), nullable=True)
+    profile_image = Column(String(500), nullable=True)
+
+    # OAuth 정보
+    oauth_provider = Column(String(20), nullable=True)  # 'google', 'kakao'
+    oauth_provider_id = Column(String(255), nullable=True, index=True)
 
     # 권한
     is_active = Column(Boolean, default=True, nullable=False)

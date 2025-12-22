@@ -24,7 +24,7 @@ from app.api.endpoints import (
     cb_subscribers,
     company_report
 )
-from app.routes import auth
+from app.routes import auth, oauth
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -67,6 +67,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # API Routers
 app.include_router(auth.router)
+app.include_router(oauth.router)
 app.include_router(graph.router, prefix="/api")
 app.include_router(graph_fallback.router, prefix="/api")
 app.include_router(financials.router, prefix="/api")

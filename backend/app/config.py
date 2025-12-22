@@ -48,6 +48,16 @@ class Settings(BaseSettings):
     email_from_name: str = "Raymontology"
     password_reset_expire_minutes: int = 60
 
+    # Google OAuth
+    google_client_id: Optional[str] = None
+    google_client_secret: Optional[str] = None
+    google_redirect_uri: str = "https://api.konnect-ai.net/api/auth/google/callback"
+
+    # Kakao OAuth
+    kakao_client_id: Optional[str] = None
+    kakao_client_secret: Optional[str] = None
+    kakao_redirect_uri: str = "https://api.konnect-ai.net/api/auth/kakao/callback"
+
     # Environment
     environment: str = "development"
     debug: bool = False
