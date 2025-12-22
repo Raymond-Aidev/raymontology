@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { LoginForm, RegisterForm } from '../components/auth'
 import { useAuthStore } from '../store/authStore'
 
@@ -7,18 +7,22 @@ type AuthMode = 'login' | 'register'
 
 function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { isAuthenticated, isLoading } = useAuthStore()
   const [mode, setMode] = useState<AuthMode>('login')
 
-  // 이미 로그인된 경우 메인 페이지로 리다이렉트
+  // 로그인 전에 접근하려던 페이지
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/'
+
+  // 이미 로그인된 경우 원래 페이지로 리다이렉트
   useEffect(() => {
     if (isAuthenticated && !isLoading) {
-      navigate('/', { replace: true })
+      navigate(from, { replace: true })
     }
-  }, [isAuthenticated, isLoading, navigate])
+  }, [isAuthenticated, isLoading, navigate, from])
 
   const handleSuccess = () => {
-    navigate('/', { replace: true })
+    navigate(from, { replace: true })
   }
 
   return (
@@ -121,20 +125,6 @@ function LoginPage() {
             )}
           </div>
 
-          {/* 게스트 모드 */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-500 mb-2">로그인 없이 둘러보기</p>
-            <Link
-              to="/"
-              className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-              게스트로 이용하기
-            </Link>
-          </div>
         </div>
       </div>
     </div>

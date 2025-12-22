@@ -1,14 +1,16 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import apiClient, { setToken as saveToken, removeToken } from '../api/client'
 
-// 사용자 타입
+// 사용자 타입 (백엔드 UserMe 스키마와 일치)
 export interface User {
   id: string
   email: string
-  name: string
-  role: 'user' | 'admin'
-  avatar?: string
-  createdAt: string
+  username: string
+  full_name: string | null
+  is_active: boolean
+  is_superuser: boolean
+  created_at: string
 }
 
 // 로그인 자격 증명
@@ -20,8 +22,9 @@ export interface LoginCredentials {
 // 회원가입 데이터
 export interface RegisterData {
   email: string
+  username: string
   password: string
-  name: string
+  full_name?: string
 }
 
 // 인증 스토어 상태
@@ -42,6 +45,7 @@ interface AuthState {
   checkAuth: () => Promise<void>
   updateUser: (user: Partial<User>) => void
   clearError: () => void
+  setToken: (token: string) => void
 
   // 초기화
   reset: () => void
@@ -64,54 +68,30 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null })
 
         try {
-          // TODO: 실제 API 호출로 교체
-          // const response = await apiClient.post('/auth/login', credentials)
-          // const { user, token } = response.data
+          // 실제 API 호출
+          const response = await apiClient.post('/api/auth/login', credentials)
+          const { access_token } = response.data
 
-          // Mock 로그인 (개발용)
-          await new Promise(resolve => setTimeout(resolve, 500))
+          // 토큰 저장 (localStorage + Zustand)
+          saveToken(access_token)
+          set({ token: access_token })
 
-          if (credentials.email === 'admin@test.com' && credentials.password === 'password') {
-            const mockUser: User = {
-              id: '1',
-              email: credentials.email,
-              name: '관리자',
-              role: 'admin',
-              createdAt: new Date().toISOString(),
-            }
-            const mockToken = 'mock-jwt-token-12345'
+          // 사용자 정보 조회
+          const userResponse = await apiClient.get('/api/auth/me', {
+            headers: { Authorization: `Bearer ${access_token}` }
+          })
 
-            set({
-              user: mockUser,
-              token: mockToken,
-              isAuthenticated: true,
-              isLoading: false,
-            })
-            return true
-          } else if (credentials.email && credentials.password) {
-            // 일반 사용자 Mock
-            const mockUser: User = {
-              id: '2',
-              email: credentials.email,
-              name: credentials.email.split('@')[0],
-              role: 'user',
-              createdAt: new Date().toISOString(),
-            }
-            const mockToken = 'mock-jwt-token-user-' + Date.now()
-
-            set({
-              user: mockUser,
-              token: mockToken,
-              isAuthenticated: true,
-              isLoading: false,
-            })
-            return true
-          }
-
-          throw new Error('이메일 또는 비밀번호가 올바르지 않습니다')
-        } catch (err) {
           set({
-            error: err instanceof Error ? err.message : '로그인에 실패했습니다',
+            user: userResponse.data,
+            isAuthenticated: true,
+            isLoading: false,
+          })
+          return true
+        } catch (err: unknown) {
+          const error = err as { response?: { data?: { detail?: string } } }
+          const message = error.response?.data?.detail || '로그인에 실패했습니다'
+          set({
+            error: message,
             isLoading: false,
           })
           return false
@@ -122,36 +102,30 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null })
 
         try {
-          // TODO: 실제 API 호출로 교체
-          // const response = await apiClient.post('/auth/register', data)
+          // 실제 API 호출
+          const response = await apiClient.post('/api/auth/register', data)
+          const { access_token } = response.data
 
-          // Mock 회원가입
-          await new Promise(resolve => setTimeout(resolve, 500))
+          // 토큰 저장 (localStorage + Zustand)
+          saveToken(access_token)
+          set({ token: access_token })
 
-          // 이메일 중복 검사 (Mock)
-          if (data.email === 'admin@test.com') {
-            throw new Error('이미 사용 중인 이메일입니다')
-          }
-
-          const mockUser: User = {
-            id: String(Date.now()),
-            email: data.email,
-            name: data.name,
-            role: 'user',
-            createdAt: new Date().toISOString(),
-          }
-          const mockToken = 'mock-jwt-token-' + Date.now()
+          // 사용자 정보 조회
+          const userResponse = await apiClient.get('/api/auth/me', {
+            headers: { Authorization: `Bearer ${access_token}` }
+          })
 
           set({
-            user: mockUser,
-            token: mockToken,
+            user: userResponse.data,
             isAuthenticated: true,
             isLoading: false,
           })
           return true
-        } catch (err) {
+        } catch (err: unknown) {
+          const error = err as { response?: { data?: { detail?: string } } }
+          const message = error.response?.data?.detail || '회원가입에 실패했습니다'
           set({
-            error: err instanceof Error ? err.message : '회원가입에 실패했습니다',
+            error: message,
             isLoading: false,
           })
           return false
@@ -159,9 +133,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
-        // 토큰 제거
-        localStorage.removeItem('auth-store')
-
+        removeToken()
         set({
           user: null,
           token: null,
@@ -173,23 +145,25 @@ export const useAuthStore = create<AuthState>()(
       checkAuth: async () => {
         const { token } = get()
         if (!token) {
-          set({ isAuthenticated: false })
+          set({ isAuthenticated: false, user: null })
           return
         }
 
         set({ isLoading: true })
 
         try {
-          // TODO: 실제 API 호출로 교체
-          // const response = await apiClient.get('/auth/me')
-          // set({ user: response.data, isAuthenticated: true })
+          // 토큰으로 사용자 정보 조회
+          const response = await apiClient.get('/api/auth/me', {
+            headers: { Authorization: `Bearer ${token}` }
+          })
 
-          // Mock 토큰 검증
-          await new Promise(resolve => setTimeout(resolve, 200))
-
-          // 토큰이 있으면 인증된 것으로 처리 (Mock)
-          set({ isLoading: false, isAuthenticated: true })
+          set({
+            user: response.data,
+            isAuthenticated: true,
+            isLoading: false,
+          })
         } catch {
+          // 토큰이 유효하지 않으면 로그아웃
           set({
             user: null,
             token: null,
@@ -205,6 +179,8 @@ export const useAuthStore = create<AuthState>()(
 
       clearError: () => set({ error: null }),
 
+      setToken: (token: string) => set({ token }),
+
       reset: () => set(initialState),
     }),
     {
@@ -219,6 +195,6 @@ export const useAuthStore = create<AuthState>()(
 )
 
 // 유틸리티 셀렉터
-export const selectIsAdmin = (state: AuthState) => state.user?.role === 'admin'
-export const selectUserName = (state: AuthState) => state.user?.name || '게스트'
+export const selectIsAdmin = (state: AuthState) => state.user?.is_superuser === true
+export const selectUserName = (state: AuthState) => state.user?.full_name || state.user?.username || '사용자'
 export const selectUserEmail = (state: AuthState) => state.user?.email || ''

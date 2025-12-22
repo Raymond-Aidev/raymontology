@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../../store/authStore'
+import { useAuthStore, selectUserName } from '../../store/authStore'
 import { ApiStatusDot } from './ApiStatusIndicator'
 
 function Header() {
@@ -8,6 +8,7 @@ function Header() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const navigate = useNavigate()
   const { user, isAuthenticated, logout } = useAuthStore()
+  const displayName = useAuthStore(selectUserName)
 
   return (
     <header className="bg-dark-surface/80 backdrop-blur-xl border-b border-dark-border sticky top-0 z-50">
@@ -54,15 +55,15 @@ function Header() {
                   className="flex items-center gap-2 px-3 py-1.5 bg-dark-card border border-dark-border rounded-lg hover:border-dark-hover transition-all"
                 >
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                    user.role === 'admin'
+                    user.is_superuser
                       ? 'bg-gradient-to-br from-accent-primary to-purple-500'
                       : 'bg-dark-hover'
                   }`}>
                     <span className="text-xs font-medium text-white">
-                      {user.name.charAt(0).toUpperCase()}
+                      {displayName.charAt(0).toUpperCase()}
                     </span>
                   </div>
-                  <span className="text-sm text-text-secondary">{user.name}</span>
+                  <span className="text-sm text-text-secondary">{displayName}</span>
                   <svg className={`w-4 h-4 text-text-muted transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
@@ -72,9 +73,9 @@ function Header() {
                 {isUserMenuOpen && (
                   <div className="absolute right-0 mt-2 w-56 bg-dark-card border border-dark-border rounded-xl shadow-card-hover py-1 animate-scale-in">
                     <div className="px-4 py-3 border-b border-dark-border">
-                      <p className="text-sm font-medium text-text-primary">{user.name}</p>
+                      <p className="text-sm font-medium text-text-primary">{displayName}</p>
                       <p className="text-xs text-text-muted mt-0.5">{user.email}</p>
-                      {user.role === 'admin' && (
+                      {user.is_superuser && (
                         <span className="inline-block mt-2 px-2 py-0.5 text-xs bg-accent-primary/20 text-accent-primary rounded-full">
                           관리자
                         </span>
@@ -160,19 +161,19 @@ function Header() {
                 <div className="px-4 space-y-3">
                   <div className="flex items-center gap-3 py-2">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      user.role === 'admin'
+                      user.is_superuser
                         ? 'bg-gradient-to-br from-accent-primary to-purple-500'
                         : 'bg-dark-hover'
                     }`}>
                       <span className="text-sm font-medium text-white">
-                        {user.name.charAt(0).toUpperCase()}
+                        {displayName.charAt(0).toUpperCase()}
                       </span>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-text-primary">{user.name}</p>
+                      <p className="text-sm font-medium text-text-primary">{displayName}</p>
                       <p className="text-xs text-text-muted">{user.email}</p>
                     </div>
-                    {user.role === 'admin' && (
+                    {user.is_superuser && (
                       <span className="ml-auto px-2 py-0.5 text-xs bg-accent-primary/20 text-accent-primary rounded-full">
                         관리자
                       </span>
