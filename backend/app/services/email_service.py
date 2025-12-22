@@ -57,9 +57,9 @@ class EmailService:
             part2 = MIMEText(html_content, "html", "utf-8")
             message.attach(part2)
 
-            # Gmail SMTP로 발송 (포트 587 + STARTTLS)
+            # Gmail SMTP로 발송 (포트 587 + STARTTLS, 타임아웃 30초)
             context = ssl.create_default_context()
-            with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            with smtplib.SMTP("smtp.gmail.com", 587, timeout=30) as server:
                 server.starttls(context=context)
                 server.login(self.smtp_email, self.smtp_password)
                 server.sendmail(self.smtp_email, to_email, message.as_string())

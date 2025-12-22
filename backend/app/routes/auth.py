@@ -1,7 +1,7 @@
 """
 Authentication Routes
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import datetime, timedelta
@@ -32,9 +32,22 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
+def send_verification_email_sync(to_email: str, token: str, username: str):
+    """백그라운드에서 이메일 발송 (동기)"""
+    import asyncio
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(email_service.send_verification_email(to_email, token, username))
+        loop.close()
+    except Exception as e:
+        logger.error(f"Background email error: {e}")
+
+
 @router.post("/register", status_code=status.HTTP_201_CREATED, response_model=MessageResponse)
 async def register(
     user_data: UserRegister,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -116,14 +129,15 @@ async def register(
         db.add(verification_token)
         await db.commit()
 
-        # 인증 이메일 발송
-        await email_service.send_verification_email(
-            to_email=user_data.email,
-            verification_token=raw_token,
-            username=user_data.username
+        # 인증 이메일 발송 (백그라운드)
+        background_tasks.add_task(
+            send_verification_email_sync,
+            user_data.email,
+            raw_token,
+            user_data.username
         )
 
-        logger.info(f"Verification email sent to: {user_data.email}")
+        logger.info(f"Verification email queued for: {user_data.email}")
 
         return MessageResponse(message="인증 이메일이 발송되었습니다. 이메일을 확인해주세요.")
 
