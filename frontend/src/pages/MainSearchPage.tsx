@@ -72,19 +72,31 @@ function MainSearchPage() {
         <div className="absolute inset-0 bg-gradient-radial from-accent-primary/5 via-transparent to-transparent" />
 
         <div className="relative z-10 text-center mb-10 animate-fade-in">
-          {/* Logo badge */}
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 mb-6 bg-dark-card border border-dark-border rounded-full">
-            <div className="w-2 h-2 rounded-full bg-accent-success animate-pulse" />
-            <span className="text-xs font-medium text-text-secondary">실시간 데이터 분석 중</span>
+          {/* Feature badges */}
+          <div className="flex flex-wrap items-center justify-center gap-2 mb-8">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-dark-card border border-dark-border rounded-full">
+              <span className="text-sm">🔍</span>
+              <span className="text-xs font-medium text-text-secondary">3단계 관계망 분석</span>
+            </div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-dark-card border border-dark-border rounded-full">
+              <span className="text-sm">⚡</span>
+              <span className="text-xs font-medium text-text-secondary">실시간 리스크 탐지</span>
+            </div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-dark-card border border-dark-border rounded-full">
+              <span className="text-sm">📊</span>
+              <span className="text-xs font-medium text-text-secondary">FairLens 스코어</span>
+            </div>
           </div>
 
-          <h1 className="text-4xl md:text-6xl font-bold text-text-primary mb-4 tracking-tight">
-            <span className="text-gradient">Raymontology</span>
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-text-primary mb-6 tracking-tight leading-tight">
+            기관만 보던 리스크,
+            <br />
+            <span className="text-gradient">이제 당신도 봅니다.</span>
           </h1>
           <p className="text-lg md:text-xl text-text-secondary max-w-2xl mx-auto leading-relaxed">
-            한국 주식시장의 숨겨진 이해관계자 네트워크를 분석하여
+            3단계 관계망 분석으로 임원 이력, CB 인수자, 숨겨진 연결고리까지.
             <br className="hidden sm:block" />
-            개인 투자자를 보호하는 리스크 탐지 플랫폼
+            <span className="text-accent-primary font-medium">FairLens</span>가 개인투자자의 눈이 되어드립니다.
           </p>
         </div>
 
