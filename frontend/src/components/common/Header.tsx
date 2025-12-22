@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore, selectUserName } from '../../store/authStore'
 import { ApiStatusDot } from './ApiStatusIndicator'
+import RaymondsRiskLogo from './RaymondsRiskLogo'
 
 function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -16,12 +17,8 @@ function Header() {
         <div className="flex items-center justify-between h-14">
           {/* Logo + API Status */}
           <div className="flex items-center gap-4">
-            <Link to="/" className="flex items-center group">
-              <img
-                src="/logo.png?v=2"
-                alt="Raymond Partners"
-                className="h-8 w-auto object-contain"
-              />
+            <Link to="/" className="inline-block">
+              <RaymondsRiskLogo size="md" variant="compact" />
             </Link>
             {/* API Status */}
             <div className="hidden sm:flex items-center gap-2 px-2 py-1 bg-dark-card rounded-full border border-dark-border">

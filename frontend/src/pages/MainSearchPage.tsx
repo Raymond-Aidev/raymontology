@@ -93,7 +93,7 @@ function MainSearchPage() {
             </div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-dark-card border border-dark-border rounded-full">
               <span className="text-sm">📊</span>
-              <span className="text-xs font-medium text-text-secondary">FairLens 스코어</span>
+              <span className="text-xs font-medium text-text-secondary">RaymondsRisk 스코어</span>
             </div>
           </div>
 
@@ -105,7 +105,7 @@ function MainSearchPage() {
           <p className="text-lg md:text-xl text-text-secondary max-w-2xl mx-auto leading-relaxed">
             3단계 관계망 분석으로 임원 이력, CB 인수자, 숨겨진 연결고리까지.
             <br className="hidden sm:block" />
-            <span className="text-accent-primary font-medium">FairLens</span>가 개인투자자의 눈이 되어드립니다.
+            <span className="text-accent-primary font-medium">RaymondsRisk</span>가 개인투자자의 눈이 되어드립니다.
           </p>
         </div>
 

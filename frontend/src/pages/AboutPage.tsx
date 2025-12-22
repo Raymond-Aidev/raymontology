@@ -4,12 +4,35 @@ import RaymondsRiskLogo from '../components/common/RaymondsRiskLogo'
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-theme-bg">
-      {/* 헤더 */}
+      {/* 헤더 - 메인과 동일한 네비게이션 */}
       <header className="sticky top-0 z-50 bg-theme-bg/80 backdrop-blur-lg border-b border-theme-border">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <Link to="/" className="inline-block">
             <RaymondsRiskLogo size="md" variant="compact" />
           </Link>
+
+          {/* 네비게이션 */}
+          <nav className="hidden md:flex items-center gap-1">
+            <Link
+              to="/"
+              className="px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-theme-hover rounded-lg transition-all"
+            >
+              검색
+            </Link>
+            <Link
+              to="/about"
+              className="px-3 py-2 text-sm text-text-primary font-medium bg-theme-hover rounded-lg"
+            >
+              서비스 소개
+            </Link>
+            <Link
+              to="/contact"
+              className="px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-theme-hover rounded-lg transition-all"
+            >
+              문의
+            </Link>
+          </nav>
+
           <div className="flex items-center gap-4">
             <Link
               to="/login"
