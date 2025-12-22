@@ -69,9 +69,9 @@ function ResetPasswordPage() {
   // 토큰이 없는 경우
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-dark-bg p-4">
+      <div className="min-h-screen flex items-center justify-center bg-theme-bg p-4">
         <div className="w-full max-w-md">
-          <div className="bg-dark-card border border-dark-border rounded-2xl shadow-xl p-8 text-center">
+          <div className="bg-theme-card border border-theme-border rounded-2xl shadow-xl p-8 text-center">
             <div className="w-16 h-16 bg-accent-danger/20 rounded-full flex items-center justify-center mx-auto mb-6">
               <svg className="w-8 h-8 text-accent-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -97,9 +97,9 @@ function ResetPasswordPage() {
   // 성공 화면
   if (isSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-dark-bg p-4">
+      <div className="min-h-screen flex items-center justify-center bg-theme-bg p-4">
         <div className="w-full max-w-md">
-          <div className="bg-dark-card border border-dark-border rounded-2xl shadow-xl p-8 text-center">
+          <div className="bg-theme-card border border-theme-border rounded-2xl shadow-xl p-8 text-center">
             <div className="w-16 h-16 bg-accent-success/20 rounded-full flex items-center justify-center mx-auto mb-6">
               <svg className="w-8 h-8 text-accent-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -123,7 +123,7 @@ function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-dark-bg p-4">
+    <div className="min-h-screen flex items-center justify-center bg-theme-bg p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/">
@@ -135,7 +135,7 @@ function ResetPasswordPage() {
           </Link>
         </div>
 
-        <div className="bg-dark-card border border-dark-border rounded-2xl shadow-xl p-8">
+        <div className="bg-theme-card border border-theme-border rounded-2xl shadow-xl p-8">
           <h2 className="text-2xl font-bold text-text-primary mb-2">새 비밀번호 설정</h2>
           <p className="text-text-secondary mb-6">
             새로운 비밀번호를 입력해주세요.
@@ -165,8 +165,8 @@ function ResetPasswordPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="8자 이상, 대/소문자, 숫자, 특수문자 포함"
-                  className={`w-full pl-10 pr-12 py-3 bg-dark-surface border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 transition-colors
-                             ${passwordError ? 'border-accent-danger/50 focus:ring-accent-danger/30' : 'border-dark-border focus:ring-accent-primary/50 focus:border-accent-primary'}`}
+                  className={`w-full pl-10 pr-12 py-3 bg-theme-surface border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 transition-colors
+                             ${passwordError ? 'border-accent-danger/50 focus:ring-accent-danger/30' : 'border-theme-border focus:ring-accent-primary/50 focus:border-accent-primary'}`}
                 />
                 <button
                   type="button"
@@ -195,7 +195,7 @@ function ResetPasswordPage() {
                       <div
                         key={i}
                         className={`h-1 flex-1 rounded-full transition-colors ${
-                          i <= passwordStrength.level ? passwordStrength.color : 'bg-dark-border'
+                          i <= passwordStrength.level ? passwordStrength.color : 'bg-theme-border'
                         }`}
                       />
                     ))}
@@ -236,8 +236,8 @@ function ResetPasswordPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="비밀번호 재입력"
-                  className={`w-full pl-10 pr-4 py-3 bg-dark-surface border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 transition-colors
-                             ${confirmError ? 'border-accent-danger/50 focus:ring-accent-danger/30' : 'border-dark-border focus:ring-accent-primary/50 focus:border-accent-primary'}`}
+                  className={`w-full pl-10 pr-4 py-3 bg-theme-surface border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 transition-colors
+                             ${confirmError ? 'border-accent-danger/50 focus:ring-accent-danger/30' : 'border-theme-border focus:ring-accent-primary/50 focus:border-accent-primary'}`}
                 />
               </div>
               {confirmError && <p className="mt-1.5 text-sm text-accent-danger">{confirmError}</p>}

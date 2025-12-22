@@ -26,9 +26,9 @@ function ForgotPasswordPage() {
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-dark-bg p-4">
+      <div className="min-h-screen flex items-center justify-center bg-theme-bg p-4">
         <div className="w-full max-w-md">
-          <div className="bg-dark-card border border-dark-border rounded-2xl shadow-xl p-8 text-center">
+          <div className="bg-theme-card border border-theme-border rounded-2xl shadow-xl p-8 text-center">
             <div className="w-16 h-16 bg-accent-success/20 rounded-full flex items-center justify-center mx-auto mb-6">
               <svg className="w-8 h-8 text-accent-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -52,7 +52,7 @@ function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-dark-bg p-4">
+    <div className="min-h-screen flex items-center justify-center bg-theme-bg p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/">
@@ -64,7 +64,7 @@ function ForgotPasswordPage() {
           </Link>
         </div>
 
-        <div className="bg-dark-card border border-dark-border rounded-2xl shadow-xl p-8">
+        <div className="bg-theme-card border border-theme-border rounded-2xl shadow-xl p-8">
           <h2 className="text-2xl font-bold text-text-primary mb-2">비밀번호 찾기</h2>
           <p className="text-text-secondary mb-6">
             가입한 이메일 주소를 입력하시면 비밀번호 재설정 링크를 보내드립니다.
@@ -94,7 +94,7 @@ function ForgotPasswordPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   placeholder="example@email.com"
-                  className="w-full pl-10 pr-4 py-3 bg-dark-surface border border-dark-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent-primary/50 focus:border-accent-primary transition-colors"
+                  className="w-full pl-10 pr-4 py-3 bg-theme-surface border border-theme-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent-primary/50 focus:border-accent-primary transition-colors"
                 />
               </div>
             </div>

@@ -93,25 +93,25 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
     <form onSubmit={handleSubmit} className="space-y-5">
       {/* 에러 메시지 */}
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-          <svg className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="p-4 bg-accent-danger/10 border border-accent-danger/30 rounded-lg flex items-start gap-3">
+          <svg className="w-5 h-5 text-accent-danger mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <div>
-            <p className="text-sm font-medium text-red-800">회원가입 실패</p>
-            <p className="text-sm text-red-600 mt-1">{error}</p>
+            <p className="text-sm font-medium text-accent-danger">회원가입 실패</p>
+            <p className="text-sm text-accent-danger/80 mt-1">{error}</p>
           </div>
         </div>
       )}
 
       {/* 사용자명 입력 */}
       <div>
-        <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-          사용자명 <span className="text-red-500">*</span>
+        <label htmlFor="username" className="block text-sm font-medium text-text-secondary mb-2">
+          사용자명 <span className="text-accent-danger">*</span>
         </label>
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-5 w-5 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
           </div>
@@ -123,22 +123,22 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
             onBlur={() => setTouched(prev => ({ ...prev, username: true }))}
             placeholder="영문, 숫자, 밑줄 (3-50자)"
             autoComplete="username"
-            className={`w-full pl-10 pr-4 py-3 border rounded-lg transition-colors focus:outline-none focus:ring-2
-                       ${usernameError ? 'border-red-300 focus:ring-red-200 focus:border-red-400' :
-                                        'border-gray-300 focus:ring-blue-200 focus:border-blue-400'}`}
+            className={`w-full pl-10 pr-4 py-3 bg-theme-surface border rounded-lg text-text-primary placeholder-text-muted transition-colors focus:outline-none focus:ring-2
+                       ${usernameError ? 'border-accent-danger/50 focus:ring-accent-danger/30 focus:border-accent-danger' :
+                                        'border-theme-border focus:ring-accent-primary/30 focus:border-accent-primary'}`}
           />
         </div>
-        {usernameError && <p className="mt-1.5 text-sm text-red-600">{usernameError}</p>}
+        {usernameError && <p className="mt-1.5 text-sm text-accent-danger">{usernameError}</p>}
       </div>
 
       {/* 이름 입력 (선택) */}
       <div>
-        <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
-          이름 <span className="text-gray-400">(선택)</span>
+        <label htmlFor="fullName" className="block text-sm font-medium text-text-secondary mb-2">
+          이름 <span className="text-text-muted">(선택)</span>
         </label>
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-5 w-5 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
@@ -150,22 +150,22 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
             onBlur={() => setTouched(prev => ({ ...prev, fullName: true }))}
             placeholder="홍길동"
             autoComplete="name"
-            className={`w-full pl-10 pr-4 py-3 border rounded-lg transition-colors focus:outline-none focus:ring-2
-                       ${fullNameError ? 'border-red-300 focus:ring-red-200 focus:border-red-400' :
-                                        'border-gray-300 focus:ring-blue-200 focus:border-blue-400'}`}
+            className={`w-full pl-10 pr-4 py-3 bg-theme-surface border rounded-lg text-text-primary placeholder-text-muted transition-colors focus:outline-none focus:ring-2
+                       ${fullNameError ? 'border-accent-danger/50 focus:ring-accent-danger/30 focus:border-accent-danger' :
+                                        'border-theme-border focus:ring-accent-primary/30 focus:border-accent-primary'}`}
           />
         </div>
-        {fullNameError && <p className="mt-1.5 text-sm text-red-600">{fullNameError}</p>}
+        {fullNameError && <p className="mt-1.5 text-sm text-accent-danger">{fullNameError}</p>}
       </div>
 
       {/* 이메일 입력 */}
       <div>
-        <label htmlFor="register-email" className="block text-sm font-medium text-gray-700 mb-2">
-          이메일 <span className="text-red-500">*</span>
+        <label htmlFor="register-email" className="block text-sm font-medium text-text-secondary mb-2">
+          이메일 <span className="text-accent-danger">*</span>
         </label>
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-5 w-5 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
             </svg>
           </div>
@@ -177,22 +177,22 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
             onBlur={() => setTouched(prev => ({ ...prev, email: true }))}
             placeholder="example@email.com"
             autoComplete="email"
-            className={`w-full pl-10 pr-4 py-3 border rounded-lg transition-colors focus:outline-none focus:ring-2
-                       ${emailError ? 'border-red-300 focus:ring-red-200 focus:border-red-400' :
-                                     'border-gray-300 focus:ring-blue-200 focus:border-blue-400'}`}
+            className={`w-full pl-10 pr-4 py-3 bg-theme-surface border rounded-lg text-text-primary placeholder-text-muted transition-colors focus:outline-none focus:ring-2
+                       ${emailError ? 'border-accent-danger/50 focus:ring-accent-danger/30 focus:border-accent-danger' :
+                                     'border-theme-border focus:ring-accent-primary/30 focus:border-accent-primary'}`}
           />
         </div>
-        {emailError && <p className="mt-1.5 text-sm text-red-600">{emailError}</p>}
+        {emailError && <p className="mt-1.5 text-sm text-accent-danger">{emailError}</p>}
       </div>
 
       {/* 비밀번호 입력 */}
       <div>
-        <label htmlFor="register-password" className="block text-sm font-medium text-gray-700 mb-2">
-          비밀번호 <span className="text-red-500">*</span>
+        <label htmlFor="register-password" className="block text-sm font-medium text-text-secondary mb-2">
+          비밀번호 <span className="text-accent-danger">*</span>
         </label>
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-5 w-5 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
           </div>
@@ -204,14 +204,14 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
             onBlur={() => setTouched(prev => ({ ...prev, password: true }))}
             placeholder="8자 이상, 대/소문자, 숫자, 특수문자 포함"
             autoComplete="new-password"
-            className={`w-full pl-10 pr-12 py-3 border rounded-lg transition-colors focus:outline-none focus:ring-2
-                       ${passwordError ? 'border-red-300 focus:ring-red-200 focus:border-red-400' :
-                                        'border-gray-300 focus:ring-blue-200 focus:border-blue-400'}`}
+            className={`w-full pl-10 pr-12 py-3 bg-theme-surface border rounded-lg text-text-primary placeholder-text-muted transition-colors focus:outline-none focus:ring-2
+                       ${passwordError ? 'border-accent-danger/50 focus:ring-accent-danger/30 focus:border-accent-danger' :
+                                        'border-theme-border focus:ring-accent-primary/30 focus:border-accent-primary'}`}
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-text-muted hover:text-text-secondary"
           >
             {showPassword ? (
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -225,7 +225,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
             )}
           </button>
         </div>
-        {passwordError && <p className="mt-1.5 text-sm text-red-600">{passwordError}</p>}
+        {passwordError && <p className="mt-1.5 text-sm text-accent-danger">{passwordError}</p>}
 
         {/* 비밀번호 강도 표시 */}
         {password && (
@@ -235,38 +235,38 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
                 <div
                   key={i}
                   className={`h-1 flex-1 rounded-full transition-colors ${
-                    i <= passwordStrength.level ? passwordStrength.color : 'bg-gray-200'
+                    i <= passwordStrength.level ? passwordStrength.color : 'bg-theme-border'
                   }`}
                 />
               ))}
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              비밀번호 강도: <span className={passwordStrength.level <= 1 ? 'text-red-600' : passwordStrength.level <= 3 ? 'text-yellow-600' : 'text-green-600'}>{passwordStrength.text}</span>
+            <p className="text-xs text-text-muted mt-1">
+              비밀번호 강도: <span className={passwordStrength.level <= 1 ? 'text-accent-danger' : passwordStrength.level <= 3 ? 'text-accent-warning' : 'text-accent-success'}>{passwordStrength.text}</span>
             </p>
           </div>
         )}
 
         {/* 비밀번호 요구사항 */}
-        <div className="mt-2 text-xs text-gray-500">
+        <div className="mt-2 text-xs text-text-muted">
           <p className="font-medium mb-1">비밀번호 요구사항:</p>
           <ul className="space-y-0.5 ml-3">
-            <li className={password.length >= 8 ? 'text-green-600' : ''}>• 8자 이상</li>
-            <li className={/[A-Z]/.test(password) ? 'text-green-600' : ''}>• 대문자 1개 이상</li>
-            <li className={/[a-z]/.test(password) ? 'text-green-600' : ''}>• 소문자 1개 이상</li>
-            <li className={/[0-9]/.test(password) ? 'text-green-600' : ''}>• 숫자 1개 이상</li>
-            <li className={/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password) ? 'text-green-600' : ''}>• 특수문자 1개 이상</li>
+            <li className={password.length >= 8 ? 'text-accent-success' : ''}>8자 이상</li>
+            <li className={/[A-Z]/.test(password) ? 'text-accent-success' : ''}>대문자 1개 이상</li>
+            <li className={/[a-z]/.test(password) ? 'text-accent-success' : ''}>소문자 1개 이상</li>
+            <li className={/[0-9]/.test(password) ? 'text-accent-success' : ''}>숫자 1개 이상</li>
+            <li className={/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password) ? 'text-accent-success' : ''}>특수문자 1개 이상</li>
           </ul>
         </div>
       </div>
 
       {/* 비밀번호 확인 */}
       <div>
-        <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 mb-2">
-          비밀번호 확인 <span className="text-red-500">*</span>
+        <label htmlFor="confirm-password" className="block text-sm font-medium text-text-secondary mb-2">
+          비밀번호 확인 <span className="text-accent-danger">*</span>
         </label>
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-5 w-5 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
@@ -278,12 +278,12 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
             onBlur={() => setTouched(prev => ({ ...prev, confirmPassword: true }))}
             placeholder="비밀번호 재입력"
             autoComplete="new-password"
-            className={`w-full pl-10 pr-4 py-3 border rounded-lg transition-colors focus:outline-none focus:ring-2
-                       ${confirmPasswordError ? 'border-red-300 focus:ring-red-200 focus:border-red-400' :
-                                               'border-gray-300 focus:ring-blue-200 focus:border-blue-400'}`}
+            className={`w-full pl-10 pr-4 py-3 bg-theme-surface border rounded-lg text-text-primary placeholder-text-muted transition-colors focus:outline-none focus:ring-2
+                       ${confirmPasswordError ? 'border-accent-danger/50 focus:ring-accent-danger/30 focus:border-accent-danger' :
+                                               'border-theme-border focus:ring-accent-primary/30 focus:border-accent-primary'}`}
           />
         </div>
-        {confirmPasswordError && <p className="mt-1.5 text-sm text-red-600">{confirmPasswordError}</p>}
+        {confirmPasswordError && <p className="mt-1.5 text-sm text-accent-danger">{confirmPasswordError}</p>}
       </div>
 
       {/* 약관 동의 */}
@@ -293,11 +293,11 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
           type="checkbox"
           checked={agreeTerms}
           onChange={(e) => setAgreeTerms(e.target.checked)}
-          className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+          className="mt-1 w-4 h-4 text-accent-primary border-theme-border rounded focus:ring-accent-primary"
         />
-        <label htmlFor="agree-terms" className="text-sm text-gray-600">
-          <span className="text-blue-600 hover:underline cursor-pointer">이용약관</span> 및{' '}
-          <span className="text-blue-600 hover:underline cursor-pointer">개인정보 처리방침</span>에 동의합니다
+        <label htmlFor="agree-terms" className="text-sm text-text-secondary">
+          <span className="text-accent-primary hover:underline cursor-pointer">이용약관</span> 및{' '}
+          <span className="text-accent-primary hover:underline cursor-pointer">개인정보 처리방침</span>에 동의합니다
         </label>
       </div>
 
@@ -306,8 +306,8 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
         type="submit"
         disabled={isLoading || !agreeTerms}
         className={`w-full py-3 px-4 rounded-lg font-medium text-white transition-all
-                   ${isLoading || !agreeTerms ? 'bg-blue-400 cursor-not-allowed' :
-                                               'bg-blue-600 hover:bg-blue-700 active:bg-blue-800'}`}
+                   ${isLoading || !agreeTerms ? 'bg-accent-primary/50 cursor-not-allowed' :
+                                               'bg-accent-primary hover:bg-accent-primary/90 active:bg-accent-primary/80'}`}
       >
         {isLoading ? (
           <span className="flex items-center justify-center gap-2">
@@ -322,12 +322,12 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
       {/* 로그인 링크 */}
       {onSwitchToLogin && (
         <div className="text-center">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-text-secondary">
             이미 계정이 있으신가요?{' '}
             <button
               type="button"
               onClick={onSwitchToLogin}
-              className="text-blue-600 hover:text-blue-700 font-medium hover:underline"
+              className="text-accent-primary hover:text-accent-primary/80 font-medium hover:underline"
             >
               로그인
             </button>

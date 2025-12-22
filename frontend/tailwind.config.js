@@ -8,13 +8,29 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Vercel-inspired dark theme palette
+        // Dynamic theme colors (CSS variables)
+        theme: {
+          bg: 'var(--color-bg)',
+          surface: 'var(--color-surface)',
+          card: 'var(--color-card)',
+          border: 'var(--color-border)',
+          hover: 'var(--color-hover)',
+        },
+        // Vercel-inspired dark theme palette (for backwards compatibility)
         dark: {
           bg: '#0a0a0a',
           surface: '#111111',
           card: '#171717',
           border: '#262626',
           hover: '#1f1f1f',
+        },
+        // Light theme colors
+        light: {
+          bg: '#ffffff',
+          surface: '#f9fafb',
+          card: '#ffffff',
+          border: '#e5e7eb',
+          hover: '#f3f4f6',
         },
         // Accent colors (Bloomberg-inspired financial colors)
         accent: {
@@ -25,12 +41,12 @@ export default {
           info: '#06b6d4',       // Cyan
           purple: '#a855f7',     // Purple (CB)
         },
-        // Text hierarchy
+        // Text hierarchy (CSS variables)
         text: {
-          primary: '#fafafa',
-          secondary: '#a1a1aa',
-          tertiary: '#71717a',
-          muted: '#52525b',
+          primary: 'var(--color-text-primary)',
+          secondary: 'var(--color-text-secondary)',
+          tertiary: 'var(--color-text-tertiary)',
+          muted: 'var(--color-text-muted)',
         },
         // Bloomberg-style data colors
         data: {

@@ -40,25 +40,25 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* 에러 메시지 */}
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-          <svg className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="p-4 bg-accent-danger/10 border border-accent-danger/30 rounded-lg flex items-start gap-3">
+          <svg className="w-5 h-5 text-accent-danger mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <div>
-            <p className="text-sm font-medium text-red-800">로그인 실패</p>
-            <p className="text-sm text-red-600 mt-1">{error}</p>
+            <p className="text-sm font-medium text-accent-danger">로그인 실패</p>
+            <p className="text-sm text-accent-danger/80 mt-1">{error}</p>
           </div>
         </div>
       )}
 
       {/* 이메일 입력 */}
       <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="email" className="block text-sm font-medium text-text-secondary mb-2">
           이메일
         </label>
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-5 w-5 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
             </svg>
           </div>
@@ -70,24 +70,24 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
             onBlur={() => setTouched(prev => ({ ...prev, email: true }))}
             placeholder="example@email.com"
             autoComplete="email"
-            className={`w-full pl-10 pr-4 py-3 border rounded-lg transition-colors focus:outline-none focus:ring-2
-                       ${emailError ? 'border-red-300 focus:ring-red-200 focus:border-red-400' :
-                                     'border-gray-300 focus:ring-blue-200 focus:border-blue-400'}`}
+            className={`w-full pl-10 pr-4 py-3 bg-theme-surface border rounded-lg text-text-primary placeholder-text-muted transition-colors focus:outline-none focus:ring-2
+                       ${emailError ? 'border-accent-danger/50 focus:ring-accent-danger/30 focus:border-accent-danger' :
+                                     'border-theme-border focus:ring-accent-primary/30 focus:border-accent-primary'}`}
           />
         </div>
         {emailError && (
-          <p className="mt-1.5 text-sm text-red-600">{emailError}</p>
+          <p className="mt-1.5 text-sm text-accent-danger">{emailError}</p>
         )}
       </div>
 
       {/* 비밀번호 입력 */}
       <div>
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="password" className="block text-sm font-medium text-text-secondary mb-2">
           비밀번호
         </label>
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-5 w-5 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
           </div>
@@ -99,14 +99,14 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
             onBlur={() => setTouched(prev => ({ ...prev, password: true }))}
             placeholder="비밀번호 입력"
             autoComplete="current-password"
-            className={`w-full pl-10 pr-12 py-3 border rounded-lg transition-colors focus:outline-none focus:ring-2
-                       ${passwordError ? 'border-red-300 focus:ring-red-200 focus:border-red-400' :
-                                        'border-gray-300 focus:ring-blue-200 focus:border-blue-400'}`}
+            className={`w-full pl-10 pr-12 py-3 bg-theme-surface border rounded-lg text-text-primary placeholder-text-muted transition-colors focus:outline-none focus:ring-2
+                       ${passwordError ? 'border-accent-danger/50 focus:ring-accent-danger/30 focus:border-accent-danger' :
+                                        'border-theme-border focus:ring-accent-primary/30 focus:border-accent-primary'}`}
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-text-muted hover:text-text-secondary"
           >
             {showPassword ? (
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -121,14 +121,14 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
           </button>
         </div>
         {passwordError && (
-          <p className="mt-1.5 text-sm text-red-600">{passwordError}</p>
+          <p className="mt-1.5 text-sm text-accent-danger">{passwordError}</p>
         )}
 
         {/* 비밀번호 찾기 링크 */}
         <div className="text-right mt-2">
           <Link
             to="/forgot-password"
-            className="text-sm text-blue-600 hover:text-blue-700 hover:underline"
+            className="text-sm text-accent-primary hover:text-accent-primary/80 hover:underline"
           >
             비밀번호를 잊으셨나요?
           </Link>
@@ -140,8 +140,8 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
         type="submit"
         disabled={isLoading}
         className={`w-full py-3 px-4 rounded-lg font-medium text-white transition-all
-                   ${isLoading ? 'bg-blue-400 cursor-not-allowed' :
-                                'bg-blue-600 hover:bg-blue-700 active:bg-blue-800'}`}
+                   ${isLoading ? 'bg-accent-primary/50 cursor-not-allowed' :
+                                'bg-accent-primary hover:bg-accent-primary/90 active:bg-accent-primary/80'}`}
       >
         {isLoading ? (
           <span className="flex items-center justify-center gap-2">
@@ -156,10 +156,10 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
       {/* 소셜 로그인 구분선 */}
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-300" />
+          <div className="w-full border-t border-theme-border" />
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-2 bg-white text-gray-500">또는</span>
+          <span className="px-2 bg-theme-card text-text-muted">또는</span>
         </div>
       </div>
 
@@ -168,7 +168,7 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
         {/* Google 로그인 */}
         <a
           href={`${import.meta.env.VITE_API_URL || ''}/api/auth/google`}
-          className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-theme-border rounded-lg hover:bg-theme-hover transition-colors"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path
@@ -188,7 +188,7 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
               d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
             />
           </svg>
-          <span className="text-gray-700 font-medium">Google로 계속하기</span>
+          <span className="text-text-primary font-medium">Google로 계속하기</span>
         </a>
 
         {/* Kakao 로그인 */}
@@ -212,12 +212,12 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
       {/* 회원가입 링크 */}
       {onSwitchToRegister && (
         <div className="text-center">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-text-secondary">
             계정이 없으신가요?{' '}
             <button
               type="button"
               onClick={onSwitchToRegister}
-              className="text-blue-600 hover:text-blue-700 font-medium hover:underline"
+              className="text-accent-primary hover:text-accent-primary/80 font-medium hover:underline"
             >
               회원가입
             </button>

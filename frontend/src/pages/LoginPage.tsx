@@ -81,7 +81,7 @@ function LoginPage() {
       </div>
 
       {/* 오른쪽: 폼 영역 */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-gray-50">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-theme-bg">
         <div className="w-full max-w-md">
           {/* 모바일 로고 */}
           <div className="lg:hidden text-center mb-8">
@@ -95,14 +95,14 @@ function LoginPage() {
           </div>
 
           {/* 탭 전환 */}
-          <div className="bg-white rounded-2xl shadow-xl p-8">
-            <div className="flex mb-8 bg-gray-100 rounded-lg p-1">
+          <div className="bg-theme-card border border-theme-border rounded-2xl shadow-xl p-8">
+            <div className="flex mb-8 bg-theme-surface rounded-lg p-1">
               <button
                 onClick={() => setMode('login')}
                 className={`flex-1 py-2.5 text-sm font-medium rounded-md transition-all ${
                   mode === 'login'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
+                    ? 'bg-theme-card text-accent-primary shadow-sm'
+                    : 'text-text-secondary hover:text-text-primary'
                 }`}
               >
                 로그인
@@ -111,8 +111,8 @@ function LoginPage() {
                 onClick={() => setMode('register')}
                 className={`flex-1 py-2.5 text-sm font-medium rounded-md transition-all ${
                   mode === 'register'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
+                    ? 'bg-theme-card text-accent-primary shadow-sm'
+                    : 'text-text-secondary hover:text-text-primary'
                 }`}
               >
                 회원가입

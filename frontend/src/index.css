@@ -4,14 +4,31 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Dark theme base styles */
+/* Light theme (default) */
 :root {
+  --color-bg: #ffffff;
+  --color-surface: #f9fafb;
+  --color-card: #ffffff;
+  --color-border: #e5e7eb;
+  --color-hover: #f3f4f6;
+  --color-text-primary: #111827;
+  --color-text-secondary: #4b5563;
+  --color-text-tertiary: #6b7280;
+  --color-text-muted: #9ca3af;
+  --color-accent: #3b82f6;
+}
+
+/* Dark theme */
+:root.dark, .dark {
   --color-bg: #0a0a0a;
   --color-surface: #111111;
   --color-card: #171717;
   --color-border: #262626;
+  --color-hover: #1f1f1f;
   --color-text-primary: #fafafa;
   --color-text-secondary: #a1a1aa;
+  --color-text-tertiary: #71717a;
+  --color-text-muted: #52525b;
   --color-accent: #3b82f6;
 }
 
@@ -24,6 +41,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--color-bg);
   color: var(--color-text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 /* Custom Animations */
@@ -114,23 +132,36 @@ body {
   animation: glow-pulse 2s ease-in-out infinite;
 }
 
-/* Bloomberg-style scrollbar */
+/* Scrollbar - Light theme */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #111111;
+  background: var(--color-surface);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #333333;
+  background: var(--color-border);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* Scrollbar - Dark theme */
+.dark ::-webkit-scrollbar-track {
+  background: #111111;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #333333;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
   background: #444444;
 }
 
