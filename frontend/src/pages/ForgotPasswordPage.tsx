@@ -55,8 +55,12 @@ function ForgotPasswordPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link to="/" className="text-2xl font-bold text-blue-600">
-            Raymontology
+          <Link to="/">
+            <img
+              src="/logo.png"
+              alt="Raymond Partners"
+              className="h-10 w-auto object-contain mx-auto"
+            />
           </Link>
         </div>
 

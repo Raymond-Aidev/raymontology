@@ -16,13 +16,12 @@ function Header() {
         <div className="flex items-center justify-between h-14">
           {/* Logo + API Status */}
           <div className="flex items-center gap-4">
-            <Link to="/" className="flex items-center gap-2.5 group">
-              <div className="w-8 h-8 bg-gradient-to-br from-accent-primary to-purple-500 rounded-lg flex items-center justify-center shadow-glow">
-                <span className="text-white font-bold text-sm">R</span>
-              </div>
-              <span className="text-lg font-semibold text-text-primary hidden sm:block group-hover:text-accent-primary transition-colors">
-                Raymontology
-              </span>
+            <Link to="/" className="flex items-center group">
+              <img
+                src="/logo.png"
+                alt="Raymond Partners"
+                className="h-8 w-auto object-contain"
+              />
             </Link>
             {/* API Status */}
             <div className="hidden sm:flex items-center gap-2 px-2 py-1 bg-dark-card rounded-full border border-dark-border">

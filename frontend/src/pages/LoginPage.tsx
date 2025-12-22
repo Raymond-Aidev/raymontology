@@ -30,8 +30,12 @@ function LoginPage() {
       {/* 왼쪽: 브랜드 영역 */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700 p-12 flex-col justify-between">
         <div>
-          <Link to="/" className="text-white text-2xl font-bold">
-            Raymontology
+          <Link to="/">
+            <img
+              src="/logo.png"
+              alt="Raymond Partners"
+              className="h-10 w-auto object-contain brightness-0 invert"
+            />
           </Link>
         </div>
 
@@ -81,8 +85,12 @@ function LoginPage() {
         <div className="w-full max-w-md">
           {/* 모바일 로고 */}
           <div className="lg:hidden text-center mb-8">
-            <Link to="/" className="text-2xl font-bold text-blue-600">
-              Raymontology
+            <Link to="/">
+              <img
+                src="/logo.png"
+                alt="Raymond Partners"
+                className="h-10 w-auto object-contain mx-auto"
+              />
             </Link>
           </div>
 
