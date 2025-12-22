@@ -28,70 +28,93 @@ function LoginPage() {
   return (
     <div className="min-h-screen flex">
       {/* 왼쪽: 브랜드 영역 */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700 p-12 flex-col justify-between">
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700 p-8 xl:p-12 flex-col justify-between">
         <div>
-          <Link to="/">
-            <img
-              src="/logo.png?v=2"
-              alt="Raymond Partners"
-              className="h-16 w-auto object-contain"
-            />
+          <Link to="/" className="inline-block">
+            <div className="flex items-center gap-3">
+              <img
+                src="/logo.png?v=2"
+                alt="RaymondsRisk"
+                className="h-12 xl:h-16 w-auto object-contain"
+              />
+              <div className="text-white">
+                <h2 className="text-xl xl:text-2xl font-bold">RaymondsRisk</h2>
+                <p className="text-xs xl:text-sm text-blue-200">관계형 리스크 추적 분석</p>
+              </div>
+            </div>
           </Link>
         </div>
 
-        <div className="text-white">
-          <h1 className="text-4xl font-bold mb-6 leading-tight">
-            한국 주식시장의<br />
-            숨겨진 리스크를<br />
-            탐지합니다
-          </h1>
-          <p className="text-blue-100 text-lg leading-relaxed">
-            회사 간 관계 네트워크, 임원 이력, CB 인수인 연결고리를 분석하여
-            개인 투자자가 알기 어려운 리스크를 선제적으로 파악합니다.
+        <div className="text-white flex-1 flex flex-col justify-center py-8">
+          <p className="text-blue-200 text-sm xl:text-base mb-3 font-medium">
+            주식시장의 숨겨진 리스크 추적 분석 서비스
           </p>
-        </div>
+          <h1 className="text-3xl xl:text-4xl 2xl:text-5xl font-bold mb-6 leading-tight">
+            회사간 숨겨진 관계,<br />
+            임원 리스크, CB 발행과<br />
+            인수대상자 관계 리스크
+          </h1>
+          <p className="text-blue-100 text-base xl:text-lg leading-relaxed mb-8">
+            투자 전 필수 점검 서비스.<br />
+            3단계 관계망 분석으로 임원 이력, CB 인수자, 숨겨진 연결고리까지.
+          </p>
 
-        {/* 특징 목록 */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-3 text-blue-100">
-            <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {/* 주요 기능 뱃지 */}
+          <div className="flex flex-wrap gap-2 xl:gap-3">
+            <span className="inline-flex items-center gap-1.5 px-3 xl:px-4 py-1.5 xl:py-2 bg-white/10 backdrop-blur-sm rounded-full text-xs xl:text-sm font-medium text-white border border-white/20">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+              3단계 관계망 분석
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-3 xl:px-4 py-1.5 xl:py-2 bg-white/10 backdrop-blur-sm rounded-full text-xs xl:text-sm font-medium text-white border border-white/20">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
-            </div>
-            <span>CB 네트워크 실시간 분석</span>
-          </div>
-          <div className="flex items-center gap-3 text-blue-100">
-            <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </div>
-            <span>임원 경력 네트워크 추적</span>
-          </div>
-          <div className="flex items-center gap-3 text-blue-100">
-            <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              실시간 리스크 감지
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-3 xl:px-4 py-1.5 xl:py-2 bg-white/10 backdrop-blur-sm rounded-full text-xs xl:text-sm font-medium text-white border border-white/20">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
-            </div>
-            <span>RaymondsRisk 종합 점수</span>
+              RaymondsRisk Score
+            </span>
           </div>
+        </div>
+
+        {/* 하단 저작권 */}
+        <div className="text-blue-200/60 text-xs">
+          &copy; 2024 Raymond Partners. All rights reserved.
         </div>
       </div>
 
       {/* 오른쪽: 폼 영역 */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-theme-bg">
         <div className="w-full max-w-md">
-          {/* 모바일 로고 */}
-          <div className="lg:hidden text-center mb-8">
-            <Link to="/">
-              <img
-                src="/logo.png?v=2"
-                alt="Raymond Partners"
-                className="h-14 w-auto object-contain mx-auto"
-              />
+          {/* 모바일 헤더 */}
+          <div className="lg:hidden text-center mb-6">
+            <Link to="/" className="inline-block mb-4">
+              <div className="flex items-center justify-center gap-2">
+                <img
+                  src="/logo.png?v=2"
+                  alt="RaymondsRisk"
+                  className="h-10 w-auto object-contain"
+                />
+                <span className="text-lg font-bold text-text-primary">RaymondsRisk</span>
+              </div>
             </Link>
+            <p className="text-xs text-text-secondary mb-3">관계형 리스크 추적 분석 서비스</p>
+            <div className="flex flex-wrap justify-center gap-1.5">
+              <span className="px-2 py-1 bg-accent-primary/10 text-accent-primary text-[10px] rounded-full font-medium">
+                3단계 관계망
+              </span>
+              <span className="px-2 py-1 bg-accent-primary/10 text-accent-primary text-[10px] rounded-full font-medium">
+                실시간 감지
+              </span>
+              <span className="px-2 py-1 bg-accent-primary/10 text-accent-primary text-[10px] rounded-full font-medium">
+                Risk Score
+              </span>
+            </div>
           </div>
 
           {/* 탭 전환 */}
