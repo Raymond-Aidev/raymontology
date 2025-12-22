@@ -30,11 +30,11 @@ function LoginPage() {
       {/* 왼쪽: 브랜드 영역 */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700 p-12 flex-col justify-between">
         <div>
-          <Link to="/">
+          <Link to="/" className="inline-block bg-white/95 rounded-lg px-4 py-2">
             <img
               src="/logo.png"
               alt="Raymond Partners"
-              className="h-12 w-auto object-contain"
+              className="h-10 w-auto object-contain"
             />
           </Link>
         </div>
