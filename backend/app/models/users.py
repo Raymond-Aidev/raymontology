@@ -63,3 +63,23 @@ class PasswordResetToken(Base):
 
     def __repr__(self):
         return f"<PasswordResetToken(id={self.id}, user_id={self.user_id})>"
+
+
+class EmailVerificationToken(Base):
+    """
+    이메일 인증 토큰 테이블 (회원가입 시 이메일 인증)
+    """
+    __tablename__ = "email_verification_tokens"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email = Column(String(255), nullable=False, index=True)
+    username = Column(String(50), nullable=False)
+    hashed_password = Column(String(255), nullable=False)
+    full_name = Column(String(100), nullable=True)
+    token_hash = Column(String(255), nullable=False, index=True)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    verified_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    def __repr__(self):
+        return f"<EmailVerificationToken(email='{self.email}')>"

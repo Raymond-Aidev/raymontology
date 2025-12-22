@@ -19,6 +19,7 @@ const ContactPage = lazy(() => import('./pages/ContactPage'))
 const AdminPage = lazy(() => import('./pages/AdminPage'))
 const TermsPage = lazy(() => import('./pages/TermsPage'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
+const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'))
 
 function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth)
@@ -40,6 +41,7 @@ function App() {
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
 
         {/* Public MainLayout routes (home is public, but search requires auth) */}

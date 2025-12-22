@@ -279,14 +279,14 @@ function LoginPage() {
             <form onSubmit={handleRegister} className="space-y-4">
               <div>
                 <label htmlFor="register-username" className="block text-sm font-medium text-text-secondary mb-1.5">
-                  이름
+                  닉네임
                 </label>
                 <input
                   id="register-username"
                   type="text"
                   value={registerUsername}
                   onChange={(e) => setRegisterUsername(e.target.value)}
-                  placeholder="홍길동"
+                  placeholder="사용할 닉네임"
                   autoComplete="name"
                   className="w-full px-4 py-2.5 bg-theme-surface border border-theme-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent-primary/30 focus:border-accent-primary transition-colors"
                 />
@@ -422,19 +422,22 @@ function LoginPage() {
         </div>
       </div>
 
-      {/* 회원가입 성공 모달 */}
+      {/* 회원가입 성공 모달 - 이메일 인증 안내 */}
       {showSuccessModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-theme-card border border-theme-border rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl animate-scale-in">
-            <div className="w-16 h-16 mx-auto mb-4 bg-accent-success/10 rounded-full flex items-center justify-center">
-              <svg className="w-8 h-8 text-accent-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            <div className="w-16 h-16 mx-auto mb-4 bg-accent-primary/10 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-accent-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
             </div>
-            <h3 className="text-xl font-semibold text-text-primary text-center mb-2">회원가입 완료</h3>
+            <h3 className="text-xl font-semibold text-text-primary text-center mb-2">인증 메일 발송 완료</h3>
             <p className="text-sm text-text-secondary text-center mb-6">
-              회원가입이 완료되었습니다.<br />
-              왼쪽 로그인 폼에서 로그인해주세요.
+              입력하신 이메일로 인증 메일을 발송했습니다.<br />
+              메일함을 확인하고 <strong className="text-text-primary">가입 확인</strong> 버튼을 클릭해주세요.
+            </p>
+            <p className="text-xs text-text-muted text-center mb-4">
+              메일이 도착하지 않았다면 스팸함을 확인해주세요.
             </p>
             <button
               onClick={() => setShowSuccessModal(false)}

@@ -11,7 +11,7 @@ import secrets
 import hashlib
 
 from app.database import get_db
-from app.models.users import User, PasswordResetToken
+from app.models.users import User, PasswordResetToken, EmailVerificationToken
 from app.schemas.auth import (
     UserRegister, UserLogin, Token, UserMe,
     ForgotPasswordRequest, ResetPasswordRequest, MessageResponse
@@ -32,20 +32,20 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
-@router.post("/register", status_code=status.HTTP_201_CREATED)
+@router.post("/register", status_code=status.HTTP_201_CREATED, response_model=MessageResponse)
 async def register(
     user_data: UserRegister,
     db: AsyncSession = Depends(get_db)
 ):
     """
-    회원가입
+    회원가입 - 이메일 인증 요청
 
     Args:
         user_data: 회원가입 정보
         db: 데이터베이스 세션
 
     Returns:
-        Token: 액세스 토큰
+        MessageResponse: 인증 이메일 발송 안내
 
     Raises:
         HTTPException: 409 (이메일 또는 사용자명 중복)
@@ -62,7 +62,7 @@ async def register(
                 detail=error_message
             )
 
-        # 이메일 중복 체크
+        # 이메일 중복 체크 (이미 가입된 사용자)
         result = await db.execute(
             select(User).where(User.email == user_data.email)
         )
@@ -71,7 +71,7 @@ async def register(
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="Email already registered"
+                detail="이미 가입된 이메일입니다."
             )
 
         # 사용자명 중복 체크
@@ -83,27 +83,49 @@ async def register(
         if existing_username:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="Username already taken"
+                detail="이미 사용 중인 닉네임입니다."
             )
 
-        # 사용자 생성
+        # 기존 인증 대기 토큰 삭제 (같은 이메일)
+        await db.execute(
+            select(EmailVerificationToken).where(EmailVerificationToken.email == user_data.email)
+        )
+        existing_tokens = await db.execute(
+            select(EmailVerificationToken).where(
+                EmailVerificationToken.email == user_data.email,
+                EmailVerificationToken.verified_at.is_(None)
+            )
+        )
+        for token in existing_tokens.scalars():
+            await db.delete(token)
+
+        # 이메일 인증 토큰 생성
+        raw_token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
         hashed_pw = get_password_hash(user_data.password)
 
-        new_user = User(
+        verification_token = EmailVerificationToken(
             email=user_data.email,
             username=user_data.username,
             hashed_password=hashed_pw,
             full_name=user_data.full_name,
+            token_hash=token_hash,
+            expires_at=datetime.utcnow() + timedelta(hours=24)  # 24시간 유효
         )
 
-        db.add(new_user)
+        db.add(verification_token)
         await db.commit()
-        await db.refresh(new_user)
 
-        logger.info(f"User registered successfully: {new_user.email}")
+        # 인증 이메일 발송
+        await email_service.send_verification_email(
+            to_email=user_data.email,
+            verification_token=raw_token,
+            username=user_data.username
+        )
 
-        # 토큰 생성 (create_user_token 헬퍼 사용)
-        return create_user_token(new_user)
+        logger.info(f"Verification email sent to: {user_data.email}")
+
+        return MessageResponse(message="인증 이메일이 발송되었습니다. 이메일을 확인해주세요.")
 
     except HTTPException:
         raise
@@ -112,7 +134,94 @@ async def register(
         logger.error(traceback.format_exc())
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Registration failed: {str(e)}"
+            detail=f"회원가입 처리 중 오류가 발생했습니다."
+        )
+
+
+@router.get("/verify-email", response_model=MessageResponse)
+async def verify_email(
+    token: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    이메일 인증 완료
+
+    Args:
+        token: 인증 토큰
+        db: 데이터베이스 세션
+
+    Returns:
+        MessageResponse: 인증 완료 메시지
+
+    Raises:
+        HTTPException: 400 (유효하지 않거나 만료된 토큰)
+    """
+    try:
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+
+        # 토큰 조회
+        result = await db.execute(
+            select(EmailVerificationToken).where(
+                EmailVerificationToken.token_hash == token_hash,
+                EmailVerificationToken.verified_at.is_(None),
+                EmailVerificationToken.expires_at > datetime.utcnow()
+            )
+        )
+        verification = result.scalar_one_or_none()
+
+        if not verification:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="유효하지 않거나 만료된 인증 링크입니다."
+            )
+
+        # 이메일/닉네임 중복 재확인
+        result = await db.execute(
+            select(User).where(User.email == verification.email)
+        )
+        if result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="이미 가입된 이메일입니다."
+            )
+
+        result = await db.execute(
+            select(User).where(User.username == verification.username)
+        )
+        if result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="이미 사용 중인 닉네임입니다."
+            )
+
+        # 사용자 생성
+        new_user = User(
+            email=verification.email,
+            username=verification.username,
+            hashed_password=verification.hashed_password,
+            full_name=verification.full_name,
+        )
+
+        db.add(new_user)
+
+        # 토큰 사용 처리
+        verification.verified_at = datetime.utcnow()
+
+        await db.commit()
+        await db.refresh(new_user)
+
+        logger.info(f"User verified and created: {new_user.email}")
+
+        return MessageResponse(message="이메일 인증이 완료되었습니다. 이제 로그인할 수 있습니다.")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Email verification error: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="이메일 인증 처리 중 오류가 발생했습니다."
         )
 
 

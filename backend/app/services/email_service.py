@@ -138,5 +138,76 @@ class EmailService:
         return await self.send_email(to_email, subject, html_content, plain_content)
 
 
+    async def send_verification_email(self, to_email: str, verification_token: str, username: str) -> bool:
+        """회원가입 이메일 인증 발송"""
+        verify_url = f"{self.frontend_url}/verify-email?token={verification_token}"
+
+        subject = "[RaymondsRisk] 이메일 인증을 완료해주세요"
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>
+                body {{ font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background: linear-gradient(135deg, #3B82F6, #8B5CF6); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+                .content {{ background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }}
+                .button {{ display: inline-block; background: #10B981; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; font-size: 16px; }}
+                .button:hover {{ background: #059669; }}
+                .footer {{ text-align: center; color: #6b7280; font-size: 12px; margin-top: 20px; }}
+                .info {{ background: #dbeafe; border: 1px solid #3b82f6; padding: 15px; border-radius: 8px; margin-top: 20px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1 style="margin: 0; font-size: 24px;">RaymondsRisk</h1>
+                    <p style="margin: 10px 0 0; opacity: 0.9;">이메일 인증</p>
+                </div>
+                <div class="content">
+                    <p>안녕하세요, <strong>{username}</strong>님!</p>
+                    <p>RaymondsRisk 회원가입을 환영합니다. 아래 버튼을 클릭하여 이메일 인증을 완료해주세요.</p>
+
+                    <div style="text-align: center;">
+                        <a href="{verify_url}" class="button">가입 확인</a>
+                    </div>
+
+                    <p>또는 아래 링크를 브라우저에 직접 입력하세요:</p>
+                    <p style="word-break: break-all; font-size: 14px; color: #6b7280;">{verify_url}</p>
+
+                    <div class="info">
+                        <strong>안내:</strong> 이 링크는 24시간 동안 유효합니다.
+                        회원가입을 요청하지 않으셨다면 이 이메일을 무시하셔도 됩니다.
+                    </div>
+                </div>
+                <div class="footer">
+                    <p>이 이메일은 RaymondsRisk에서 자동으로 발송되었습니다.</p>
+                    <p>&copy; 2025 RaymondsRisk. All rights reserved.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        plain_content = f"""
+        이메일 인증
+
+        안녕하세요, {username}님!
+
+        RaymondsRisk 회원가입을 환영합니다. 아래 링크를 클릭하여 이메일 인증을 완료해주세요.
+
+        {verify_url}
+
+        이 링크는 24시간 동안 유효합니다.
+        회원가입을 요청하지 않으셨다면 이 이메일을 무시하셔도 됩니다.
+
+        RaymondsRisk 팀 드림
+        """
+
+        return await self.send_email(to_email, subject, html_content, plain_content)
+
+
 # 싱글톤 인스턴스
 email_service = EmailService()
