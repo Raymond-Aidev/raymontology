@@ -1,11 +1,12 @@
 """
-이메일 서비스 (SendGrid)
+이메일 서비스 (Gmail SMTP)
 """
 import logging
+import smtplib
+import ssl
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from typing import Optional
-
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail, Email, To, Content
 
 from app.config import settings
 
@@ -13,18 +14,19 @@ logger = logging.getLogger(__name__)
 
 
 class EmailService:
-    """SendGrid 기반 이메일 발송 서비스"""
+    """Gmail SMTP 기반 이메일 발송 서비스"""
 
     def __init__(self):
-        self.api_key = settings.sendgrid_api_key
+        self.smtp_email = settings.smtp_email
+        self.smtp_password = settings.smtp_password
         self.from_email = settings.email_from_address
         self.from_name = settings.email_from_name
         self.frontend_url = settings.frontend_url
 
     @property
     def is_configured(self) -> bool:
-        """SendGrid가 설정되어 있는지 확인"""
-        return bool(self.api_key)
+        """Gmail SMTP가 설정되어 있는지 확인"""
+        return bool(self.smtp_email and self.smtp_password)
 
     async def send_email(
         self,
@@ -35,7 +37,7 @@ class EmailService:
     ) -> bool:
         """이메일 발송"""
         if not self.is_configured:
-            logger.warning("SendGrid API key not configured. Email not sent.")
+            logger.warning("Gmail SMTP not configured. Email not sent.")
             # 개발 환경에서는 콘솔에 출력
             logger.info(f"[DEV] Email to: {to_email}")
             logger.info(f"[DEV] Subject: {subject}")
@@ -43,25 +45,29 @@ class EmailService:
             return True  # 개발 환경에서는 성공으로 처리
 
         try:
-            message = Mail(
-                from_email=Email(self.from_email, self.from_name),
-                to_emails=To(to_email),
-                subject=subject,
-                html_content=Content("text/html", html_content)
-            )
+            # 이메일 메시지 생성
+            message = MIMEMultipart("alternative")
+            message["Subject"] = subject
+            message["From"] = f"{self.from_name} <{self.smtp_email}>"
+            message["To"] = to_email
 
+            # Plain text 버전 추가
             if plain_content:
-                message.add_content(Content("text/plain", plain_content))
+                part1 = MIMEText(plain_content, "plain", "utf-8")
+                message.attach(part1)
 
-            sg = SendGridAPIClient(self.api_key)
-            response = sg.send(message)
+            # HTML 버전 추가
+            part2 = MIMEText(html_content, "html", "utf-8")
+            message.attach(part2)
 
-            if response.status_code in [200, 201, 202]:
-                logger.info(f"Email sent successfully to {to_email}")
-                return True
-            else:
-                logger.error(f"Failed to send email: {response.status_code}")
-                return False
+            # Gmail SMTP로 발송
+            context = ssl.create_default_context()
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+                server.login(self.smtp_email, self.smtp_password)
+                server.sendmail(self.smtp_email, to_email, message.as_string())
+
+            logger.info(f"Email sent successfully to {to_email}")
+            return True
 
         except Exception as e:
             logger.error(f"Error sending email: {e}")

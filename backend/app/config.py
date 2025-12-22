@@ -42,10 +42,11 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
 
-    # Email (SendGrid)
-    sendgrid_api_key: Optional[str] = None
+    # Email (Gmail SMTP)
+    smtp_email: Optional[str] = None
+    smtp_password: Optional[str] = None
     email_from_address: str = "noreply@konnect-ai.net"
-    email_from_name: str = "Raymontology"
+    email_from_name: str = "RaymondsRisk"
     password_reset_expire_minutes: int = 60
 
     # Google OAuth
