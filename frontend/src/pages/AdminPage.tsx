@@ -27,8 +27,17 @@ type TabType = 'users' | 'terms' | 'privacy'
 
 function AdminPage() {
   const navigate = useNavigate()
-  const { user, isAuthenticated } = useAuthStore()
+  const { user, isAuthenticated, login } = useAuthStore()
 
+  // 로그인 상태
+  const [showLogin, setShowLogin] = useState(false)
+  const [loginEmail, setLoginEmail] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
+  const [loginError, setLoginError] = useState<string | null>(null)
+  const [isLoggingIn, setIsLoggingIn] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+
+  // 관리자 페이지 상태
   const [activeTab, setActiveTab] = useState<TabType>('users')
   const [users, setUsers] = useState<User[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
@@ -39,17 +48,37 @@ function AdminPage() {
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  // 관리자 권한 체크
+  // 로그인 여부 및 관리자 권한 체크
   useEffect(() => {
     if (!isAuthenticated) {
-      navigate('/login')
+      setShowLogin(true)
+      setIsLoading(false)
       return
     }
     if (user && !user.is_superuser) {
+      // 관리자가 아니면 메인으로
       navigate('/')
       return
     }
+    setShowLogin(false)
   }, [isAuthenticated, user, navigate])
+
+  // 관리자 로그인 처리
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoginError(null)
+    setIsLoggingIn(true)
+
+    try {
+      await login({ email: loginEmail, password: loginPassword })
+      // 로그인 성공 후 관리자 권한 체크는 useEffect에서 처리
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } }
+      setLoginError(error.response?.data?.detail || '로그인에 실패했습니다.')
+    } finally {
+      setIsLoggingIn(false)
+    }
+  }
 
   // 데이터 로드
   const loadData = useCallback(async () => {
@@ -80,8 +109,10 @@ function AdminPage() {
   }, [user])
 
   useEffect(() => {
-    loadData()
-  }, [loadData])
+    if (user?.is_superuser) {
+      loadData()
+    }
+  }, [loadData, user])
 
   // 설정 저장
   const handleSaveSetting = async (key: 'terms' | 'privacy') => {
@@ -115,6 +146,114 @@ function AdminPage() {
       console.error('Failed to toggle user:', err)
       setError('사용자 상태 변경에 실패했습니다.')
     }
+  }
+
+  // 로그인 폼 표시
+  if (showLogin) {
+    return (
+      <div className="min-h-screen bg-theme-bg flex flex-col">
+        {/* Header */}
+        <header className="bg-dark-surface/80 backdrop-blur-xl border-b border-dark-border">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-center h-14">
+              <RaymondsRiskLogo size="sm" variant="compact" />
+            </div>
+          </div>
+        </header>
+
+        {/* Login Form */}
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="w-full max-w-md">
+            <div className="bg-theme-card border border-theme-border rounded-2xl p-8">
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-accent-primary/10 rounded-full mb-4">
+                  <svg className="w-8 h-8 text-accent-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+                <h1 className="text-2xl font-bold text-text-primary">관리자 로그인</h1>
+                <p className="text-sm text-text-secondary mt-2">관리자 계정으로 로그인하세요</p>
+              </div>
+
+              <form onSubmit={handleAdminLogin} className="space-y-5">
+                {loginError && (
+                  <div className="p-4 bg-accent-danger/10 border border-accent-danger/30 rounded-lg">
+                    <p className="text-sm text-accent-danger">{loginError}</p>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-2">
+                    이메일
+                  </label>
+                  <input
+                    type="email"
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                    placeholder="admin@example.com"
+                    className="w-full px-4 py-3 bg-theme-surface border border-theme-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent-primary/30 focus:border-accent-primary transition-all"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-2">
+                    비밀번호
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      placeholder="비밀번호 입력"
+                      className="w-full px-4 py-3 bg-theme-surface border border-theme-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent-primary/30 focus:border-accent-primary transition-all pr-12"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-text-secondary transition-colors"
+                    >
+                      {showPassword ? (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoggingIn || !loginEmail || !loginPassword}
+                  className={`w-full py-3 rounded-lg font-medium text-white transition-all ${
+                    isLoggingIn || !loginEmail || !loginPassword
+                      ? 'bg-accent-primary/50 cursor-not-allowed'
+                      : 'bg-accent-primary hover:bg-accent-primary/90'
+                  }`}
+                >
+                  {isLoggingIn ? '로그인 중...' : '로그인'}
+                </button>
+              </form>
+
+              <div className="mt-6 text-center">
+                <button
+                  onClick={() => navigate('/')}
+                  className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+                >
+                  메인으로 돌아가기
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (!user?.is_superuser) {
