@@ -133,7 +133,7 @@ async def get_company_network_fallback(
         
         # 3. 전환사채(CB) 조회
         cb_query = text("""
-            SELECT id::text, bond_name, issue_date::text, issue_amount, bond_number
+            SELECT id::text, bond_name, issue_date::text, issue_amount, bond_type
             FROM convertible_bonds
             WHERE company_id::text = :company_id
             ORDER BY issue_date DESC
@@ -141,7 +141,7 @@ async def get_company_network_fallback(
         """)
         result = await db.execute(cb_query, {"company_id": center_id})
         cbs = result.fetchall()
-        
+
         for cb in cbs:
             if cb.id not in seen_node_ids:
                 nodes.append(GraphNode(
@@ -151,7 +151,7 @@ async def get_company_network_fallback(
                         "bond_name": cb.bond_name,
                         "issue_date": cb.issue_date,
                         "issue_amount": cb.issue_amount,
-                        "bond_number": cb.bond_number
+                        "bond_type": cb.bond_type
                     }
                 ))
                 seen_node_ids.add(cb.id)
