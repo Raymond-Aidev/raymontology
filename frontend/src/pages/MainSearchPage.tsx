@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { SearchInput } from '../components/common'
 import { getHighRiskCompanies } from '../api/company'
 import { useGraphStore } from '../store'
+import { useAuthStore } from '../store/authStore'
 import type { CompanySearchResult } from '../types/company'
 
 // Risk level config for dark theme
@@ -31,10 +32,12 @@ const gradeConfig: Record<string, string> = {
 function MainSearchPage() {
   const navigate = useNavigate()
   const clearNavigation = useGraphStore((state) => state.clearNavigation)
+  const { isAuthenticated } = useAuthStore()
 
   const [highRiskCompanies, setHighRiskCompanies] = useState<CompanySearchResult[]>([])
   const [isLoadingHighRisk, setIsLoadingHighRisk] = useState(true)
   const [highRiskError, setHighRiskError] = useState<string | null>(null)
+  const [showLoginModal, setShowLoginModal] = useState(false)
 
   useEffect(() => {
     const loadHighRiskCompanies = async () => {
@@ -55,13 +58,19 @@ function MainSearchPage() {
   }, [])
 
   const handleSelectCompany = useCallback((company: CompanySearchResult) => {
+    // 로그인하지 않은 경우 모달 표시
+    if (!isAuthenticated) {
+      setShowLoginModal(true)
+      return
+    }
     // 새 검색 시 네비게이션 히스토리 초기화
     clearNavigation()
     // corp_code로 조회해야 CB 데이터가 함께 표시됨
     navigate(`/company/${company.corp_code}/graph`)
-  }, [navigate, clearNavigation])
+  }, [navigate, clearNavigation, isAuthenticated])
 
   return (
+    <>
     <div className="min-h-[calc(100vh-200px)] flex flex-col">
       {/* Hero Section */}
       <section className="flex-1 flex flex-col items-center justify-center py-16 px-4 relative">
@@ -344,6 +353,66 @@ function MainSearchPage() {
         </div>
       </section>
     </div>
+
+    {/* Login Required Modal */}
+    {showLoginModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+        <div className="bg-dark-card border border-dark-border rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl animate-scale-in">
+          {/* Icon */}
+          <div className="w-14 h-14 mx-auto mb-4 bg-accent-primary/10 rounded-2xl flex items-center justify-center">
+            <svg className="w-7 h-7 text-accent-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+
+          {/* Title */}
+          <h3 className="text-lg font-semibold text-text-primary text-center mb-2">
+            로그인이 필요합니다
+          </h3>
+
+          {/* Description */}
+          <p className="text-sm text-text-secondary text-center mb-6">
+            기업 관계도와 상세 분석 데이터를 보려면
+            <br />
+            로그인이 필요합니다.
+          </p>
+
+          {/* Buttons */}
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => {
+                setShowLoginModal(false)
+                navigate('/login')
+              }}
+              className="w-full py-3 px-4 bg-accent-primary hover:bg-accent-primary/90 text-white font-medium rounded-xl transition-colors"
+            >
+              로그인하기
+            </button>
+            <button
+              onClick={() => setShowLoginModal(false)}
+              className="w-full py-3 px-4 bg-dark-surface hover:bg-dark-hover border border-dark-border text-text-secondary font-medium rounded-xl transition-colors"
+            >
+              취소
+            </button>
+          </div>
+
+          {/* Register link */}
+          <p className="mt-4 text-center text-sm text-text-muted">
+            계정이 없으신가요?{' '}
+            <button
+              onClick={() => {
+                setShowLoginModal(false)
+                navigate('/login')
+              }}
+              className="text-accent-primary hover:underline"
+            >
+              회원가입
+            </button>
+          </p>
+        </div>
+      </div>
+    )}
+    </>
   )
 }
 

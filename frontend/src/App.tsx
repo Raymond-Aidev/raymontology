@@ -15,6 +15,7 @@ const GraphPage = lazy(() => import('./pages/GraphPage'))
 const ReportPage = lazy(() => import('./pages/ReportPage'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 const AboutPage = lazy(() => import('./pages/AboutPage'))
+const ContactPage = lazy(() => import('./pages/ContactPage'))
 
 function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth)
@@ -30,9 +31,15 @@ function App() {
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/about" element={<AboutPage />} />
+        <Route path="/contact" element={<ContactPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
+
+        {/* Public MainLayout routes (home is public, but search requires auth) */}
+        <Route element={<MainLayout />}>
+          <Route path="/" element={<MainSearchPage />} />
+        </Route>
 
         {/* Protected routes */}
         <Route element={
@@ -40,7 +47,6 @@ function App() {
             <MainLayout />
           </ProtectedRoute>
         }>
-          <Route path="/" element={<MainSearchPage />} />
           <Route path="/company/:companyId/graph" element={<GraphPage />} />
           <Route path="/company/:companyId/report" element={<ReportPage />} />
         </Route>

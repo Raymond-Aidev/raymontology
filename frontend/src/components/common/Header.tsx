@@ -38,10 +38,16 @@ function Header() {
               검색
             </Link>
             <Link
-              to="/company/00126380/graph"
+              to="/about"
               className="px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-dark-hover rounded-lg transition-all"
             >
-              관계도
+              서비스 소개
+            </Link>
+            <Link
+              to="/contact"
+              className="px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-dark-hover rounded-lg transition-all"
+            >
+              문의
             </Link>
           </nav>
 
@@ -149,11 +155,18 @@ function Header() {
                 검색
               </Link>
               <Link
-                to="/company/00126380/graph"
+                to="/about"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="px-4 py-2.5 text-sm text-text-secondary hover:text-text-primary hover:bg-dark-hover rounded-lg transition-all"
               >
-                관계도
+                서비스 소개
+              </Link>
+              <Link
+                to="/contact"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="px-4 py-2.5 text-sm text-text-secondary hover:text-text-primary hover:bg-dark-hover rounded-lg transition-all"
+              >
+                문의
               </Link>
               <div className="my-2 border-t border-dark-border" />
               {isAuthenticated && user ? (
