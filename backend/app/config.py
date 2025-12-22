@@ -42,6 +42,12 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
 
+    # Email (SendGrid)
+    sendgrid_api_key: Optional[str] = None
+    email_from_address: str = "noreply@konnect-ai.net"
+    email_from_name: str = "Raymontology"
+    password_reset_expire_minutes: int = 60
+
     # Environment
     environment: str = "development"
     debug: bool = False

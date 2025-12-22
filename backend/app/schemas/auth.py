@@ -61,3 +61,23 @@ class UserMe(BaseModel):
     is_active: bool
     is_superuser: bool
     created_at: datetime
+
+
+# ============================================================================
+# Password Reset Schemas
+# ============================================================================
+
+class ForgotPasswordRequest(BaseModel):
+    """비밀번호 재설정 요청"""
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    """비밀번호 재설정"""
+    token: str
+    new_password: str = Field(..., min_length=8, max_length=100)
+
+
+class MessageResponse(BaseModel):
+    """일반 메시지 응답"""
+    message: str

@@ -7,6 +7,8 @@ import { useAuthStore } from './store/authStore'
 
 // Lazy load pages for code splitting
 const LoginPage = lazy(() => import('./pages/LoginPage'))
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
 const MainSearchPage = lazy(() => import('./pages/MainSearchPage'))
 const GraphPage = lazy(() => import('./pages/GraphPage'))
 const ReportPage = lazy(() => import('./pages/ReportPage'))
@@ -23,7 +25,12 @@ function App() {
   return (
     <Suspense fallback={<PageLoading />}>
       <Routes>
+        {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+        {/* Protected routes */}
         <Route element={
           <ProtectedRoute>
             <MainLayout />

@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 
 interface LoginFormProps {
@@ -122,6 +123,16 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
         {passwordError && (
           <p className="mt-1.5 text-sm text-red-600">{passwordError}</p>
         )}
+
+        {/* 비밀번호 찾기 링크 */}
+        <div className="text-right mt-2">
+          <Link
+            to="/forgot-password"
+            className="text-sm text-blue-600 hover:text-blue-700 hover:underline"
+          >
+            비밀번호를 잊으셨나요?
+          </Link>
+        </div>
       </div>
 
       {/* 로그인 버튼 */}
@@ -141,13 +152,6 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
           '로그인'
         )}
       </button>
-
-      {/* 테스트 계정 안내 */}
-      <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-600">
-        <p className="font-medium mb-1">테스트 계정</p>
-        <p>관리자: admin@test.com / password</p>
-        <p>일반 사용자: 아무 이메일/비밀번호 입력</p>
-      </div>
 
       {/* 회원가입 링크 */}
       {onSwitchToRegister && (
