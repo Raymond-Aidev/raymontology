@@ -2,8 +2,10 @@ import { useState, useCallback, useEffect } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import RaymondsRiskLogo from '../components/common/RaymondsRiskLogo'
+import apiClient from '../api/client'
 
 type ViewMode = 'login' | 'register'
+type ModalType = 'terms' | 'privacy' | null
 
 function LoginPage() {
   const navigate = useNavigate()
@@ -40,6 +42,11 @@ function LoginPage() {
   const [registerLoading, setRegisterLoading] = useState(false)
   const [registerError, setRegisterError] = useState('')
   const [showSuccessModal, setShowSuccessModal] = useState(false)
+
+  // 약관/개인정보 팝업 상태
+  const [showPolicyModal, setShowPolicyModal] = useState<ModalType>(null)
+  const [policyContent, setPolicyContent] = useState('')
+  const [policyLoading, setPolicyLoading] = useState(false)
 
   // 로그인 처리
   const handleLogin = useCallback(async (e: React.FormEvent) => {
@@ -120,6 +127,48 @@ function LoginPage() {
     setViewMode(mode)
     setLoginError('')
     setRegisterError('')
+  }
+
+  // 약관/개인정보 팝업 열기
+  const openPolicyModal = async (type: 'terms' | 'privacy') => {
+    setShowPolicyModal(type)
+    setPolicyLoading(true)
+    setPolicyContent('')
+
+    try {
+      const response = await apiClient.get(`/api/admin/public/settings/${type}`)
+      setPolicyContent(response.data.value || '')
+    } catch (err) {
+      console.error(`Failed to load ${type}:`, err)
+      setPolicyContent(type === 'terms' ? '이용약관을 불러오는데 실패했습니다.' : '개인정보처리방침을 불러오는데 실패했습니다.')
+    } finally {
+      setPolicyLoading(false)
+    }
+  }
+
+  // 간단한 Markdown 렌더링
+  const renderMarkdown = (text: string) => {
+    return text.split('\n').map((line, index) => {
+      if (line.startsWith('# ')) {
+        return <h1 key={index} className="text-xl font-bold text-text-primary mt-4 mb-3">{line.slice(2)}</h1>
+      }
+      if (line.startsWith('## ')) {
+        return <h2 key={index} className="text-lg font-semibold text-text-primary mt-4 mb-2">{line.slice(3)}</h2>
+      }
+      if (line.startsWith('### ')) {
+        return <h3 key={index} className="text-base font-medium text-text-primary mt-3 mb-2">{line.slice(4)}</h3>
+      }
+      if (line.startsWith('- ')) {
+        return <li key={index} className="text-text-secondary ml-4 mb-1 text-sm">{line.slice(2)}</li>
+      }
+      if (line.startsWith('---')) {
+        return <hr key={index} className="my-4 border-theme-border" />
+      }
+      if (line.trim() === '') {
+        return <br key={index} />
+      }
+      return <p key={index} className="text-text-secondary mb-2 text-sm">{line}</p>
+    })
   }
 
   return (
@@ -353,9 +402,21 @@ function LoginPage() {
                   className="mt-0.5 w-4 h-4 rounded border-theme-border text-accent-primary focus:ring-accent-primary/30"
                 />
                 <label htmlFor="agree-terms" className="text-sm text-text-secondary">
-                  <Link to="/terms" className="text-accent-primary hover:underline">이용약관</Link>
+                  <button
+                    type="button"
+                    onClick={() => openPolicyModal('terms')}
+                    className="text-accent-primary hover:underline"
+                  >
+                    이용약관
+                  </button>
                   {' '}및{' '}
-                  <Link to="/privacy" className="text-accent-primary hover:underline">개인정보 처리방침</Link>
+                  <button
+                    type="button"
+                    onClick={() => openPolicyModal('privacy')}
+                    className="text-accent-primary hover:underline"
+                  >
+                    개인정보 처리방침
+                  </button>
                   에 동의합니다
                 </label>
               </div>
@@ -435,6 +496,51 @@ function LoginPage() {
             >
               확인
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 이용약관/개인정보처리방침 팝업 모달 */}
+      {showPolicyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4">
+          <div className="bg-theme-card border border-theme-border rounded-2xl w-full max-w-2xl max-h-[80vh] shadow-2xl animate-scale-in flex flex-col">
+            {/* 헤더 */}
+            <div className="flex items-center justify-between p-6 border-b border-theme-border">
+              <h3 className="text-xl font-semibold text-text-primary">
+                {showPolicyModal === 'terms' ? '이용약관' : '개인정보 처리방침'}
+              </h3>
+              <button
+                onClick={() => setShowPolicyModal(null)}
+                className="p-2 text-text-muted hover:text-text-secondary hover:bg-theme-hover rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* 내용 */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {policyLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-8 h-8 border-4 border-accent-primary border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : (
+                <div className="prose prose-invert max-w-none">
+                  {renderMarkdown(policyContent)}
+                </div>
+              )}
+            </div>
+
+            {/* 푸터 - 확인 버튼 */}
+            <div className="p-6 border-t border-theme-border">
+              <button
+                onClick={() => setShowPolicyModal(null)}
+                className="w-full py-3.5 px-4 bg-accent-primary hover:bg-accent-primary/90 text-white font-semibold rounded-xl text-center transition-colors shadow-lg shadow-accent-primary/25"
+              >
+                확인
+              </button>
+            </div>
           </div>
         </div>
       )}
