@@ -371,13 +371,19 @@ async def get_company_full_report(
                 for row in fin_rows
             ]
 
-            # 9. 주주 (숫자로만 된 이름 필터링 - 파싱 오류 데이터)
+            # 9. 주주 (중복 제거 + 숫자로만 된 이름 필터링 - 파싱 오류 데이터)
+            # 동일 주주는 가장 최신 보고서 기준으로 1건만 표시
             sh_rows = await conn.fetch("""
-                SELECT shareholder_name, share_ratio, is_largest_shareholder, report_year
+                SELECT DISTINCT ON (shareholder_name_normalized)
+                    shareholder_name,
+                    share_ratio,
+                    is_largest_shareholder,
+                    report_year,
+                    source_rcept_no
                 FROM major_shareholders
                 WHERE company_id = $1
                   AND shareholder_name !~ '^[0-9,\\.\\s]+$'
-                ORDER BY report_year DESC, share_ratio DESC NULLS LAST
+                ORDER BY shareholder_name_normalized, source_rcept_no DESC NULLS LAST
             """, company_id)
 
             shareholders = [
@@ -389,6 +395,9 @@ async def get_company_full_report(
                 )
                 for row in sh_rows
             ]
+
+            # 지분율 높은 순으로 재정렬
+            shareholders.sort(key=lambda x: x.share_ratio or 0, reverse=True)
 
             # 10. 계열회사
             aff_rows = await conn.fetch("""
