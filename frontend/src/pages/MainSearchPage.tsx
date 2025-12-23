@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { SearchInput } from '../components/common'
-import { getHighRiskCompanies } from '../api/company'
+import { getHighRiskCompanies, getPlatformStats, type PlatformStats } from '../api/company'
 import { useGraphStore } from '../store'
 import { useAuthStore } from '../store/authStore'
 import type { CompanySearchResult } from '../types/company'
@@ -38,23 +38,29 @@ function MainSearchPage() {
   const [isLoadingHighRisk, setIsLoadingHighRisk] = useState(true)
   const [highRiskError, setHighRiskError] = useState<string | null>(null)
   const [showLoginModal, setShowLoginModal] = useState(false)
+  const [stats, setStats] = useState<PlatformStats | null>(null)
 
   useEffect(() => {
-    const loadHighRiskCompanies = async () => {
+    const loadData = async () => {
       setIsLoadingHighRisk(true)
       setHighRiskError(null)
       try {
-        const companies = await getHighRiskCompanies(5, 6)
+        // 병렬로 데이터 로드
+        const [companies, platformStats] = await Promise.all([
+          getHighRiskCompanies(5, 6),
+          getPlatformStats()
+        ])
         setHighRiskCompanies(companies)
+        setStats(platformStats)
       } catch (error) {
-        console.error('고위험 회사 로드 실패:', error)
+        console.error('데이터 로드 실패:', error)
         setHighRiskError('데이터를 불러오는데 실패했습니다')
       } finally {
         setIsLoadingHighRisk(false)
       }
     }
 
-    loadHighRiskCompanies()
+    loadData()
   }, [])
 
   const handleSelectCompany = useCallback((company: CompanySearchResult) => {
@@ -129,20 +135,40 @@ function MainSearchPage() {
         </p>
 
         {/* Stats row */}
-        <div className="relative z-10 mt-12 flex items-center gap-8 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+        <div className="relative z-10 mt-12 flex flex-wrap items-center justify-center gap-6 md:gap-8 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
           <div className="text-center">
-            <p className="text-2xl font-bold font-mono text-text-primary">3,922</p>
+            <p className="text-xl md:text-2xl font-bold font-mono text-text-primary">
+              {stats ? stats.companies.toLocaleString() : '3,922'}
+            </p>
             <p className="text-xs text-text-muted uppercase tracking-wider">분석 기업</p>
           </div>
-          <div className="w-px h-10 bg-dark-border" />
+          <div className="w-px h-10 bg-dark-border hidden sm:block" />
           <div className="text-center">
-            <p className="text-2xl font-bold font-mono text-text-primary">1,435</p>
+            <p className="text-xl md:text-2xl font-bold font-mono text-text-primary">
+              {stats ? stats.convertible_bonds.toLocaleString() : '1,463'}
+            </p>
             <p className="text-xs text-text-muted uppercase tracking-wider">CB 발행</p>
           </div>
-          <div className="w-px h-10 bg-dark-border" />
+          <div className="w-px h-10 bg-dark-border hidden sm:block" />
           <div className="text-center">
-            <p className="text-2xl font-bold font-mono text-text-primary">38K+</p>
+            <p className="text-xl md:text-2xl font-bold font-mono text-text-primary">
+              {stats ? (stats.officers >= 1000 ? `${Math.floor(stats.officers / 1000)}K+` : stats.officers.toLocaleString()) : '44K+'}
+            </p>
             <p className="text-xs text-text-muted uppercase tracking-wider">임원 데이터</p>
+          </div>
+          <div className="w-px h-10 bg-dark-border hidden sm:block" />
+          <div className="text-center">
+            <p className="text-xl md:text-2xl font-bold font-mono text-text-primary">
+              {stats ? (stats.major_shareholders >= 1000 ? `${Math.floor(stats.major_shareholders / 1000)}K+` : stats.major_shareholders.toLocaleString()) : '95K+'}
+            </p>
+            <p className="text-xs text-text-muted uppercase tracking-wider">주주변동</p>
+          </div>
+          <div className="w-px h-10 bg-dark-border hidden sm:block" />
+          <div className="text-center">
+            <p className="text-xl md:text-2xl font-bold font-mono text-text-primary">
+              {stats ? stats.financial_statements.toLocaleString() : '9,432'}
+            </p>
+            <p className="text-xs text-text-muted uppercase tracking-wider">재무지표</p>
           </div>
         </div>
       </section>

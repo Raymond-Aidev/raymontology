@@ -1,6 +1,15 @@
 import apiClient from './client'
 import type { CompanySearchResult } from '../types/company'
 
+// Platform Stats 응답 타입
+export interface PlatformStats {
+  companies: number
+  convertible_bonds: number
+  officers: number
+  major_shareholders: number
+  financial_statements: number
+}
+
 // Backend API 응답 타입
 interface ApiCompanySearchResponse {
   total: number
@@ -108,5 +117,26 @@ export async function checkApiHealth(): Promise<boolean> {
     return true
   } catch {
     return false
+  }
+}
+
+/**
+ * 플랫폼 통계 API
+ * 분석 기업, CB 발행, 임원, 주주변동, 재무제표 수량 조회
+ */
+export async function getPlatformStats(): Promise<PlatformStats> {
+  try {
+    const response = await apiClient.get<PlatformStats>('/api/companies/stats')
+    return response.data
+  } catch (error) {
+    console.error('플랫폼 통계 API 호출 실패:', error)
+    // Fallback 데이터
+    return {
+      companies: 3922,
+      convertible_bonds: 1463,
+      officers: 44673,
+      major_shareholders: 95191,
+      financial_statements: 9432
+    }
   }
 }

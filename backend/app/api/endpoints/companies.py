@@ -12,8 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, func, and_
 
 from app.database import AsyncSessionLocal
-from app.models import Company, ConvertibleBond, Officer
+from app.models import Company, ConvertibleBond, Officer, FinancialStatement
 import logging
+from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +60,15 @@ class CompanySearchResponse(BaseModel):
     items: List[CompanyListItem]
 
 
+class PlatformStatsResponse(BaseModel):
+    """플랫폼 통계 응답"""
+    companies: int
+    convertible_bonds: int
+    officers: int
+    major_shareholders: int
+    financial_statements: int
+
+
 class CompanyCBListItem(BaseModel):
     """회사 CB 발행 항목"""
     id: str
@@ -84,6 +94,43 @@ async def get_db():
 
 
 # Endpoints
+@router.get("/stats", response_model=PlatformStatsResponse)
+async def get_platform_stats(
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    플랫폼 전체 통계 조회
+
+    - 분석 기업 수
+    - CB 발행 건수
+    - 임원 데이터 수
+    - 주주변동 데이터 수
+    - 재무제표 건수
+    """
+    try:
+        # 각 테이블의 COUNT 조회
+        companies_count = await db.execute(select(func.count(Company.id)))
+        cb_count = await db.execute(select(func.count(ConvertibleBond.id)))
+        officers_count = await db.execute(select(func.count(Officer.id)))
+        financial_count = await db.execute(select(func.count(FinancialStatement.id)))
+
+        # major_shareholders는 모델이 없어서 raw SQL 사용
+        major_shareholders_result = await db.execute(
+            text("SELECT COUNT(*) FROM major_shareholders")
+        )
+
+        return PlatformStatsResponse(
+            companies=companies_count.scalar() or 0,
+            convertible_bonds=cb_count.scalar() or 0,
+            officers=officers_count.scalar() or 0,
+            major_shareholders=major_shareholders_result.scalar() or 0,
+            financial_statements=financial_count.scalar() or 0
+        )
+    except Exception as e:
+        logger.error(f"Error getting platform stats: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/", response_model=CompanySearchResponse)
 async def list_companies(
     page: int = Query(1, ge=1, description="페이지 번호"),
