@@ -47,3 +47,6 @@ export {
   checkApiConnection,
   type ApiStatus,
 } from './ApiStatusIndicator'
+
+// 모바일 컴포넌트
+export { default as BottomSheet } from './BottomSheet'

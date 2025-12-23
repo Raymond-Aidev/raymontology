@@ -98,9 +98,9 @@ function ReportPage() {
 
   return (
     <div className="max-w-6xl mx-auto">
-      {/* API 연결 상태 배너 */}
+      {/* API 연결 상태 배너 - 모바일에서 숨김 */}
       {isApiConnected === false && !isLoading && (
-        <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg flex items-center gap-2 text-amber-400">
+        <div className="hidden md:flex mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg items-center gap-2 text-amber-400">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
@@ -108,42 +108,47 @@ function ReportPage() {
         </div>
       )}
 
-      {/* 상단 네비게이션 */}
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link to="/" className="text-accent-primary hover:underline flex items-center gap-1">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      {/* 상단 네비게이션 - 모바일 최적화 */}
+      <div className="mb-4 md:mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-2 md:gap-4">
+          <Link to="/" className="text-accent-primary hover:underline flex items-center gap-1 p-1.5 md:p-0">
+            <svg className="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
-            검색으로
+            <span className="hidden md:inline">검색으로</span>
           </Link>
-          <span className="text-dark-border">|</span>
+          <span className="hidden md:inline text-dark-border">|</span>
           <Link
             to={`/company/${companyId}/graph`}
-            className="text-accent-primary hover:underline flex items-center gap-1"
+            className="text-accent-primary hover:underline flex items-center gap-1 p-1.5 md:p-0"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
-            관계도 보기
+            <span className="hidden md:inline">관계도 보기</span>
           </Link>
         </div>
       </div>
 
-      {/* 타이틀 */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-text-primary">{reportData.companyName}</h1>
-        <p className="text-text-secondary mt-1">RaymondsRisk 분석보고서</p>
+      {/* 타이틀 - 모바일 최적화 */}
+      <div className="mb-4 md:mb-8">
+        <h1 className="text-xl md:text-3xl font-bold text-text-primary truncate">{reportData.companyName}</h1>
+        <p className="text-sm md:text-base text-text-secondary mt-1">RaymondsRisk 분석보고서</p>
       </div>
 
-      {/* 리스크 대시보드 */}
-      <div className="bg-dark-card border border-dark-border rounded-xl shadow-card p-6 mb-6">
-        <h2 className="text-lg font-bold text-text-primary mb-6">리스크 대시보드</h2>
+      {/* 리스크 대시보드 - 모바일 최적화 */}
+      <div className="bg-dark-card border border-dark-border rounded-xl shadow-card p-4 md:p-6 mb-4 md:mb-6">
+        <h2 className="text-base md:text-lg font-bold text-text-primary mb-4 md:mb-6">리스크 대시보드</h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* 종합 리스크 게이지 */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+          {/* 종합 리스크 게이지 - 모바일에서 크기 축소 */}
           <div className="flex justify-center">
-            <RiskGauge score={reportData.riskScore.total} size={220} />
+            <div className="md:hidden">
+              <RiskGauge score={reportData.riskScore.total} size={160} />
+            </div>
+            <div className="hidden md:block">
+              <RiskGauge score={reportData.riskScore.total} size={220} />
+            </div>
           </div>
 
           {/* 투자등급 */}
@@ -159,12 +164,12 @@ function ReportPage() {
 
         {/* 경고 요약 */}
         {reportData.warnings.length > 0 && (
-          <div className="mt-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-            <div className="flex items-start gap-3">
-              <span className="text-2xl">⚠️</span>
+          <div className="mt-4 md:mt-6 p-3 md:p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+            <div className="flex items-start gap-2 md:gap-3">
+              <span className="text-xl md:text-2xl">⚠️</span>
               <div>
-                <h3 className="font-semibold text-amber-400">주의 필요</h3>
-                <ul className="text-sm text-amber-300 mt-1 list-disc list-inside">
+                <h3 className="font-semibold text-amber-400 text-sm md:text-base">주의 필요</h3>
+                <ul className="text-xs md:text-sm text-amber-300 mt-1 list-disc list-inside">
                   {reportData.warnings.map((warning, index) => (
                     <li key={index}>{warning}</li>
                   ))}
@@ -175,15 +180,15 @@ function ReportPage() {
         )}
       </div>
 
-      {/* 리스크 신호 목록 */}
-      <div className="bg-dark-card border border-dark-border rounded-xl shadow-card p-6 mb-6">
-        <h2 className="text-lg font-bold text-text-primary mb-4">리스크 신호 탐지</h2>
+      {/* 리스크 신호 목록 - 모바일 최적화 */}
+      <div className="bg-dark-card border border-dark-border rounded-xl shadow-card p-4 md:p-6 mb-4 md:mb-6">
+        <h2 className="text-base md:text-lg font-bold text-text-primary mb-3 md:mb-4">리스크 신호 탐지</h2>
         <RiskSignalList signals={reportData.riskSignals} />
       </div>
 
-      {/* 데이터 탭 */}
-      <div className="bg-dark-card border border-dark-border rounded-xl shadow-card p-6">
-        <h2 className="text-lg font-bold text-text-primary mb-6">세부 데이터</h2>
+      {/* 데이터 탭 - 모바일 최적화 */}
+      <div className="bg-dark-card border border-dark-border rounded-xl shadow-card p-4 md:p-6">
+        <h2 className="text-base md:text-lg font-bold text-text-primary mb-4 md:mb-6">세부 데이터</h2>
         <DataTabs
           cbIssuances={reportData.cbIssuances}
           cbSubscribers={reportData.cbSubscribers}
@@ -194,10 +199,10 @@ function ReportPage() {
         />
       </div>
 
-      {/* 면책조항 */}
-      <div className="mt-6 p-4 bg-dark-surface border border-dark-border rounded-lg text-xs text-text-muted">
+      {/* 면책조항 - 모바일 최적화 */}
+      <div className="mt-4 md:mt-6 p-3 md:p-4 bg-dark-surface border border-dark-border rounded-lg text-[10px] md:text-xs text-text-muted">
         <p className="font-semibold mb-1 text-text-secondary">면책조항</p>
-        <p>
+        <p className="leading-relaxed">
           본 보고서는 금융감독원 DART 공시 데이터를 기반으로 자동 생성되었으며, 투자 권유를 목적으로 하지 않습니다.
           투자 결정 시 반드시 전문가와 상담하시기 바랍니다. 데이터의 정확성을 보장하지 않으며,
           본 보고서로 인한 손실에 대해 책임을 지지 않습니다.

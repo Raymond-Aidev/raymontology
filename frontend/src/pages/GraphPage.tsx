@@ -5,7 +5,7 @@ import { ForceGraph, NodeDetailPanel, GraphControls, NavigationButtons, Breadcru
 import type { ForceGraphRef } from '../components/graph'
 import type { GraphNode, GraphData, NodeType } from '../types/graph'
 import { NODE_LIMIT, DEFAULT_DEPTH, type DateRangeParams } from '../api/graph'
-import { DateRangePicker, type DateRange } from '../components/common'
+import { DateRangePicker, type DateRange, BottomSheet } from '../components/common'
 import { useGraphQuery } from '../hooks/useGraphQuery'
 import { useGraphStore, selectCanGoBack, selectCanGoForward } from '../store'
 
@@ -73,6 +73,10 @@ function GraphPage() {
   const svgRef = useRef<SVGSVGElement | null>(null)
   const forceGraphRef = useRef<ForceGraphRef>(null)
 
+  // 모바일 상태
+  const [isMobile, setIsMobile] = useState(false)
+  const [showMobileFilters, setShowMobileFilters] = useState(false)
+
   // 날짜를 YYYY-MM-DD 형식으로 변환
   const formatDateParam = (date: Date | string | null | undefined): string | undefined => {
     if (!date) return undefined
@@ -134,14 +138,17 @@ function GraphPage() {
     setSearchParams(params, { replace: true })
   }, [depth, dateRange, setSearchParams])
 
-  // 컨테이너 크기 감지
+  // 컨테이너 크기 및 모바일 감지
   useEffect(() => {
     const updateDimensions = () => {
+      const mobile = window.innerWidth < 768
+      setIsMobile(mobile)
+
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect()
         setDimensions({
           width: rect.width,
-          height: Math.max(rect.height, 500),
+          height: mobile ? window.innerHeight - 120 : Math.max(rect.height, 500),
         })
       }
     }
@@ -321,9 +328,9 @@ function GraphPage() {
 
   return (
     <div className="h-full flex flex-col -mx-4 sm:-mx-6 lg:-mx-8 -my-6">
-      {/* API 연결 상태 배너 */}
+      {/* API 연결 상태 배너 - 모바일에서 숨김 */}
       {!isApiConnected && !isLoading && (
-        <div className="mx-4 sm:mx-6 lg:mx-8 mt-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg flex items-center gap-2 text-amber-400">
+        <div className="hidden md:flex mx-4 sm:mx-6 lg:mx-8 mt-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg items-center gap-2 text-amber-400">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
@@ -331,9 +338,9 @@ function GraphPage() {
         </div>
       )}
 
-      {/* 노드 수 제한 경고 배너 */}
+      {/* 노드 수 제한 경고 배너 - 모바일에서 축소 */}
       {isNodeLimited && !isLoading && (
-        <div className="mx-4 sm:mx-6 lg:mx-8 mt-4 p-3 bg-accent-info/10 border border-accent-info/30 rounded-lg flex items-center justify-between">
+        <div className="hidden md:flex mx-4 sm:mx-6 lg:mx-8 mt-4 p-3 bg-accent-info/10 border border-accent-info/30 rounded-lg items-center justify-between">
           <div className="flex items-center gap-2 text-accent-info">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -348,44 +355,48 @@ function GraphPage() {
         </div>
       )}
 
-      {/* 상단 네비게이션 */}
-      <div className="px-4 sm:px-6 lg:px-8 py-4 border-b border-dark-border bg-dark-surface/80 backdrop-blur-xl">
+      {/* 상단 네비게이션 - 모바일 최적화 */}
+      <div className="px-4 sm:px-6 lg:px-8 py-3 md:py-4 border-b border-dark-border bg-dark-surface/80 backdrop-blur-xl">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link to="/" className="text-accent-primary hover:text-accent-primary/80 flex items-center gap-1 text-sm transition-colors">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {/* 모바일: 간소화된 네비게이션 */}
+          <div className="flex items-center gap-2 md:gap-4">
+            <Link to="/" className="text-accent-primary hover:text-accent-primary/80 p-1.5 md:p-0 md:flex md:items-center md:gap-1 text-sm transition-colors">
+              <svg className="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
-              검색으로
+              <span className="hidden md:inline">검색으로</span>
             </Link>
-            <span className="text-dark-border">|</span>
-            {/* 네비게이션 버튼 */}
-            <NavigationButtons
-              canGoBack={canGoBack}
-              canGoForward={canGoForward}
-              onGoBack={handleGoBack}
-              onGoForward={handleGoForward}
-            />
-            <span className="text-dark-border">|</span>
-            <h1 className="text-lg font-semibold text-text-primary">
-              {centerCompany?.name || '회사'} <span className="text-text-muted font-normal">관계도</span>
+            <span className="hidden md:inline text-dark-border">|</span>
+            {/* 네비게이션 버튼 - 모바일에서 숨김 */}
+            <div className="hidden md:flex items-center gap-4">
+              <NavigationButtons
+                canGoBack={canGoBack}
+                canGoForward={canGoForward}
+                onGoBack={handleGoBack}
+                onGoForward={handleGoForward}
+              />
+              <span className="text-dark-border">|</span>
+            </div>
+            <h1 className="text-base md:text-lg font-semibold text-text-primary truncate max-w-[150px] md:max-w-none">
+              {centerCompany?.name || '회사'} <span className="hidden md:inline text-text-muted font-normal">관계도</span>
             </h1>
           </div>
+          {/* 모바일: 보고서 버튼 아이콘만 */}
           <Link
             to={`/company/${companyId}/report`}
-            className="px-4 py-2 bg-purple-500/20 text-purple-400 text-sm font-medium rounded-lg border border-purple-500/30 hover:bg-purple-500/30 hover:border-purple-500/50 transition-all shadow-[0_0_10px_rgba(168,85,247,0.2)] flex items-center gap-2"
+            className="p-2.5 md:px-4 md:py-2 bg-purple-500/20 text-purple-400 text-sm font-medium rounded-lg border border-purple-500/30 hover:bg-purple-500/30 hover:border-purple-500/50 transition-all shadow-[0_0_10px_rgba(168,85,247,0.2)] flex items-center gap-2"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
-            분석 보고서
+            <span className="hidden md:inline">분석 보고서</span>
           </Link>
         </div>
       </div>
 
-      {/* 브레드크럼 (탐색 기록) */}
+      {/* 브레드크럼 (탐색 기록) - 모바일에서 숨김 */}
       {navigationHistory.length > 1 && (
-        <div className="mx-4 sm:mx-6 lg:mx-8 mt-4 bg-dark-card rounded-lg px-4 py-2 border border-dark-border">
+        <div className="hidden md:block mx-4 sm:mx-6 lg:mx-8 mt-4 bg-dark-card rounded-lg px-4 py-2 border border-dark-border">
           <div className="flex items-center gap-2">
             <span className="text-xs text-text-muted flex-shrink-0 uppercase tracking-wide">탐색 경로</span>
             <Breadcrumb
@@ -398,8 +409,8 @@ function GraphPage() {
         </div>
       )}
 
-      {/* 필터 영역: 탐색 깊이 + 날짜 범위 */}
-      <div className="mx-4 sm:mx-6 lg:mx-8 mt-4 bg-dark-card rounded-xl border border-dark-border p-4">
+      {/* 필터 영역 - 데스크톱 */}
+      <div className="hidden md:block mx-4 sm:mx-6 lg:mx-8 mt-4 bg-dark-card rounded-xl border border-dark-border p-4">
         <div className="flex flex-wrap items-center gap-6">
           {/* 탐색 깊이 */}
           <div className="flex items-center gap-3">
@@ -467,12 +478,57 @@ function GraphPage() {
         </div>
       </div>
 
+      {/* 모바일 필터 토글 버튼 */}
+      <div className="md:hidden mx-4 mt-2">
+        <button
+          onClick={() => setShowMobileFilters(!showMobileFilters)}
+          className="w-full py-2.5 px-4 bg-dark-card border border-dark-border rounded-lg flex items-center justify-between"
+        >
+          <span className="text-sm text-text-secondary">
+            필터: {depth}단계
+          </span>
+          <svg className={`w-4 h-4 text-text-muted transition-transform ${showMobileFilters ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {/* 모바일 필터 드롭다운 */}
+        {showMobileFilters && (
+          <div className="mt-2 p-3 bg-dark-card border border-dark-border rounded-lg space-y-3">
+            <div>
+              <span className="text-xs font-medium text-text-muted uppercase tracking-wide">탐색 깊이</span>
+              <div className="flex gap-2 mt-2">
+                {[1, 2, 3].map(d => (
+                  <button
+                    key={d}
+                    onClick={() => handleDepthChange(d)}
+                    className={`flex-1 py-2.5 text-sm rounded-lg border transition-all font-medium ${
+                      depth === d
+                        ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/50'
+                        : 'bg-dark-surface text-text-secondary border-dark-border'
+                    }`}
+                  >
+                    {d}단계
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <span className="text-xs font-medium text-text-muted uppercase tracking-wide">기간 필터</span>
+              <div className="mt-2">
+                <DateRangePicker onChange={handleDateRangeChange} />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* 메인 컨텐츠 */}
-      <div className="flex-1 grid grid-cols-4 gap-4 min-h-0 px-4 sm:px-6 lg:px-8 py-4">
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 min-h-0 px-4 sm:px-6 lg:px-8 py-4">
         {/* 그래프 영역 */}
         <div
           ref={containerRef}
-          className="col-span-3 bg-dark-card rounded-xl border border-dark-border relative overflow-hidden"
+          className="col-span-1 md:col-span-3 bg-dark-card rounded-xl border border-dark-border relative overflow-hidden"
         >
           {isLoading ? (
             <div className="absolute inset-0 flex items-center justify-center bg-dark-bg/50">
@@ -531,8 +587,8 @@ function GraphPage() {
           )}
         </div>
 
-        {/* 사이드 패널 */}
-        <div className="bg-dark-card rounded-xl border border-dark-border p-4">
+        {/* 사이드 패널 - 데스크톱 */}
+        <div className="hidden md:block bg-dark-card rounded-xl border border-dark-border p-4">
           <NodeDetailPanel
             node={selectedNode}
             onClose={() => selectNode(null)}
@@ -542,8 +598,28 @@ function GraphPage() {
         </div>
       </div>
 
-      {/* 하단 통계 */}
-      <div className="mx-4 sm:mx-6 lg:mx-8 mb-4 bg-dark-card rounded-xl border border-dark-border p-4">
+      {/* 모바일 노드 상세 BottomSheet */}
+      {isMobile && (
+        <BottomSheet
+          isOpen={!!selectedNode}
+          onClose={() => selectNode(null)}
+          title={selectedNode?.name || '노드 상세'}
+          minHeight={35}
+          maxHeight={70}
+        >
+          <div className="p-4">
+            <NodeDetailPanel
+              node={selectedNode}
+              onClose={() => selectNode(null)}
+              onRecenter={handleRecenter}
+              onNavigateToCompany={handleNavigateToCompany}
+            />
+          </div>
+        </BottomSheet>
+      )}
+
+      {/* 하단 통계 - 데스크톱 */}
+      <div className="hidden md:block mx-4 sm:mx-6 lg:mx-8 mb-4 bg-dark-card rounded-xl border border-dark-border p-4">
         <div className="flex items-center justify-around text-center">
           <div>
             <p className="text-2xl font-bold font-mono text-data-company">
@@ -596,6 +672,69 @@ function GraphPage() {
           </div>
         </div>
       </div>
+
+      {/* 하단 통계 - 모바일 (간소화) */}
+      <div className="md:hidden mx-4 mb-4 bg-dark-card rounded-xl border border-dark-border p-3">
+        <div className="flex items-center justify-around text-center">
+          <div>
+            <p className="text-lg font-bold font-mono text-data-company">
+              {filteredGraphData.nodes.filter(n => n.type === 'company').length}
+            </p>
+            <p className="text-[10px] text-text-muted">회사</p>
+          </div>
+          <div className="w-px h-8 bg-dark-border" />
+          <div>
+            <p className="text-lg font-bold font-mono text-data-officer">
+              {filteredGraphData.nodes.filter(n => n.type === 'officer').length}
+            </p>
+            <p className="text-[10px] text-text-muted">임원</p>
+          </div>
+          <div className="w-px h-8 bg-dark-border" />
+          <div>
+            <p className="text-lg font-bold font-mono text-data-cb">
+              {filteredGraphData.nodes.filter(n => n.type === 'cb').length}
+            </p>
+            <p className="text-[10px] text-text-muted">CB</p>
+          </div>
+          <div className="w-px h-8 bg-dark-border" />
+          <div>
+            <p className="text-lg font-bold font-mono text-text-secondary">
+              {filteredGraphData.links.length}
+            </p>
+            <p className="text-[10px] text-text-muted">관계</p>
+          </div>
+        </div>
+      </div>
+
+      {/* 모바일 플로팅 컨트롤 버튼 */}
+      {isMobile && !isLoading && filteredGraphData.nodes.length > 0 && (
+        <div className="fixed bottom-24 right-4 flex flex-col gap-2 z-30">
+          <button
+            onClick={handleZoomIn}
+            className="w-12 h-12 bg-dark-card border border-dark-border rounded-full shadow-lg flex items-center justify-center text-text-secondary active:bg-dark-hover"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+            </svg>
+          </button>
+          <button
+            onClick={handleZoomOut}
+            className="w-12 h-12 bg-dark-card border border-dark-border rounded-full shadow-lg flex items-center justify-center text-text-secondary active:bg-dark-hover"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
+            </svg>
+          </button>
+          <button
+            onClick={handleReset}
+            className="w-12 h-12 bg-dark-card border border-dark-border rounded-full shadow-lg flex items-center justify-center text-text-secondary active:bg-dark-hover"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+        </div>
+      )}
     </div>
   )
 }

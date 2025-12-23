@@ -22,7 +22,7 @@ export default memo(function GraphControls({
   const nodeTypes: NodeType[] = ['company', 'officer', 'subscriber', 'cb', 'shareholder', 'affiliate']
 
   return (
-    <div className="absolute top-4 left-4 flex flex-col gap-2">
+    <div className="absolute top-4 left-4 flex-col gap-2 hidden md:flex">
       {/* 줌 컨트롤 */}
       <div className="bg-dark-card rounded-lg border border-dark-border overflow-hidden">
         <button

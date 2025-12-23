@@ -1,7 +1,28 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useGraphStore, selectCurrentNavEntry } from '../../store'
 
 function Footer() {
   const currentYear = new Date().getFullYear()
+  const navigate = useNavigate()
+
+  // 최근 조회한 회사 정보 가져오기
+  const currentNavEntry = useGraphStore(selectCurrentNavEntry)
+  const hasRecentCompany = !!currentNavEntry?.companyId
+
+  // 관계도/보고서 클릭 핸들러 - 회사 정보 없으면 검색으로 이동
+  const handleGraphClick = (e: React.MouseEvent) => {
+    if (!hasRecentCompany) {
+      e.preventDefault()
+      navigate('/')
+    }
+  }
+
+  const handleReportClick = (e: React.MouseEvent) => {
+    if (!hasRecentCompany) {
+      e.preventDefault()
+      navigate('/')
+    }
+  }
 
   return (
     <footer className="bg-dark-surface border-t border-dark-border">
@@ -43,13 +64,27 @@ function Footer() {
                 </Link>
               </li>
               <li>
-                <Link to="/company/00126380/graph" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
+                <Link
+                  to={hasRecentCompany ? `/company/${currentNavEntry.companyId}/graph` : '/'}
+                  onClick={handleGraphClick}
+                  className="text-sm text-text-secondary hover:text-text-primary transition-colors flex items-center gap-1.5"
+                >
                   관계도 분석
+                  {hasRecentCompany && (
+                    <span className="text-xs text-text-muted">({currentNavEntry.companyName})</span>
+                  )}
                 </Link>
               </li>
               <li>
-                <Link to="/company/00126380/report" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
+                <Link
+                  to={hasRecentCompany ? `/company/${currentNavEntry.companyId}/report` : '/'}
+                  onClick={handleReportClick}
+                  className="text-sm text-text-secondary hover:text-text-primary transition-colors flex items-center gap-1.5"
+                >
                   리스크 보고서
+                  {hasRecentCompany && (
+                    <span className="text-xs text-text-muted">({currentNavEntry.companyName})</span>
+                  )}
                 </Link>
               </li>
             </ul>
