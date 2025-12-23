@@ -56,12 +56,16 @@ export interface Officer {
 // 재무제표 데이터
 export interface FinancialStatement {
   year: number
+  quarter?: string | null  // Q1, Q2, Q3, Q4, null (연간)
   revenue: number
   operating_profit: number
   net_income: number
   total_assets: number
   total_liabilities: number
   equity: number
+  // 계산된 재무비율
+  debt_ratio?: number  // 부채비율 (%)
+  current_ratio?: number  // 유동비율 (%)
 }
 
 // 주주 유형

@@ -301,14 +301,23 @@ function mapOfficerToFrontend(apiOfficer: ApiOfficerInfo): Officer {
 }
 
 function mapFinancialToFrontend(apiFin: ApiFinancialInfo): FinancialStatement {
+  const total_assets = Math.round((apiFin.total_assets_billion || 0) * 100000000)
+  const total_liabilities = Math.round((apiFin.total_liabilities_billion || 0) * 100000000)
+  const equity = Math.round((apiFin.total_equity_billion || 0) * 100000000)
+
+  // 부채비율 계산: (총부채 / 자기자본) * 100
+  const debt_ratio = equity > 0 ? (total_liabilities / equity) * 100 : undefined
+
   return {
     year: apiFin.fiscal_year,
+    quarter: apiFin.quarter,
     revenue: Math.round((apiFin.revenue_billion || 0) * 100000000),
     operating_profit: Math.round((apiFin.operating_profit_billion || 0) * 100000000),
     net_income: Math.round((apiFin.net_income_billion || 0) * 100000000),
-    total_assets: Math.round((apiFin.total_assets_billion || 0) * 100000000),
-    total_liabilities: Math.round((apiFin.total_liabilities_billion || 0) * 100000000),
-    equity: Math.round((apiFin.total_equity_billion || 0) * 100000000),
+    total_assets,
+    total_liabilities,
+    equity,
+    debt_ratio,
   }
 }
 

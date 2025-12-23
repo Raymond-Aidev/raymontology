@@ -332,20 +332,29 @@ export default function DataTabs({ cbIssuances, cbSubscribers, officers, financi
         <>
           {financials.length === 0 ? (
             <div className="py-12 text-center">
+              <svg className="w-12 h-12 mx-auto mb-3 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
               <p className="text-text-muted">재무제표 정보가 없습니다</p>
+              <p className="text-xs text-text-tertiary mt-1">아직 공시되지 않았거나 데이터를 불러올 수 없습니다</p>
             </div>
           ) : (
             <>
               {/* 모바일 카드 뷰 */}
               <div className="md:hidden space-y-3">
                 {financials.map((fin, index) => {
-                  const debtRatio = ((fin.total_liabilities / fin.equity) * 100).toFixed(1)
+                  const debtRatio = fin.debt_ratio ?? (fin.equity > 0 ? (fin.total_liabilities / fin.equity) * 100 : 0)
                   return (
-                    <div key={`${fin.year}-${index}`} className="bg-dark-surface border border-dark-border rounded-lg p-3">
+                    <div key={`${fin.year}-${fin.quarter || 'annual'}-${index}`} className="bg-dark-surface border border-dark-border rounded-lg p-3">
                       <div className="flex items-center justify-between mb-3">
-                        <span className="font-bold text-accent-primary text-lg">{fin.year}</span>
-                        <span className={`text-xs font-medium ${parseFloat(debtRatio) > 200 ? 'text-accent-danger' : 'text-text-secondary'}`}>
-                          부채비율 {debtRatio}%
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-accent-primary text-lg">{fin.year}</span>
+                          {fin.quarter && (
+                            <span className="px-1.5 py-0.5 text-xs bg-accent-primary/20 text-accent-primary rounded">{fin.quarter}</span>
+                          )}
+                        </div>
+                        <span className={`text-xs font-medium ${debtRatio > 200 ? 'text-accent-danger' : debtRatio > 100 ? 'text-amber-400' : 'text-green-400'}`}>
+                          부채비율 {debtRatio.toFixed(1)}%
                         </span>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-xs">
@@ -369,6 +378,16 @@ export default function DataTabs({ cbIssuances, cbSubscribers, officers, financi
                             {formatCurrency(fin.net_income)}
                           </p>
                         </div>
+                        <div>
+                          <span className="text-text-muted">자기자본</span>
+                          <p className={fin.equity < 0 ? 'text-accent-danger font-medium' : 'text-text-primary font-medium'}>
+                            {formatCurrency(fin.equity)}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-text-muted">총부채</span>
+                          <p className="text-text-primary font-medium">{formatCurrency(fin.total_liabilities)}</p>
+                        </div>
                       </div>
                     </div>
                   )
@@ -379,20 +398,28 @@ export default function DataTabs({ cbIssuances, cbSubscribers, officers, financi
                 <table className="w-full text-sm">
                   <thead className="bg-dark-card">
                     <tr>
-                      <th className="px-4 py-3 text-left font-medium text-text-secondary">연도</th>
+                      <th className="px-4 py-3 text-left font-medium text-text-secondary">기간</th>
                       <th className="px-4 py-3 text-right font-medium text-text-secondary">매출액</th>
                       <th className="px-4 py-3 text-right font-medium text-text-secondary">영업이익</th>
                       <th className="px-4 py-3 text-right font-medium text-text-secondary">당기순이익</th>
                       <th className="px-4 py-3 text-right font-medium text-text-secondary">총자산</th>
+                      <th className="px-4 py-3 text-right font-medium text-text-secondary">자기자본</th>
                       <th className="px-4 py-3 text-right font-medium text-text-secondary">부채비율</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-dark-border">
                     {financials.map((fin, index) => {
-                      const debtRatio = ((fin.total_liabilities / fin.equity) * 100).toFixed(1)
+                      const debtRatio = fin.debt_ratio ?? (fin.equity > 0 ? (fin.total_liabilities / fin.equity) * 100 : 0)
                       return (
-                        <tr key={`${fin.year}-${index}`} className="hover:bg-dark-hover">
-                          <td className="px-4 py-3 font-medium text-text-primary">{fin.year}</td>
+                        <tr key={`${fin.year}-${fin.quarter || 'annual'}-${index}`} className="hover:bg-dark-hover">
+                          <td className="px-4 py-3 font-medium text-text-primary">
+                            <div className="flex items-center gap-2">
+                              {fin.year}
+                              {fin.quarter && (
+                                <span className="px-1.5 py-0.5 text-xs bg-accent-primary/20 text-accent-primary rounded">{fin.quarter}</span>
+                              )}
+                            </div>
+                          </td>
                           <td className="px-4 py-3 text-right text-text-primary">{formatCurrency(fin.revenue)}</td>
                           <td className={`px-4 py-3 text-right ${fin.operating_profit < 0 ? 'text-accent-danger' : 'text-text-primary'}`}>
                             {formatCurrency(fin.operating_profit)}
@@ -401,8 +428,15 @@ export default function DataTabs({ cbIssuances, cbSubscribers, officers, financi
                             {formatCurrency(fin.net_income)}
                           </td>
                           <td className="px-4 py-3 text-right text-text-primary">{formatCurrency(fin.total_assets)}</td>
-                          <td className={`px-4 py-3 text-right ${parseFloat(debtRatio) > 200 ? 'text-accent-danger font-medium' : 'text-text-primary'}`}>
-                            {debtRatio}%
+                          <td className={`px-4 py-3 text-right ${fin.equity < 0 ? 'text-accent-danger' : 'text-text-primary'}`}>
+                            {formatCurrency(fin.equity)}
+                          </td>
+                          <td className={`px-4 py-3 text-right font-medium ${
+                            debtRatio > 200 ? 'text-accent-danger' :
+                            debtRatio > 100 ? 'text-amber-400' :
+                            'text-green-400'
+                          }`}>
+                            {debtRatio.toFixed(1)}%
                           </td>
                         </tr>
                       )
