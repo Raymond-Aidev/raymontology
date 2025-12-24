@@ -47,7 +47,7 @@ class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
         if self.enable_memory_tracking:
             try:
                 memory_before = self.process.memory_info().rss / 1024 / 1024  # MB
-            except:
+            except (AttributeError, OSError):
                 pass
 
         # 요청 처리
@@ -63,7 +63,7 @@ class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
             try:
                 memory_after = self.process.memory_info().rss / 1024 / 1024
                 memory_delta = memory_after - memory_before
-            except:
+            except (AttributeError, OSError):
                 pass
 
         # 응답 헤더 추가
@@ -309,7 +309,7 @@ class ResponseSizeTracker:
             else:
                 # 파이썬 객체 크기
                 return sys.getsizeof(data)
-        except:
+        except (TypeError, ValueError, OverflowError):
             return 0
 
     @staticmethod

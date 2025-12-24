@@ -345,8 +345,8 @@ async def get_officer_career_fallback(
                             "status": item.get("status", "unknown"),
                             "source": "parsed"
                         })
-            except:
-                pass
+            except (json.JSONDecodeError, TypeError, KeyError) as e:
+                logger.warning(f"Failed to parse career_history: {e}")
 
         return {
             "officer": {

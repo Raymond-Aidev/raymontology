@@ -211,8 +211,8 @@ async def _get_officer_career_from_postgres(officer_id: str, db: AsyncSession):
                         is_listed=False,
                         source="disclosure"
                     ))
-        except:
-            pass
+        except (json.JSONDecodeError, TypeError, KeyError) as e:
+            logger.warning(f"Failed to parse career_history for officer {officer.id}: {e}")
 
     return OfficerCareerResponse(
         officer=GraphNode(
