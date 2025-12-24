@@ -41,6 +41,25 @@
 | 스키마 레지스트리 | 모든 테이블명/컬럼명 참조 | `scripts/SCHEMA_REGISTRY.md` |
 | 표준 작업 프로세스 | 모든 DB 작업 체크리스트 | `scripts/STANDARD_PROCESS.md` |
 | 파싱 상태 | 상세 파싱 진행 상황 | `scripts/PARSING_STATUS.md` |
+| **앱인토스 가이드** | **토스 앱인앱 연동 개발** | **`docs/APPS_IN_TOSS_GUIDE.md`** |
+
+---
+
+## 앱인토스(Apps in Toss) 개발 규칙
+
+### 앱인토스 관련 작업 시 필수 확인
+```
+앱인토스 관련 개발/수정 작업 전 반드시 docs/APPS_IN_TOSS_GUIDE.md 참조
+```
+
+### 앱인토스란?
+- 토스 앱 내에서 서비스를 앱인앱 형태로 제공하는 플랫폼
+- 3,000만 토스 유저에게 서비스 노출 가능
+- WebView/React Native 기반 SDK 제공
+
+### 공식 문서
+- 개발자 문서: https://developers-apps-in-toss.toss.im/
+- 홈페이지: https://apps-in-toss.toss.im/
 
 ---
 
