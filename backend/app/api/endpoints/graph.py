@@ -820,16 +820,16 @@ async def get_officer_career_network(
     try:
         async with driver.session() as session:
             result = await session.run(cypher, officer_id=officer_id, limit=limit)
-            records = await result.data()
-
-            if not records:
-                raise HTTPException(status_code=404, detail="Officer not found")
 
             nodes = []
             relationships = []
             seen_nodes = set()
+            seen_rels = set()
+            has_records = False
 
-            for record in records:
+            async for record in result:
+                has_records = True
+
                 # Officer
                 officer = record["o"]
                 if officer["id"] not in seen_nodes:
@@ -850,8 +850,13 @@ async def get_officer_career_network(
                     ))
                     seen_nodes.add(company["id"])
 
-                # Career relationship
-                relationships.append(serialize_neo4j_relationship(record["r"]))
+                # Career relationship (WORKS_AT or WORKED_AT)
+                rel = record["r"]
+                if rel:
+                    serialized = serialize_neo4j_relationship(rel)
+                    if serialized.id not in seen_rels:
+                        relationships.append(serialized)
+                        seen_rels.add(serialized.id)
 
                 # Other officers
                 for other in record["other_officers"]:
@@ -882,6 +887,9 @@ async def get_officer_career_network(
                             properties=serialize_node_properties(cb)
                         ))
                         seen_nodes.add(cb["id"])
+
+            if not has_records:
+                raise HTTPException(status_code=404, detail="Officer not found")
 
             return GraphResponse(
                 nodes=nodes,
@@ -1034,17 +1042,16 @@ async def get_subscriber_investment_network(
     try:
         async with driver.session() as session:
             result = await session.run(cypher, subscriber_id=subscriber_id, limit=limit)
-            records = await result.data()
-
-            if not records:
-                raise HTTPException(status_code=404, detail="Subscriber not found")
 
             nodes = []
             relationships = []
             seen_nodes = set()
             seen_rels = set()
+            has_records = False
 
-            for record in records:
+            async for record in result:
+                has_records = True
+
                 # Subscriber
                 subscriber = record["s"]
                 if subscriber["id"] not in seen_nodes:
@@ -1057,7 +1064,7 @@ async def get_subscriber_investment_network(
 
                 # Company
                 company = record["c"]
-                if company["id"] not in seen_nodes:
+                if company and company["id"] not in seen_nodes:
                     nodes.append(GraphNode(
                         id=company["id"],
                         type="Company",
@@ -1067,7 +1074,7 @@ async def get_subscriber_investment_network(
 
                 # CB
                 cb = record["cb"]
-                if cb["id"] not in seen_nodes:
+                if cb and cb["id"] not in seen_nodes:
                     nodes.append(GraphNode(
                         id=cb["id"],
                         type="ConvertibleBond",
@@ -1116,6 +1123,9 @@ async def get_subscriber_investment_network(
                         if serialized.id not in seen_rels:
                             relationships.append(serialized)
                             seen_rels.add(serialized.id)
+
+            if not has_records:
+                raise HTTPException(status_code=404, detail="Subscriber not found")
 
             return GraphResponse(
                 nodes=nodes,
@@ -1457,16 +1467,16 @@ async def recenter_graph(
                 node_id=request.node_id,
                 limit=request.limit
             )
-            records = await result.data()
-
-            if not records:
-                raise HTTPException(status_code=404, detail=f"{request.node_type} not found")
 
             nodes = []
             relationships = []
             seen_nodes = set()
+            seen_rels = set()
+            has_records = False
 
-            for record in records:
+            async for record in result:
+                has_records = True
+
                 # Center node
                 center = record["center"]
                 if center["id"] not in seen_nodes:
@@ -1480,7 +1490,8 @@ async def recenter_graph(
                 # Connected node
                 connected = record["connected"]
                 if connected["id"] not in seen_nodes:
-                    node_type = list(connected.labels)[0] if connected.labels else "Unknown"
+                    # labels 속성 사용 (Record 객체에서는 사용 가능)
+                    node_type = list(connected.labels)[0] if hasattr(connected, 'labels') and connected.labels else "Unknown"
                     nodes.append(GraphNode(
                         id=connected["id"],
                         type=node_type,
@@ -1489,7 +1500,15 @@ async def recenter_graph(
                     seen_nodes.add(connected["id"])
 
                 # Relationship
-                relationships.append(serialize_neo4j_relationship(record["r"]))
+                rel = record["r"]
+                if rel:
+                    serialized = serialize_neo4j_relationship(rel)
+                    if serialized.id not in seen_rels:
+                        relationships.append(serialized)
+                        seen_rels.add(serialized.id)
+
+            if not has_records:
+                raise HTTPException(status_code=404, detail=f"{request.node_type} not found")
 
             return GraphResponse(
                 nodes=nodes,
