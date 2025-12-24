@@ -296,20 +296,20 @@ async def get_officer_career_fallback(
 ):
     """임원 경력 조회 (PostgreSQL 폴백)"""
     try:
-        # 임원 정보 조회
+        # 임원 정보 조회 (career_history JSON 포함)
         officer_query = text("""
-            SELECT id::text, name, birth_date
+            SELECT id::text, name, birth_date, position, career_history
             FROM officers WHERE id::text = :officer_id
         """)
         result = await db.execute(officer_query, {"officer_id": officer_id})
         officer = result.fetchone()
-        
+
         if not officer:
             raise HTTPException(status_code=404, detail="Officer not found")
-        
-        # 경력 조회
+
+        # 경력 조회 (officer_positions 테이블)
         career_query = text("""
-            SELECT c.id::text as company_id, c.name as company_name, 
+            SELECT c.id::text as company_id, c.name as company_name,
                    op.position, op.term_start_date::text, op.term_end_date::text, op.is_current
             FROM officer_positions op
             JOIN companies c ON op.company_id = c.id
@@ -318,7 +318,7 @@ async def get_officer_career_fallback(
         """)
         result = await db.execute(career_query, {"officer_id": officer_id})
         careers = result.fetchall()
-        
+
         career_history = []
         for c in careers:
             career_history.append({
@@ -331,17 +331,36 @@ async def get_officer_career_fallback(
                 "is_listed": True,
                 "source": "db"
             })
-        
+
+        # officers.career_history JSON에서 추가 경력 정보 추출
+        parsed_careers = []
+        if officer.career_history:
+            import json
+            try:
+                raw_careers = officer.career_history if isinstance(officer.career_history, list) else json.loads(officer.career_history)
+                for item in raw_careers:
+                    if isinstance(item, dict):
+                        parsed_careers.append({
+                            "text": item.get("text", ""),
+                            "status": item.get("status", "unknown"),
+                            "source": "parsed"
+                        })
+            except:
+                pass
+
         return {
             "officer": {
                 "id": officer.id,
                 "type": "Officer",
                 "properties": {
                     "name": officer.name,
-                    "birth_date": officer.birth_date
+                    "birth_date": officer.birth_date,
+                    "position": officer.position,
+                    "career_history": parsed_careers
                 }
             },
-            "career_history": career_history
+            "career_history": career_history,
+            "parsed_careers": parsed_careers
         }
         
     except HTTPException:

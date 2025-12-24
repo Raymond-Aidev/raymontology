@@ -140,6 +140,12 @@ async def get_neo4j_driver():
     # 드라이버 종료는 app shutdown에서 처리 (database.close_db)
 
 
+async def get_neo4j_driver_optional():
+    """Neo4j driver 제공 (없으면 None 반환, 에러 없음)"""
+    driver = db_module.neo4j_driver
+    yield driver
+
+
 async def get_db():
     """Database session 제공"""
     async with AsyncSessionLocal() as session:
@@ -147,6 +153,81 @@ async def get_db():
 
 
 # Helper Functions
+
+async def _get_officer_career_from_postgres(officer_id: str, db: AsyncSession):
+    """PostgreSQL에서 임원 경력 조회 (Neo4j fallback)"""
+    from sqlalchemy import text
+
+    # 임원 정보 조회
+    officer_query = text("""
+        SELECT id::text, name, birth_date, position, career_history
+        FROM officers WHERE id::text = :officer_id
+    """)
+    result = await db.execute(officer_query, {"officer_id": officer_id})
+    officer = result.fetchone()
+
+    if not officer:
+        raise HTTPException(status_code=404, detail="Officer not found")
+
+    # 경력 조회 (officer_positions 테이블)
+    career_query = text("""
+        SELECT c.id::text as company_id, c.name as company_name,
+               op.position, op.term_start_date::text, op.term_end_date::text, op.is_current
+        FROM officer_positions op
+        JOIN companies c ON op.company_id = c.id
+        WHERE op.officer_id::text = :officer_id
+        ORDER BY op.is_current DESC, op.term_start_date DESC
+    """)
+    result = await db.execute(career_query, {"officer_id": officer_id})
+    careers = result.fetchall()
+
+    career_history = []
+    for c in careers:
+        career_history.append(CareerHistory(
+            company_id=c.company_id,
+            company_name=c.company_name,
+            position=c.position,
+            start_date=c.term_start_date,
+            end_date=c.term_end_date,
+            is_current=c.is_current if c.is_current is not None else False,
+            is_listed=True,
+            source="db"
+        ))
+
+    # officers.career_history JSON에서 추가 경력 정보 추출
+    if officer.career_history:
+        import json
+        try:
+            raw_careers = officer.career_history if isinstance(officer.career_history, list) else json.loads(officer.career_history)
+            for item in raw_careers:
+                if isinstance(item, dict) and item.get("text"):
+                    career_history.append(CareerHistory(
+                        company_id=None,
+                        company_name=item.get("text", "")[:50],
+                        position=item.get("text", ""),
+                        start_date=None,
+                        end_date=None,
+                        is_current=item.get("status") == "current",
+                        is_listed=False,
+                        source="disclosure"
+                    ))
+        except:
+            pass
+
+    return OfficerCareerResponse(
+        officer=GraphNode(
+            id=officer.id,
+            type="Officer",
+            properties={
+                "name": officer.name,
+                "birth_date": officer.birth_date,
+                "position": officer.position
+            }
+        ),
+        career_history=career_history
+    )
+
+
 def serialize_neo4j_node(record: Dict) -> GraphNode:
     """Neo4j 노드를 GraphNode로 변환"""
     node = record
@@ -578,7 +659,7 @@ async def get_company_network(
 @router.get("/officer/{officer_id}/career", response_model=OfficerCareerResponse)
 async def get_officer_career(
     officer_id: str,
-    driver=Depends(get_neo4j_driver),
+    driver=Depends(get_neo4j_driver_optional),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -590,7 +671,11 @@ async def get_officer_career(
     - 두 가지 소스:
       1. "db": 상장사 임원 DB (Neo4j WORKS_AT/WORKED_AT)
       2. "disclosure": 공시 파싱 경력 (PostgreSQL career_history JSONB)
+    - Neo4j 없으면 PostgreSQL fallback 사용
     """
+    # Neo4j 없으면 PostgreSQL fallback 사용
+    if driver is None:
+        return await _get_officer_career_from_postgres(officer_id, db)
     cypher = """
     // 먼저 해당 임원의 이름과 생년월일을 가져옴
     MATCH (target:Officer {id: $officer_id})
