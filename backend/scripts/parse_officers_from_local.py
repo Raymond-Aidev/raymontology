@@ -66,17 +66,21 @@ class OfficerParser:
         logger.info(f"회사 캐시 로드: {len(self.company_cache)}개 (상장사: {listed_count}개)")
 
     def extract_xml_from_zip(self, zip_path: Path) -> Optional[str]:
-        """ZIP에서 XML 추출"""
+        """ZIP에서 모든 XML 추출하고 합침"""
         try:
+            all_xml = []
             with zipfile.ZipFile(zip_path, 'r') as zf:
                 for name in zf.namelist():
                     if name.endswith('.xml'):
                         content = zf.read(name)
-                        for enc in ['euc-kr', 'utf-8', 'cp949']:
+                        for enc in ['utf-8', 'euc-kr', 'cp949']:
                             try:
-                                return content.decode(enc)
+                                decoded = content.decode(enc)
+                                all_xml.append(decoded)
+                                break
                             except:
                                 continue
+            return '\n'.join(all_xml) if all_xml else None
         except Exception as e:
             pass
         return None
@@ -114,10 +118,16 @@ class OfficerParser:
         try:
             officer = {'base_date': base_date}
 
-            # 성명 (SH5_NM_T)
-            name_match = re.search(r'ACODE="SH5_NM_T"[^>]*>([^<]+)</TE>', row_xml)
+            # 성명 (SH5_NM_T) - <P> 태그 포함 가능
+            name_match = re.search(r'ACODE="SH5_NM_T"[^>]*>(.*?)</TE>', row_xml, re.DOTALL)
             if name_match:
-                name = name_match.group(1).strip()
+                raw_name = name_match.group(1)
+                # <P> 태그 내용 추출
+                p_match = re.search(r'<P[^>]*>([^<]+)</P>', raw_name)
+                if p_match:
+                    name = p_match.group(1).strip()
+                else:
+                    name = re.sub(r'<[^>]+>', '', raw_name).strip()
                 if name and len(name) >= 2 and name != '-':
                     officer['name'] = name
 
@@ -134,10 +144,15 @@ class OfficerParser:
             if sex_match:
                 officer['gender'] = '남' if sex_match.group(1) == '1' else '여'
 
-            # 직위 (SH5_LEV)
-            pos_match = re.search(r'ACODE="SH5_LEV"[^>]*>([^<]+)</TE>', row_xml)
+            # 직위 (SH5_LEV) - <P> 태그 포함 가능
+            pos_match = re.search(r'ACODE="SH5_LEV"[^>]*>(.*?)</TE>', row_xml, re.DOTALL)
             if pos_match:
-                pos = pos_match.group(1).strip()
+                raw_pos = pos_match.group(1)
+                p_match = re.search(r'<P[^>]*>([^<]+)</P>', raw_pos)
+                if p_match:
+                    pos = p_match.group(1).strip()
+                else:
+                    pos = re.sub(r'<[^>]+>', '', raw_pos).strip()
                 if pos and pos != '-':
                     officer['position'] = pos
 
@@ -151,10 +166,18 @@ class OfficerParser:
             if ful_match:
                 officer['is_fulltime'] = ful_match.group(1) == '1'
 
-            # 주요경력 (SH5_SKL)
-            skl_match = re.search(r'ACODE="SH5_SKL"[^>]*>([^<]*)</TE>', row_xml, re.DOTALL)
+            # 주요경력 (SH5_SKL) - <P> 태그 포함 복잡한 형식 지원
+            skl_match = re.search(r'ACODE="SH5_SKL"[^>]*>(.*?)</TE>', row_xml, re.DOTALL)
             if skl_match:
-                officer['career_text'] = skl_match.group(1).strip()
+                raw_career = skl_match.group(1)
+                # <P> 태그 내용 추출하고 줄바꿈으로 연결
+                p_contents = re.findall(r'<P[^>]*>([^<]*)</P>', raw_career)
+                if p_contents:
+                    career_text = '\n'.join(p_contents)
+                else:
+                    # <P> 태그가 없으면 직접 텍스트 사용
+                    career_text = re.sub(r'<[^>]+>', '', raw_career)
+                officer['career_text'] = career_text.strip()
                 officer['career_history'] = self._parse_career(officer['career_text'])
 
             # 재직기간 (SH5_PER)
