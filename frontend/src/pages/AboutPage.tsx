@@ -99,7 +99,7 @@ export default function AboutPage() {
               </div>
               <h3 className="text-lg font-semibold text-text-primary mb-2">정보 비대칭 해소</h3>
               <p className="text-sm text-text-secondary leading-relaxed">
-                기관투자자는 전문 실사팀과 고가의 Bloomberg 터미널($24,000/년)로 기업을 분석하지만,
+                기관투자자는 전문 실사팀과 고가의 터미널로 기업을 분석하지만,
                 개인투자자는 공시 자료에만 의존합니다. RaymondsRisk는 이러한 정보 격차를 해소합니다.
               </p>
             </div>
