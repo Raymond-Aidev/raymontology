@@ -113,7 +113,7 @@ export default function AboutPage() {
               </div>
               <h3 className="text-lg font-semibold text-text-primary mb-2">특허 기술 기반 신뢰성</h3>
               <p className="text-sm text-text-secondary leading-relaxed">
-                대한민국 특허청에 등록된 '3단계 계층적 관계망 시각화' 및 '포트폴리오 학습 시스템' 특허 기술을 기반으로,
+                대한민국 특허청에 출원 중인 '3단계 계층적 관계망 시각화' 및 '포트폴리오 학습 시스템' 특허 기술을 기반으로,
                 1.5초 이내에 복잡한 관계망을 구축하고 78.3% 정확도로 리스크를 예측합니다.
               </p>
             </div>
