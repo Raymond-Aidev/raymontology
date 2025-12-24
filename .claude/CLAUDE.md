@@ -209,8 +209,26 @@ disclosures: 0건 → 5,678건 (+5,678건)
 
 ## DB 접속 정보
 
+### 로컬 (개발)
 ```bash
 PGPASSWORD=dev_password psql -h localhost -U postgres -d raymontology_dev
+```
+
+### 프로덕션 (Railway)
+```bash
+# PostgreSQL
+PGPASSWORD=ooRdnLPpUTvrYODqhYqvhWwwQtsnmjnR psql -h hopper.proxy.rlwy.net -p 41316 -U postgres -d railway
+
+# API URL
+https://raymontology-production.up.railway.app
+```
+
+### Neo4j (미설정 - placeholder 상태)
+```
+NEO4J_URI=neo4j+s://xxxxx.databases.neo4j.io
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=your_strong_neo4j_password_here
+# 주의: 실제 Neo4j Aura 설정 필요
 ```
 
 ---
