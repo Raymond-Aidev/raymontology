@@ -46,6 +46,12 @@ function Header() {
             >
               문의
             </Link>
+            <Link
+              to="/pricing"
+              className="px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-dark-hover rounded-lg transition-all"
+            >
+              이용권
+            </Link>
           </nav>
 
           {/* User Menu (Desktop) */}
@@ -164,6 +170,13 @@ function Header() {
                 className="px-4 py-2.5 text-sm text-text-secondary hover:text-text-primary hover:bg-dark-hover rounded-lg transition-all"
               >
                 문의
+              </Link>
+              <Link
+                to="/pricing"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="px-4 py-2.5 text-sm text-text-secondary hover:text-text-primary hover:bg-dark-hover rounded-lg transition-all"
+              >
+                이용권
               </Link>
               <div className="my-2 border-t border-dark-border" />
               {isAuthenticated && user ? (

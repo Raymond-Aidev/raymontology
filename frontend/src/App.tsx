@@ -20,6 +20,7 @@ const AdminPage = lazy(() => import('./pages/AdminPage'))
 const TermsPage = lazy(() => import('./pages/TermsPage'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
 const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'))
+const PricingPage = lazy(() => import('./pages/PricingPage'))
 
 function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth)
@@ -36,6 +37,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
+        <Route path="/pricing" element={<PricingPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/admin" element={<AdminPage />} />

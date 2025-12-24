@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { SearchInput } from '../components/common'
 import { getHighRiskCompanies, getPlatformStats, type PlatformStats } from '../api/company'
-import { useGraphStore } from '../store'
 import { useAuthStore } from '../store/authStore'
 import type { CompanySearchResult } from '../types/company'
 
@@ -31,13 +30,13 @@ const gradeConfig: Record<string, string> = {
 
 function MainSearchPage() {
   const navigate = useNavigate()
-  const clearNavigation = useGraphStore((state) => state.clearNavigation)
   const { isAuthenticated } = useAuthStore()
 
   const [highRiskCompanies, setHighRiskCompanies] = useState<CompanySearchResult[]>([])
   const [isLoadingHighRisk, setIsLoadingHighRisk] = useState(true)
   const [highRiskError, setHighRiskError] = useState<string | null>(null)
   const [showLoginModal, setShowLoginModal] = useState(false)
+  const [showPaywallModal, setShowPaywallModal] = useState(false)
   const [stats, setStats] = useState<PlatformStats | null>(null)
 
   useEffect(() => {
@@ -63,17 +62,15 @@ function MainSearchPage() {
     loadData()
   }, [])
 
-  const handleSelectCompany = useCallback((company: CompanySearchResult) => {
-    // 로그인하지 않은 경우 모달 표시
+  const handleSelectCompany = useCallback((_company: CompanySearchResult) => {
+    // 로그인하지 않은 경우 로그인 모달 표시
     if (!isAuthenticated) {
       setShowLoginModal(true)
       return
     }
-    // 새 검색 시 네비게이션 히스토리 초기화
-    clearNavigation()
-    // corp_code로 조회해야 CB 데이터가 함께 표시됨
-    navigate(`/company/${company.corp_code}/graph`)
-  }, [navigate, clearNavigation, isAuthenticated])
+    // 로그인한 경우 유료 서비스 모달 표시
+    setShowPaywallModal(true)
+  }, [isAuthenticated])
 
   return (
     <>
@@ -379,6 +376,41 @@ function MainSearchPage() {
         </div>
       </section>
     </div>
+
+    {/* Paywall Modal */}
+    {showPaywallModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+        <div className="bg-dark-card border border-dark-border rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl animate-scale-in">
+          {/* Icon */}
+          <div className="w-14 h-14 mx-auto mb-4 bg-accent-warning/10 rounded-2xl flex items-center justify-center">
+            <svg className="w-7 h-7 text-accent-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+
+          {/* Title */}
+          <h3 className="text-lg font-semibold text-text-primary text-center mb-2">
+            유료 서비스입니다
+          </h3>
+
+          {/* Description */}
+          <p className="text-sm text-text-secondary text-center mb-6">
+            결제 후 이용 가능합니다.
+          </p>
+
+          {/* Button */}
+          <button
+            onClick={() => {
+              setShowPaywallModal(false)
+              navigate('/pricing')
+            }}
+            className="w-full py-3 px-4 bg-accent-primary hover:bg-accent-primary/90 text-white font-medium rounded-xl transition-colors"
+          >
+            확인
+          </button>
+        </div>
+      </div>
+    )}
 
     {/* Login Required Modal */}
     {showLoginModal && (
