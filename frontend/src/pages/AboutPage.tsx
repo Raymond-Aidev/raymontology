@@ -125,9 +125,9 @@ export default function AboutPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-text-primary mb-2">24시간 실시간 모니터링</h3>
+              <h3 className="text-lg font-semibold text-text-primary mb-2">실시간 업데이트</h3>
               <p className="text-sm text-text-secondary leading-relaxed">
-                CB 발행, 대표이사 변경, 대주주 변동, 거래량 급증 등 7가지 위험 신호를 즉시 포착하여 알림을 발송합니다.
+                CB 발행, 대표이사 변경, 대주주 변동, 거래량 급증 등 7가지 위험 신호를 실시간으로 업데이트합니다.
                 시장 변화에 신속하게 대응할 수 있습니다.
               </p>
             </div>
