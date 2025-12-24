@@ -12,6 +12,8 @@ import logging
 from app.database import get_db, get_redis
 from app.crawlers.dart_crawler import DARTCrawler
 from app.utils.cache import make_cache_key, get_cached, set_cached, CacheTTL
+from app.auth.deps import get_current_superuser
+from app.models.users import User
 
 logger = logging.getLogger(__name__)
 
@@ -22,18 +24,23 @@ router = APIRouter(prefix="/api/admin/crawl", tags=["Admin - Crawling"])
 # 관리자 권한 체크 (간단한 버전 - 실제로는 JWT 토큰 검증 필요)
 # ============================================================================
 
-async def require_admin():
+async def require_admin(
+    current_user: User = Depends(get_current_superuser)
+) -> User:
     """
-    관리자 권한 확인
+    관리자 권한 확인 (슈퍼유저만 접근 가능)
 
-    TODO: 실제 인증/인가 로직 구현 필요
-    현재는 플레이스홀더
+    Args:
+        current_user: JWT 토큰에서 추출된 슈퍼유저
+
+    Returns:
+        User 모델 인스턴스
+
+    Raises:
+        HTTPException: 401 (인증 실패), 403 (권한 없음)
     """
-    # 실제로는 JWT 토큰에서 role 확인
-    # user = Depends(get_current_user)
-    # if user.role != "ADMIN":
-    #     raise HTTPException(403, "관리자 권한 필요")
-    pass
+    logger.info(f"Admin access granted: {current_user.email}")
+    return current_user
 
 
 # ============================================================================

@@ -19,6 +19,8 @@ from app.models.convertible_bonds import ConvertibleBond
 from app.models.cb_subscribers import CBSubscriber
 from app.models.financial_statements import FinancialStatement
 from app.models.users import User
+from app.models.major_shareholders import MajorShareholder
+from app.models.risk_scores import RiskScore
 
 __all__ = [
     "Base",
@@ -38,4 +40,6 @@ __all__ = [
     "CBSubscriber",
     "FinancialStatement",
     "User",
+    "MajorShareholder",
+    "RiskScore",
 ]

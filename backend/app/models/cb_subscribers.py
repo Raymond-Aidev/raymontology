@@ -3,7 +3,7 @@ CB 인수자 모델
 
 전환사채 발행 대상자(인수자) 정보
 """
-from sqlalchemy import Column, String, Float, Integer, Boolean, Date, ForeignKey, DateTime, Index
+from sqlalchemy import Column, String, Float, Integer, Boolean, Date, ForeignKey, DateTime, Index, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -65,8 +65,11 @@ class CBSubscriber(Base):
     # Relationships
     convertible_bond = relationship("ConvertibleBond", back_populates="subscribers")
 
-    # 인덱스
+    # 인덱스 및 제약조건
     __table_args__ = (
+        # 유니크 제약조건: 동일 CB에 동일 인수자는 1건만 존재
+        UniqueConstraint('cb_id', 'subscriber_name', name='uq_cb_subscriber'),
+        # 인덱스
         Index('idx_cb_subscribers_cb_id', 'cb_id'),
         Index('idx_cb_subscribers_name', 'subscriber_name'),
         Index('idx_cb_subscribers_related', 'is_related_party'),
