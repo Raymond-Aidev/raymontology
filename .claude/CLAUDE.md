@@ -1,12 +1,23 @@
 # Raymontology 프로젝트 - Claude Code 필수 규칙
 
-## 상태: 서비스 운영 중 (2025-12-17)
+## 세션 시작 시 `/sc:load` 실행하세요
+
+세션 시작 시 `PROJECT_SETUP.md`를 참조하여 현재 구현 상태를 확인합니다.
+
+---
+
+## 상태: 서비스 운영 중 (2025-12-24)
 전체 11개 테이블 데이터 적재 완료. 프론트엔드/백엔드 연동 정상.
 
-### 최근 수정 (2025-12-17)
-- **임원-회사 매칭 데이터 정제**: 7,277건 잘못된 데이터 삭제
+### 최근 수정 (2025-12-24)
+- **임원 API 리팩토링**: `officer_positions` 테이블 기반으로 변경
+- **중복 데이터 정리**: 243,398건 삭제 → 64,265건
+- **OfficerPosition 모델 추가**: `backend/app/models/officer_positions.py`
+- **PostgreSQL fallback**: Neo4j 없을 때 자동 대체
+
+### 이전 수정 (2025-12-17)
+- 임원-회사 매칭 데이터 정제: 7,277건 삭제
 - 원본 공시와 비교 검증 스크립트: `scripts/verify_officer_company_match.py`
-- Neo4j 임원 네트워크 재구축 완료
 
 ### 이전 수정 (2025-12-16)
 - 스키마 레지스트리 도입: `scripts/SCHEMA_REGISTRY.md`
@@ -25,6 +36,8 @@
 
 | 문서 | 용도 | 경로 |
 |------|------|------|
+| **프로젝트 설정** | **구현 현황 및 환경 설정** | **`PROJECT_SETUP.md`** |
+| 환경 변수 | 프로덕션 DB 접속정보 | `.env.production` |
 | 스키마 레지스트리 | 모든 테이블명/컬럼명 참조 | `scripts/SCHEMA_REGISTRY.md` |
 | 표준 작업 프로세스 | 모든 DB 작업 체크리스트 | `scripts/STANDARD_PROCESS.md` |
 | 파싱 상태 | 상세 파싱 진행 상황 | `scripts/PARSING_STATUS.md` |
@@ -134,21 +147,49 @@ disclosures: 0건 → 5,678건 (+5,678건)
 
 ---
 
-## 현재 DB 상태 (2025-12-17 기준)
+## 현재 DB 상태 (2025-12-24 기준)
 
 | 테이블 | 레코드 수 | 상태 | 비고 |
 |--------|----------|------|------|
 | companies | 3,922 | ✅ 완료 | |
-| officers | 42,263 | ✅ 완료 | |
-| officer_positions | 267,771 | ✅ 완료 | 7,298건 정제됨 |
+| officers | 44,679 | ✅ 완료 | |
+| officer_positions | 64,265 | ✅ 완료 | **중복 243,398건 삭제됨** |
 | disclosures | 213,304 | ✅ 완료 | |
-| convertible_bonds | 1,140 | ✅ 완료 | |
-| cb_subscribers | 5,479 | ✅ 완료 | |
+| convertible_bonds | 1,463 | ✅ 완료 | |
+| cb_subscribers | 7,490 | ✅ 완료 | |
 | financial_statements | 9,432 | ✅ 완료 | |
 | risk_signals | 1,412 | ✅ 완료 | |
 | risk_scores | 3,912 | ✅ 완료 | |
-| major_shareholders | 60,926 | ✅ 완료 | |
-| affiliates | 973 | ✅ 완료 | 지분율 321건(33%) |
+| major_shareholders | 95,191 | ✅ 완료 | |
+| affiliates | 973 | ✅ 완료 | |
+
+---
+
+## 임원 API 규칙 (2025-12-24 확정)
+
+### 임원 조회는 officer_positions 테이블 사용
+
+```
+주의: officers.current_company_id는 대부분 NULL (8건만 존재)
+실제 임원-회사 관계는 officer_positions 테이블에 저장됨
+```
+
+```python
+# 올바른 방법 (officer_positions 사용)
+query = (
+    select(Officer, OfficerPosition.position)
+    .join(OfficerPosition, Officer.id == OfficerPosition.officer_id)
+    .where(OfficerPosition.company_id == company_id)
+    .where(OfficerPosition.is_current == True)
+)
+
+# 잘못된 방법 (current_company_id 사용 - 대부분 NULL)
+query = select(Officer).where(Officer.current_company_id == company_id)
+```
+
+### Neo4j 미설정 시 PostgreSQL fallback
+
+`graph.py`의 `/officer/{id}/career` 엔드포인트는 Neo4j 없으면 자동으로 PostgreSQL 사용
 
 ---
 

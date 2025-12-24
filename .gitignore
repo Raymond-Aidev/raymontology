@@ -54,3 +54,4 @@ data/
 *.jks
 keystore/
 opcode/
+.env.production
