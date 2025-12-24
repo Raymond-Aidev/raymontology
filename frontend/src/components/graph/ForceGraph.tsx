@@ -147,7 +147,8 @@ const ForceGraph = forwardRef<ForceGraphRef, ForceGraphProps>(({
     if (!svgRef.current || !data.nodes.length) return
 
     const svg = d3.select(svgRef.current)
-    svg.selectAll('*').remove()
+    // Preserve accessibility elements (title, desc), only remove D3-managed elements
+    svg.selectAll('g, defs').remove()
 
     // 줌 설정
     const g = svg.append('g')
@@ -210,10 +211,25 @@ const ForceGraph = forwardRef<ForceGraphRef, ForceGraphProps>(({
     // 노드 그룹
     const node = g.append('g')
       .attr('class', 'nodes')
+      .attr('role', 'list')
+      .attr('aria-label', '네트워크 노드 목록')
       .selectAll<SVGGElement, GraphNode>('g')
       .data(nodes)
       .join('g')
       .attr('class', 'node')
+      .attr('role', 'listitem')
+      .attr('aria-label', d => {
+        const typeLabel = {
+          company: '회사',
+          officer: '임원',
+          subscriber: 'CB투자자',
+          cb: '전환사채',
+          shareholder: '대주주',
+          affiliate: '계열사'
+        }[d.type] || d.type
+        return `${typeLabel}: ${d.name}`
+      })
+      .attr('tabindex', 0)
       .style('cursor', 'pointer')
       .call(d3.drag<SVGGElement, GraphNode>()
         .on('start', (event, d) => {
@@ -364,6 +380,15 @@ const ForceGraph = forwardRef<ForceGraphRef, ForceGraphProps>(({
       onNodeDoubleClick?.(d)
     })
 
+    // 키보드 접근성: Enter/Space로 노드 선택
+    node.on('keydown', (event: KeyboardEvent, d) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault()
+        event.stopPropagation()
+        onNodeClick?.(d)
+      }
+    })
+
     // 시뮬레이션 틱
     simulation.on('tick', () => {
       link
@@ -383,7 +408,10 @@ const ForceGraph = forwardRef<ForceGraphRef, ForceGraphProps>(({
     return () => {
       simulation.stop()
     }
-  }, [data, width, height, onNodeClick, onNodeDoubleClick, selectedNodeId, getNodeRadius, centerOnNodeFn, getNodeFillColor, getNodeStrokeColor, shouldFillNode, filledNodeIds])
+    // Note: filledNodeIds, getNodeFillColor, shouldFillNode are intentionally excluded
+    // Click handler updates node visuals directly via D3, no re-render needed
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, width, height, onNodeClick, onNodeDoubleClick, selectedNodeId, getNodeRadius, centerOnNodeFn, getNodeStrokeColor])
 
   // 선택 노드 변경 시 하이라이트 업데이트
   useEffect(() => {
@@ -419,7 +447,16 @@ const ForceGraph = forwardRef<ForceGraphRef, ForceGraphProps>(({
       style={{
         background: 'radial-gradient(circle at center, #171717 0%, #0a0a0a 100%)'
       }}
-    />
+      role="img"
+      aria-label={`기업 네트워크 그래프: ${data.nodes.length}개 노드, ${data.links.length}개 연결`}
+      tabIndex={0}
+    >
+      <title>기업 네트워크 시각화</title>
+      <desc>
+        기업, 임원, CB투자자, 계열사 간의 연결 관계를 보여주는 인터랙티브 네트워크 그래프입니다.
+        노드를 클릭하면 상세 정보를 볼 수 있습니다.
+      </desc>
+    </svg>
   )
 })
 
