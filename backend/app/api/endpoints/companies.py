@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, func, and_
 
 from app.database import AsyncSessionLocal
-from app.models import Company, ConvertibleBond, Officer, FinancialStatement
+from app.models import Company, ConvertibleBond, Officer, OfficerPosition, FinancialStatement
 import logging
 from sqlalchemy import text
 
@@ -207,13 +207,14 @@ async def list_companies(
             cb_result = await db.execute(cb_count_query)
             cb_counts = {str(row[0]): row[1] for row in cb_result.all()}
 
-            # 임원 개수
+            # 임원 개수 (officer_positions 기반)
             officer_count_query = select(
-                Officer.current_company_id,
-                func.count(Officer.id).label('count')
+                OfficerPosition.company_id,
+                func.count(func.distinct(OfficerPosition.officer_id)).label('count')
             ).where(
-                Officer.current_company_id.in_(company_ids)
-            ).group_by(Officer.current_company_id)
+                OfficerPosition.company_id.in_(company_ids),
+                OfficerPosition.is_current == True
+            ).group_by(OfficerPosition.company_id)
 
             officer_result = await db.execute(officer_count_query)
             officer_counts = {str(row[0]): row[1] for row in officer_result.all()}
@@ -311,13 +312,14 @@ async def search_companies(
             cb_result = await db.execute(cb_count_query)
             cb_counts = {str(row[0]): row[1] for row in cb_result.all()}
 
-            # 임원 개수
+            # 임원 개수 (officer_positions 기반)
             officer_count_query = select(
-                Officer.current_company_id,
-                func.count(Officer.id).label('count')
+                OfficerPosition.company_id,
+                func.count(func.distinct(OfficerPosition.officer_id)).label('count')
             ).where(
-                Officer.current_company_id.in_(company_ids)
-            ).group_by(Officer.current_company_id)
+                OfficerPosition.company_id.in_(company_ids),
+                OfficerPosition.is_current == True
+            ).group_by(OfficerPosition.company_id)
 
             officer_result = await db.execute(officer_count_query)
             officer_counts = {str(row[0]): row[1] for row in officer_result.all()}
@@ -405,9 +407,10 @@ async def get_company_detail(
         cb_count_result = await db.execute(cb_count_query)
         cb_count = cb_count_result.scalar() or 0
 
-        # 임원 개수
-        officer_count_query = select(func.count(Officer.id)).where(
-            Officer.current_company_id == actual_company_id
+        # 임원 개수 (officer_positions 기반)
+        officer_count_query = select(func.count(func.distinct(OfficerPosition.officer_id))).where(
+            OfficerPosition.company_id == actual_company_id,
+            OfficerPosition.is_current == True
         )
         officer_count_result = await db.execute(officer_count_query)
         officer_count = officer_count_result.scalar() or 0
@@ -513,22 +516,26 @@ async def get_company_officers(
         if not company:
             raise HTTPException(status_code=404, detail="Company not found")
 
-        # 임원 목록 조회
-        officer_query = select(Officer).where(
-            Officer.current_company_id == company_id
-        ).order_by(Officer.influence_score.desc().nulls_last(), Officer.name)
+        # 임원 목록 조회 (officer_positions 기반)
+        officer_query = (
+            select(Officer, OfficerPosition.position.label("op_position"))
+            .join(OfficerPosition, Officer.id == OfficerPosition.officer_id)
+            .where(OfficerPosition.company_id == company_id)
+            .where(OfficerPosition.is_current == True)
+            .order_by(Officer.influence_score.desc().nulls_last(), Officer.name)
+        )
 
         officer_result = await db.execute(officer_query)
-        officers = officer_result.scalars().all()
+        rows = officer_result.all()
 
         return [
             CompanyOfficerListItem(
                 id=str(officer.id),
                 name=officer.name,
-                position=officer.position,
+                position=op_position or officer.position,
                 influence_score=officer.influence_score
             )
-            for officer in officers
+            for officer, op_position in rows
         ]
 
     except HTTPException:

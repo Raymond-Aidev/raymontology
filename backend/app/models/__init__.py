@@ -9,6 +9,7 @@ from app.database import Base
 # Import all models
 from app.models.companies import Company
 from app.models.officers import Officer
+from app.models.officer_positions import OfficerPosition
 from app.models.ontology_objects import OntologyObject
 from app.models.ontology_links import OntologyLink
 from app.models.risk_signals import RiskSignal, RiskSeverity, RiskStatus
@@ -23,6 +24,7 @@ __all__ = [
     "Base",
     "Company",
     "Officer",
+    "OfficerPosition",
     "OntologyObject",
     "OntologyLink",
     "RiskSignal",
