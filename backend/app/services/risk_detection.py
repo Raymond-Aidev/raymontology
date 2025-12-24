@@ -15,6 +15,9 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
 from neo4j import AsyncGraphDatabase, AsyncDriver
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
+import json
+import re
 
 from app.services.financial_metrics import FinancialMetricsCalculator
 import logging
@@ -342,9 +345,34 @@ class RiskDetectionEngine:
                 "risk_level": risk_level
             }
 
+    def _extract_company_name_from_career(self, career_text: str) -> Optional[str]:
+        """
+        career_history text에서 회사명 추출
+
+        예: "(주)이아이디 재무이사" -> "이아이디"
+        """
+        if not career_text:
+            return None
+
+        # (주), (유), 주식회사 등 제거하고 회사명 추출
+        patterns = [
+            r'\(주\)([^\s]+)',      # (주)회사명
+            r'\(유\)([^\s]+)',      # (유)회사명
+            r'주식회사\s*([^\s]+)', # 주식회사 회사명
+            r'^([^\s]+)\s+',        # 첫 단어 (회사명으로 추정)
+        ]
+
+        for pattern in patterns:
+            match = re.search(pattern, career_text)
+            if match:
+                return match.group(1).strip()
+
+        return None
+
     async def detect_officer_movement_pattern(
         self,
         company_id: str,
+        db: Optional[AsyncSession] = None,
         months: int = 12
     ) -> Dict[str, Any]:
         """
@@ -352,12 +380,18 @@ class RiskDetectionEngine:
 
         부실 회사 출신 임원의 유입 패턴
 
+        Args:
+            company_id: 대상 회사 ID
+            db: SQLAlchemy 세션 (고위험 회사 조회용)
+            months: 분석 기간 (개월)
+
         Returns:
             {
                 "high_risk_officers": [
                     {
                         "officer": "홍길동",
                         "previous_companies": ["부실회사A", "부실회사B"],
+                        "high_risk_companies": ["부실회사A"],
                         "career_count": 8
                     }
                 ],
@@ -389,24 +423,70 @@ class RiskDetectionEngine:
             result = await session.run(cypher, company_id=company_id)
             records = await result.data()
 
+            # 고위험 회사 목록 조회 (db가 제공된 경우)
+            high_risk_company_names = set()
+            if db:
+                try:
+                    from app.models.risk_scores import RiskScore
+                    from app.models.companies import Company
+
+                    # 리스크 점수가 60 이상인 회사 조회
+                    stmt = (
+                        select(Company.name)
+                        .join(RiskScore, Company.id == RiskScore.company_id)
+                        .where(RiskScore.total_score >= 60)
+                    )
+                    result_db = await db.execute(stmt)
+                    high_risk_company_names = {row[0] for row in result_db.fetchall()}
+                    logger.debug(f"Found {len(high_risk_company_names)} high-risk companies")
+                except Exception as e:
+                    logger.warning(f"Failed to fetch high-risk companies: {e}")
+
             high_risk_officers = []
+            total_high_risk_careers = 0
+
             for record in records:
-                # TODO: career_history JSON 파싱하여 부실 회사 여부 확인
-                # 현재는 career_count 기준으로만 평가
+                career_history = record.get("career_history")
+                previous_companies = []
+                high_risk_companies = []
+
+                # career_history JSON 파싱
+                if career_history:
+                    try:
+                        careers = career_history if isinstance(career_history, list) else json.loads(career_history)
+                        for career in careers:
+                            if isinstance(career, dict) and career.get("text"):
+                                company_name = self._extract_company_name_from_career(career["text"])
+                                if company_name:
+                                    previous_companies.append(company_name)
+                                    # 고위험 회사 경력 확인
+                                    if company_name in high_risk_company_names:
+                                        high_risk_companies.append(company_name)
+                    except (json.JSONDecodeError, TypeError) as e:
+                        logger.warning(f"Failed to parse career_history: {e}")
+
+                if high_risk_companies:
+                    total_high_risk_careers += len(high_risk_companies)
+
                 high_risk_officers.append({
                     "officer": record["officer"],
                     "career_count": record["career_count"],
-                    "influence_score": record.get("influence_score", 0)
+                    "influence_score": record.get("influence_score", 0),
+                    "previous_companies": previous_companies[:5],  # 최대 5개
+                    "high_risk_companies": high_risk_companies
                 })
 
-            # 위험도 평가
-            if high_risk_officers and max(o["career_count"] for o in high_risk_officers) >= 6:
+            # 위험도 평가 (고위험 회사 경력 기반)
+            if total_high_risk_careers >= 3:
+                risk_level = "high"
+            elif total_high_risk_careers >= 1 or (high_risk_officers and max(o["career_count"] for o in high_risk_officers) >= 6):
                 risk_level = "medium"
             else:
                 risk_level = "low"
 
             return {
                 "high_risk_officers": high_risk_officers,
+                "total_high_risk_careers": total_high_risk_careers,
                 "risk_level": risk_level
             }
 
@@ -486,17 +566,23 @@ class RiskDetectionEngine:
 
     async def detect_affiliate_chain_risk(
         self,
-        company_id: str
+        company_id: str,
+        db: Optional[AsyncSession] = None
     ) -> Dict[str, Any]:
         """
         8. 계열사 연쇄 부실 패턴
 
         계열사 중 재무 악화 회사의 비율
 
+        Args:
+            company_id: 대상 회사 ID
+            db: SQLAlchemy 세션 (재무 건전성 조회용)
+
         Returns:
             {
                 "total_affiliates": 5,
                 "distressed_affiliates": 2,
+                "distressed_companies": ["회사A", "회사B"],
                 "distress_ratio": 0.4,
                 "risk_level": "high"
             }
@@ -514,21 +600,105 @@ class RiskDetectionEngine:
                 return {
                     "total_affiliates": 0,
                     "distressed_affiliates": 0,
-                    "distress_ratio": 0,
+                    "distress_ratio": 0.0,
                     "risk_level": "low"
                 }
 
             affiliate_ids = record["affiliate_ids"]
+            total_affiliates = len(affiliate_ids)
 
-            # TODO: 각 계열사의 재무 건전성 점수를 DB에서 조회
-            # 현재는 placeholder
+            # 계열사 재무 건전성 조회
+            distressed_count = 0
+            distressed_companies = []
+
+            if db:
+                try:
+                    from app.models.financial_statements import FinancialStatement
+                    from app.models.companies import Company
+                    import uuid
+
+                    # UUID 변환
+                    affiliate_uuids = []
+                    for aid in affiliate_ids:
+                        try:
+                            affiliate_uuids.append(uuid.UUID(aid) if isinstance(aid, str) else aid)
+                        except (ValueError, TypeError):
+                            continue
+
+                    if affiliate_uuids:
+                        # 각 계열사의 최신 재무제표 조회
+                        stmt = (
+                            select(
+                                Company.id,
+                                Company.name,
+                                FinancialStatement.total_equity,
+                                FinancialStatement.total_liabilities,
+                                FinancialStatement.operating_income,
+                                FinancialStatement.net_income
+                            )
+                            .join(FinancialStatement, Company.id == FinancialStatement.company_id)
+                            .where(Company.id.in_(affiliate_uuids))
+                            .order_by(Company.id, FinancialStatement.fiscal_year.desc())
+                            .distinct(Company.id)
+                        )
+                        result_db = await db.execute(stmt)
+                        financials = result_db.fetchall()
+
+                        for row in financials:
+                            company_name = row[1]
+                            total_equity = float(row[2]) if row[2] else 0
+                            total_liabilities = float(row[3]) if row[3] else 0
+                            operating_income = float(row[4]) if row[4] else 0
+                            net_income = float(row[5]) if row[5] else 0
+
+                            # 재무 건전성 평가 기준
+                            # 1. 부채비율 200% 초과
+                            # 2. 영업이익 적자
+                            # 3. 당기순이익 적자
+                            is_distressed = False
+
+                            if total_equity > 0:
+                                debt_ratio = total_liabilities / total_equity
+                                if debt_ratio > 2.0:
+                                    is_distressed = True
+
+                            if operating_income < 0 or net_income < 0:
+                                is_distressed = True
+
+                            if is_distressed:
+                                distressed_count += 1
+                                distressed_companies.append(company_name)
+
+                except Exception as e:
+                    logger.warning(f"Failed to fetch affiliate financials: {e}")
+                    return {
+                        "total_affiliates": total_affiliates,
+                        "affiliate_ids": affiliate_ids,
+                        "distressed_affiliates": None,
+                        "distress_ratio": None,
+                        "risk_level": "unknown",
+                        "note": f"Error: {str(e)}"
+                    }
+
+            # 부실 비율 계산
+            distress_ratio = distressed_count / total_affiliates if total_affiliates > 0 else 0.0
+
+            # 위험도 평가
+            if distress_ratio >= 0.5:
+                risk_level = "critical"
+            elif distress_ratio >= 0.3:
+                risk_level = "high"
+            elif distress_ratio >= 0.1:
+                risk_level = "medium"
+            else:
+                risk_level = "low"
+
             return {
-                "total_affiliates": len(affiliate_ids),
-                "affiliate_ids": affiliate_ids,
-                "distressed_affiliates": None,  # Requires financial analysis
-                "distress_ratio": None,
-                "risk_level": "unknown",
-                "note": "Requires batch financial analysis of affiliates"
+                "total_affiliates": total_affiliates,
+                "distressed_affiliates": distressed_count,
+                "distressed_companies": distressed_companies[:5],  # 최대 5개
+                "distress_ratio": round(distress_ratio, 3),
+                "risk_level": risk_level
             }
 
     async def analyze_company_risk(
@@ -571,13 +741,13 @@ class RiskDetectionEngine:
         patterns["related_party_transactions"] = await self.detect_related_party_transactions(company_id)
 
         # 6. 임원 이동 패턴
-        patterns["officer_movement"] = await self.detect_officer_movement_pattern(company_id)
+        patterns["officer_movement"] = await self.detect_officer_movement_pattern(company_id, db=db)
 
         # 7. CB 투자자 집중
         patterns["cb_investor_concentration"] = await self.detect_cb_investor_concentration(company_id)
 
         # 8. 계열사 연쇄 부실
-        patterns["affiliate_chain_risk"] = await self.detect_affiliate_chain_risk(company_id)
+        patterns["affiliate_chain_risk"] = await self.detect_affiliate_chain_risk(company_id, db=db)
 
         # 종합 위험도 계산
         risk_scores = {
