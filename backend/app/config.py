@@ -64,8 +64,16 @@ class Settings(BaseSettings):
     debug: bool = False
     frontend_url: str = "http://localhost:5173"
 
+    # Registration Control (회원가입 비활성화 - 관리자만 계정 생성 가능)
+    registration_enabled: bool = False
+
     # CORS - allow all origins during deployment testing
     cors_allow_all: bool = True
+
+    # Payment Gateway (PG) - 결제 대행사
+    pg_provider: str = "mock"  # 'tosspayments', 'portone', 'mock'
+    toss_payments_client_key: Optional[str] = None
+    toss_payments_secret_key: Optional[str] = None
 
     # Monitoring & Observability
     sentry_dsn: Optional[str] = None

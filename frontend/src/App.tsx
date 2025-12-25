@@ -21,6 +21,8 @@ const TermsPage = lazy(() => import('./pages/TermsPage'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
 const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'))
 const PricingPage = lazy(() => import('./pages/PricingPage'))
+const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'))
+const PaymentFailPage = lazy(() => import('./pages/PaymentFailPage'))
 
 function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth)
@@ -38,6 +40,8 @@ function App() {
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/pricing" element={<PricingPage />} />
+        <Route path="/payment/success" element={<PaymentSuccessPage />} />
+        <Route path="/payment/fail" element={<PaymentFailPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/admin" element={<AdminPage />} />

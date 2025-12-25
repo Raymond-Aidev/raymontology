@@ -12,8 +12,30 @@ interface User {
   is_active: boolean
   is_superuser: boolean
   oauth_provider: string | null
+  subscription_tier: string
+  subscription_expires_at: string | null
   created_at: string
   last_login: string | null
+}
+
+type SubscriptionTier = 'free' | 'light' | 'max'
+
+const TIER_LABELS: Record<SubscriptionTier, string> = {
+  free: '무료',
+  light: '라이트',
+  max: '맥스'
+}
+
+const TIER_COLORS: Record<SubscriptionTier, string> = {
+  free: 'bg-gray-500/20 text-gray-400',
+  light: 'bg-blue-500/20 text-blue-400',
+  max: 'bg-purple-500/20 text-purple-400'
+}
+
+const TIER_PRICES: Record<SubscriptionTier, string> = {
+  free: '무료',
+  light: '3,000원/월',
+  max: '30,000원/월'
 }
 
 interface Stats {
@@ -47,6 +69,15 @@ function AdminPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  // 이용권 관리 모달 상태
+  const [subscriptionModal, setSubscriptionModal] = useState<{
+    isOpen: boolean
+    user: User | null
+  }>({ isOpen: false, user: null })
+  const [selectedTier, setSelectedTier] = useState<SubscriptionTier>('free')
+  const [selectedDuration, setSelectedDuration] = useState<number | null>(null) // null = 무기한
+  const [isUpdatingSubscription, setIsUpdatingSubscription] = useState(false)
 
   // 로그인 여부 및 관리자 권한 체크
   useEffect(() => {
@@ -146,6 +177,58 @@ function AdminPage() {
       console.error('Failed to toggle user:', err)
       setError('사용자 상태 변경에 실패했습니다.')
     }
+  }
+
+  // 이용권 관리 모달 열기
+  const openSubscriptionModal = (u: User) => {
+    setSubscriptionModal({ isOpen: true, user: u })
+    setSelectedTier(u.subscription_tier as SubscriptionTier || 'free')
+    setSelectedDuration(null)
+    setError(null)
+  }
+
+  // 이용권 관리 모달 닫기
+  const closeSubscriptionModal = () => {
+    setSubscriptionModal({ isOpen: false, user: null })
+    setSelectedTier('free')
+    setSelectedDuration(null)
+  }
+
+  // 이용권 업데이트
+  const handleUpdateSubscription = async () => {
+    if (!subscriptionModal.user) return
+
+    setIsUpdatingSubscription(true)
+    setError(null)
+
+    try {
+      await apiClient.patch(`/api/admin/users/${subscriptionModal.user.id}/subscription`, {
+        tier: selectedTier,
+        duration_days: selectedDuration
+      })
+
+      // 목록 새로고침
+      const usersRes = await apiClient.get('/api/admin/users')
+      setUsers(usersRes.data.users)
+
+      setSaveSuccess('이용권이 업데이트되었습니다.')
+      setTimeout(() => setSaveSuccess(null), 3000)
+      closeSubscriptionModal()
+    } catch (err) {
+      console.error('Failed to update subscription:', err)
+      setError('이용권 업데이트에 실패했습니다.')
+    } finally {
+      setIsUpdatingSubscription(false)
+    }
+  }
+
+  // 이용권 만료일 포맷
+  const formatSubscriptionExpiry = (expiresAt: string | null): string => {
+    if (!expiresAt) return '무기한'
+    const date = new Date(expiresAt)
+    const now = new Date()
+    if (date < now) return '만료됨'
+    return date.toLocaleDateString('ko-KR')
   }
 
   // 로그인 폼 표시
@@ -357,8 +440,9 @@ function AdminPage() {
                         <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">이메일</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">이름</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">가입방식</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">이용권</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">만료일</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">가입일</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">마지막 로그인</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">상태</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">액션</th>
                       </tr>
@@ -392,13 +476,18 @@ function AdminPage() {
                               <span className="text-xs text-text-muted">이메일</span>
                             )}
                           </td>
-                          <td className="px-4 py-3 text-sm text-text-secondary">
-                            {new Date(u.created_at).toLocaleDateString('ko-KR')}
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-0.5 text-xs rounded ${
+                              TIER_COLORS[u.subscription_tier as SubscriptionTier] || TIER_COLORS.free
+                            }`}>
+                              {TIER_LABELS[u.subscription_tier as SubscriptionTier] || '무료'}
+                            </span>
                           </td>
                           <td className="px-4 py-3 text-sm text-text-secondary">
-                            {u.last_login
-                              ? new Date(u.last_login).toLocaleDateString('ko-KR')
-                              : '-'}
+                            {formatSubscriptionExpiry(u.subscription_expires_at)}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-text-secondary">
+                            {new Date(u.created_at).toLocaleDateString('ko-KR')}
                           </td>
                           <td className="px-4 py-3">
                             <span className={`px-2 py-0.5 text-xs rounded ${
@@ -410,18 +499,26 @@ function AdminPage() {
                             </span>
                           </td>
                           <td className="px-4 py-3">
-                            {!u.is_superuser && (
+                            <div className="flex items-center gap-2">
                               <button
-                                onClick={() => handleToggleUserActive(u.id)}
-                                className={`px-2 py-1 text-xs rounded transition-colors ${
-                                  u.is_active
-                                    ? 'bg-accent-danger/10 text-accent-danger hover:bg-accent-danger/20'
-                                    : 'bg-accent-success/10 text-accent-success hover:bg-accent-success/20'
-                                }`}
+                                onClick={() => openSubscriptionModal(u)}
+                                className="px-2 py-1 text-xs rounded bg-accent-primary/10 text-accent-primary hover:bg-accent-primary/20 transition-colors"
                               >
-                                {u.is_active ? '비활성화' : '활성화'}
+                                이용권
                               </button>
-                            )}
+                              {!u.is_superuser && (
+                                <button
+                                  onClick={() => handleToggleUserActive(u.id)}
+                                  className={`px-2 py-1 text-xs rounded transition-colors ${
+                                    u.is_active
+                                      ? 'bg-accent-danger/10 text-accent-danger hover:bg-accent-danger/20'
+                                      : 'bg-accent-success/10 text-accent-success hover:bg-accent-success/20'
+                                  }`}
+                                >
+                                  {u.is_active ? '비활성화' : '활성화'}
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -500,6 +597,126 @@ function AdminPage() {
           </>
         )}
       </div>
+
+      {/* 이용권 관리 모달 */}
+      {subscriptionModal.isOpen && subscriptionModal.user && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-theme-card border border-theme-border rounded-2xl w-full max-w-md shadow-2xl">
+            {/* 모달 헤더 */}
+            <div className="flex items-center justify-between p-6 border-b border-theme-border">
+              <div>
+                <h3 className="text-lg font-semibold text-text-primary">이용권 관리</h3>
+                <p className="text-sm text-text-secondary mt-1">{subscriptionModal.user.email}</p>
+              </div>
+              <button
+                onClick={closeSubscriptionModal}
+                className="p-2 text-text-muted hover:text-text-secondary hover:bg-theme-hover rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* 모달 내용 */}
+            <div className="p-6 space-y-6">
+              {/* 현재 이용권 정보 */}
+              <div className="p-4 bg-theme-surface rounded-lg">
+                <p className="text-sm text-text-secondary mb-2">현재 이용권</p>
+                <div className="flex items-center gap-3">
+                  <span className={`px-3 py-1 text-sm font-medium rounded ${
+                    TIER_COLORS[subscriptionModal.user.subscription_tier as SubscriptionTier] || TIER_COLORS.free
+                  }`}>
+                    {TIER_LABELS[subscriptionModal.user.subscription_tier as SubscriptionTier] || '무료'}
+                  </span>
+                  <span className="text-sm text-text-secondary">
+                    {formatSubscriptionExpiry(subscriptionModal.user.subscription_expires_at)}
+                  </span>
+                </div>
+              </div>
+
+              {/* 이용권 선택 */}
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-3">
+                  이용권 등급
+                </label>
+                <div className="space-y-2">
+                  {(Object.keys(TIER_LABELS) as SubscriptionTier[]).map((tier) => (
+                    <button
+                      key={tier}
+                      onClick={() => setSelectedTier(tier)}
+                      className={`w-full px-4 py-3 rounded-lg border text-left transition-all ${
+                        selectedTier === tier
+                          ? 'border-accent-primary bg-accent-primary/10'
+                          : 'border-theme-border bg-theme-surface hover:border-theme-border-hover'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className={`font-medium ${selectedTier === tier ? 'text-accent-primary' : 'text-text-primary'}`}>
+                          {TIER_LABELS[tier]}
+                        </span>
+                        <span className={`text-sm ${selectedTier === tier ? 'text-accent-primary' : 'text-text-muted'}`}>
+                          {TIER_PRICES[tier]}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 기간 선택 */}
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-3">
+                  유효 기간
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { value: null, label: '무기한' },
+                    { value: 30, label: '30일' },
+                    { value: 90, label: '90일' },
+                    { value: 180, label: '180일' },
+                    { value: 365, label: '1년' },
+                    { value: 730, label: '2년' }
+                  ].map((option) => (
+                    <button
+                      key={option.label}
+                      onClick={() => setSelectedDuration(option.value)}
+                      className={`px-3 py-2 rounded-lg border text-sm transition-all ${
+                        selectedDuration === option.value
+                          ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
+                          : 'border-theme-border bg-theme-surface text-text-secondary hover:border-theme-border-hover'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* 모달 푸터 */}
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-theme-border">
+              <button
+                onClick={closeSubscriptionModal}
+                className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleUpdateSubscription}
+                disabled={isUpdatingSubscription}
+                className={`px-6 py-2 rounded-lg text-sm font-medium text-white transition-colors ${
+                  isUpdatingSubscription
+                    ? 'bg-accent-primary/50 cursor-not-allowed'
+                    : 'bg-accent-primary hover:bg-accent-primary/90'
+                }`}
+              >
+                {isUpdatingSubscription ? '저장 중...' : '저장'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

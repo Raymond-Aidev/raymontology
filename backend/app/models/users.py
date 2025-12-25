@@ -36,6 +36,10 @@ class User(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     is_superuser = Column(Boolean, default=False, nullable=False)
 
+    # 이용권 (subscription)
+    subscription_tier = Column(String(20), default='free', nullable=False)  # 'free', 'basic', 'pro', 'enterprise'
+    subscription_expires_at = Column(DateTime(timezone=True), nullable=True)  # NULL이면 무기한
+
     # 메타데이터
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)

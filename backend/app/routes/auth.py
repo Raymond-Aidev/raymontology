@@ -63,7 +63,15 @@ async def register(
     Raises:
         HTTPException: 409 (이메일 또는 사용자명 중복)
         HTTPException: 400 (비밀번호 강도 부족)
+        HTTPException: 403 (회원가입 비활성화)
     """
+    # 회원가입 비활성화 체크
+    if not settings.registration_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="현재 회원가입이 비활성화되어 있습니다. 관리자에게 문의하세요."
+        )
+
     try:
         logger.info(f"Register attempt for email: {user_data.email}")
 

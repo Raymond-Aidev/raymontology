@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from pydantic import BaseModel
-from typing import Optional, List
-from datetime import datetime
+from typing import Optional, List, Literal
+from datetime import datetime, timedelta
 import logging
 
 from app.database import get_db
@@ -45,8 +45,17 @@ class UserListItem(BaseModel):
     is_active: bool
     is_superuser: bool
     oauth_provider: Optional[str]
+    subscription_tier: str
+    subscription_expires_at: Optional[datetime]
     created_at: datetime
     last_login: Optional[datetime]
+
+
+class SubscriptionUpdateRequest(BaseModel):
+    """이용권 업데이트 요청"""
+    tier: Literal['free', 'light', 'max']  # 2종 플랜: Light 3,000원/월, Max 30,000원/월
+    duration_days: Optional[int] = None  # None이면 무기한
+    memo: Optional[str] = None  # 부여 사유
 
 
 class UserListResponse(BaseModel):
@@ -219,6 +228,8 @@ async def list_users(
                 is_active=user.is_active,
                 is_superuser=user.is_superuser,
                 oauth_provider=user.oauth_provider,
+                subscription_tier=user.subscription_tier or 'free',
+                subscription_expires_at=user.subscription_expires_at,
                 created_at=user.created_at,
                 last_login=user.last_login
             )
@@ -293,3 +304,56 @@ async def toggle_user_active(
     await db.commit()
 
     return {"message": f"사용자 상태가 {'활성화' if user.is_active else '비활성화'}되었습니다."}
+
+
+@router.patch("/users/{user_id}/subscription")
+async def update_user_subscription(
+    user_id: str,
+    data: SubscriptionUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """사용자 이용권 업데이트 (관리자 전용)"""
+    result = await db.execute(
+        select(User).where(User.id == user_id)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="사용자를 찾을 수 없습니다."
+        )
+
+    # 이용권 업데이트
+    old_tier = user.subscription_tier
+    user.subscription_tier = data.tier
+
+    if data.tier == 'free':
+        # 무료로 변경 시 만료일 제거
+        user.subscription_expires_at = None
+    elif data.duration_days is None:
+        # 무기한
+        user.subscription_expires_at = None
+    else:
+        # 기간 설정
+        user.subscription_expires_at = datetime.utcnow() + timedelta(days=data.duration_days)
+
+    await db.commit()
+
+    tier_names = {
+        'free': '무료',
+        'light': '라이트',
+        'max': '맥스'
+    }
+
+    expires_msg = "무기한" if user.subscription_expires_at is None else f"{data.duration_days}일"
+    memo_msg = f" (사유: {data.memo})" if data.memo else ""
+
+    logger.info(f"Subscription updated for {user.email}: {old_tier} -> {data.tier} ({expires_msg}) by {current_user.email}{memo_msg}")
+
+    return {
+        "message": f"이용권이 {tier_names.get(data.tier, data.tier)} ({expires_msg})으로 설정되었습니다.",
+        "subscription_tier": user.subscription_tier,
+        "subscription_expires_at": user.subscription_expires_at
+    }
