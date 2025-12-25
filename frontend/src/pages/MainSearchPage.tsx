@@ -30,7 +30,7 @@ const gradeConfig: Record<string, string> = {
 
 function MainSearchPage() {
   const navigate = useNavigate()
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
 
   const [highRiskCompanies, setHighRiskCompanies] = useState<CompanySearchResult[]>([])
   const [isLoadingHighRisk, setIsLoadingHighRisk] = useState(true)
@@ -38,6 +38,21 @@ function MainSearchPage() {
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showPaywallModal, setShowPaywallModal] = useState(false)
   const [stats, setStats] = useState<PlatformStats | null>(null)
+
+  // 유효한 이용권 확인 (light, max 중 하나이면서 만료 안 됨)
+  const hasValidSubscription = () => {
+    if (!user) return false
+    const tier = user.subscription_tier
+    if (!tier || tier === 'free') return false
+    // 관리자는 항상 통과
+    if (user.is_superuser) return true
+    // 만료일 확인
+    if (user.subscription_expires_at) {
+      const expiresAt = new Date(user.subscription_expires_at)
+      if (expiresAt < new Date()) return false
+    }
+    return tier === 'light' || tier === 'max'
+  }
 
   useEffect(() => {
     const loadData = async () => {
@@ -62,15 +77,21 @@ function MainSearchPage() {
     loadData()
   }, [])
 
-  const handleSelectCompany = useCallback((_company: CompanySearchResult) => {
+  const handleSelectCompany = useCallback((company: CompanySearchResult) => {
     // 로그인하지 않은 경우 로그인 모달 표시
     if (!isAuthenticated) {
       setShowLoginModal(true)
       return
     }
-    // 로그인한 경우 유료 서비스 모달 표시
+    // 유효한 이용권이 있으면 회사 상세 페이지로 이동
+    if (hasValidSubscription()) {
+      navigate(`/company/${company.id}/report`)
+      return
+    }
+    // 이용권이 없으면 유료 서비스 모달 표시
     setShowPaywallModal(true)
-  }, [isAuthenticated])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, navigate, user])
 
   return (
     <>

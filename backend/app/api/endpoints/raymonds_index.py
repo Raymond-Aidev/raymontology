@@ -1,0 +1,435 @@
+"""
+RaymondsIndex API 엔드포인트
+
+자본 배분 효율성 지수 조회 API
+"""
+from fastapi import APIRouter, HTTPException, Depends, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, desc, func
+from sqlalchemy.orm import selectinload
+from typing import Optional, List
+from uuid import UUID
+from decimal import Decimal
+import logging
+
+from app.database import get_db
+from app.models.raymonds_index import RaymondsIndex
+from app.models.companies import Company
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/raymonds-index", tags=["RaymondsIndex"])
+
+
+# ============================================================================
+# Response Schemas
+# ============================================================================
+
+def format_index_response(index: RaymondsIndex, company: Optional[Company] = None) -> dict:
+    """RaymondsIndex 응답 포맷"""
+    response = index.to_dict()
+    if company:
+        response["company_name"] = company.name
+        response["company_ticker"] = company.ticker
+        response["company_market"] = company.market
+    return response
+
+
+# ============================================================================
+# API Endpoints
+# ============================================================================
+
+@router.get("/{company_id}")
+async def get_raymonds_index(
+    company_id: UUID,
+    year: Optional[int] = None,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    단일 회사의 RaymondsIndex 조회
+
+    - company_id: 회사 UUID
+    - year: 특정 연도 (없으면 최신)
+    """
+    try:
+        query = (
+            select(RaymondsIndex, Company)
+            .join(Company, RaymondsIndex.company_id == Company.id)
+            .where(RaymondsIndex.company_id == company_id)
+        )
+
+        if year:
+            query = query.where(RaymondsIndex.fiscal_year == year)
+        else:
+            query = query.order_by(desc(RaymondsIndex.fiscal_year))
+
+        result = await db.execute(query)
+        row = result.first()
+
+        if not row:
+            raise HTTPException(status_code=404, detail="RaymondsIndex not found for this company")
+
+        index, company = row
+        return format_index_response(index, company)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching RaymondsIndex for {company_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{company_id}/history")
+async def get_raymonds_index_history(
+    company_id: UUID,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    회사의 연도별 RaymondsIndex 추이
+
+    - company_id: 회사 UUID
+    """
+    try:
+        query = (
+            select(RaymondsIndex, Company)
+            .join(Company, RaymondsIndex.company_id == Company.id)
+            .where(RaymondsIndex.company_id == company_id)
+            .order_by(desc(RaymondsIndex.fiscal_year))
+        )
+
+        result = await db.execute(query)
+        rows = result.all()
+
+        if not rows:
+            raise HTTPException(status_code=404, detail="No RaymondsIndex history found")
+
+        company = rows[0][1]
+        history = [format_index_response(row[0]) for row in rows]
+
+        return {
+            "company_id": str(company_id),
+            "company_name": company.name,
+            "history": history
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching history for {company_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/ranking/list")
+async def get_raymonds_index_ranking(
+    sort: str = Query("score_desc", regex="^(score_desc|score_asc|gap_asc|gap_desc)$"),
+    grade: Optional[str] = None,
+    year: Optional[int] = None,
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    RaymondsIndex 전체 랭킹
+
+    - sort: 정렬 기준 (score_desc, score_asc, gap_asc, gap_desc)
+    - grade: 등급 필터 (A+,A,B,C,D 쉼표 구분)
+    - year: 연도 필터
+    - limit: 조회 개수
+    - offset: 시작 위치
+    """
+    try:
+        # 기본 쿼리 - 최신 연도만 조회
+        if year:
+            subquery = (
+                select(RaymondsIndex.company_id)
+                .where(RaymondsIndex.fiscal_year == year)
+            )
+        else:
+            # 각 회사의 최신 연도만 조회
+            subquery = (
+                select(
+                    RaymondsIndex.company_id,
+                    func.max(RaymondsIndex.fiscal_year).label('max_year')
+                )
+                .group_by(RaymondsIndex.company_id)
+            ).subquery()
+
+        query = (
+            select(RaymondsIndex, Company)
+            .join(Company, RaymondsIndex.company_id == Company.id)
+        )
+
+        if year:
+            query = query.where(RaymondsIndex.fiscal_year == year)
+        else:
+            query = query.join(
+                subquery,
+                (RaymondsIndex.company_id == subquery.c.company_id) &
+                (RaymondsIndex.fiscal_year == subquery.c.max_year)
+            )
+
+        # 등급 필터
+        if grade:
+            grades = [g.strip() for g in grade.split(',')]
+            query = query.where(RaymondsIndex.grade.in_(grades))
+
+        # 정렬
+        sort_map = {
+            "score_desc": desc(RaymondsIndex.total_score),
+            "score_asc": RaymondsIndex.total_score,
+            "gap_asc": RaymondsIndex.investment_gap,
+            "gap_desc": desc(RaymondsIndex.investment_gap),
+        }
+        query = query.order_by(sort_map.get(sort, desc(RaymondsIndex.total_score)))
+
+        # 페이징
+        query = query.offset(offset).limit(limit)
+
+        result = await db.execute(query)
+        rows = result.all()
+
+        rankings = []
+        for i, (index, company) in enumerate(rows, start=offset + 1):
+            item = format_index_response(index, company)
+            item["rank"] = i
+            rankings.append(item)
+
+        # 전체 개수
+        count_query = select(func.count()).select_from(RaymondsIndex)
+        if year:
+            count_query = count_query.where(RaymondsIndex.fiscal_year == year)
+        if grade:
+            count_query = count_query.where(RaymondsIndex.grade.in_(grades))
+
+        total_result = await db.execute(count_query)
+        total = total_result.scalar()
+
+        return {
+            "total": total,
+            "offset": offset,
+            "limit": limit,
+            "rankings": rankings
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching ranking: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/search/filter")
+async def search_raymonds_index(
+    min_score: Optional[float] = None,
+    max_score: Optional[float] = None,
+    min_gap: Optional[float] = None,
+    max_gap: Optional[float] = None,
+    has_red_flags: Optional[bool] = None,
+    grade: Optional[str] = None,
+    market: Optional[str] = None,
+    year: Optional[int] = None,
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    RaymondsIndex 조건 검색
+
+    - min_score, max_score: 점수 범위
+    - min_gap, max_gap: 투자괴리율 범위
+    - has_red_flags: Red Flag 유무
+    - grade: 등급 필터
+    - market: 시장 필터 (KOSPI, KOSDAQ, KONEX)
+    - year: 연도 필터
+    """
+    try:
+        query = (
+            select(RaymondsIndex, Company)
+            .join(Company, RaymondsIndex.company_id == Company.id)
+        )
+
+        # 연도 필터 (기본: 각 회사의 최신)
+        if year:
+            query = query.where(RaymondsIndex.fiscal_year == year)
+        else:
+            subquery = (
+                select(
+                    RaymondsIndex.company_id,
+                    func.max(RaymondsIndex.fiscal_year).label('max_year')
+                )
+                .group_by(RaymondsIndex.company_id)
+            ).subquery()
+            query = query.join(
+                subquery,
+                (RaymondsIndex.company_id == subquery.c.company_id) &
+                (RaymondsIndex.fiscal_year == subquery.c.max_year)
+            )
+
+        # 점수 필터
+        if min_score is not None:
+            query = query.where(RaymondsIndex.total_score >= min_score)
+        if max_score is not None:
+            query = query.where(RaymondsIndex.total_score <= max_score)
+
+        # 투자괴리율 필터
+        if min_gap is not None:
+            query = query.where(RaymondsIndex.investment_gap >= min_gap)
+        if max_gap is not None:
+            query = query.where(RaymondsIndex.investment_gap <= max_gap)
+
+        # Red Flag 필터
+        if has_red_flags is not None:
+            if has_red_flags:
+                query = query.where(func.jsonb_array_length(RaymondsIndex.red_flags) > 0)
+            else:
+                query = query.where(func.jsonb_array_length(RaymondsIndex.red_flags) == 0)
+
+        # 등급 필터
+        if grade:
+            grades = [g.strip() for g in grade.split(',')]
+            query = query.where(RaymondsIndex.grade.in_(grades))
+
+        # 시장 필터
+        if market:
+            markets = [m.strip() for m in market.split(',')]
+            query = query.where(Company.market.in_(markets))
+
+        # 정렬 및 페이징
+        query = query.order_by(desc(RaymondsIndex.total_score))
+        query = query.offset(offset).limit(limit)
+
+        result = await db.execute(query)
+        rows = result.all()
+
+        items = [format_index_response(index, company) for index, company in rows]
+
+        return {
+            "total": len(items),
+            "offset": offset,
+            "limit": limit,
+            "results": items
+        }
+
+    except Exception as e:
+        logger.error(f"Error searching: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/statistics/summary")
+async def get_raymonds_index_statistics(
+    year: Optional[int] = None,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    RaymondsIndex 전체 통계
+
+    - 평균/중앙값/분포
+    - 등급별 비율
+    - 주요 지표 분포
+    """
+    try:
+        base_query = select(RaymondsIndex)
+
+        if year:
+            base_query = base_query.where(RaymondsIndex.fiscal_year == year)
+        else:
+            # 각 회사의 최신 연도만
+            subquery = (
+                select(
+                    RaymondsIndex.company_id,
+                    func.max(RaymondsIndex.fiscal_year).label('max_year')
+                )
+                .group_by(RaymondsIndex.company_id)
+            ).subquery()
+            base_query = base_query.join(
+                subquery,
+                (RaymondsIndex.company_id == subquery.c.company_id) &
+                (RaymondsIndex.fiscal_year == subquery.c.max_year)
+            )
+
+        # 기본 통계
+        stats_query = select(
+            func.count(RaymondsIndex.id).label('total_count'),
+            func.avg(RaymondsIndex.total_score).label('avg_score'),
+            func.min(RaymondsIndex.total_score).label('min_score'),
+            func.max(RaymondsIndex.total_score).label('max_score'),
+            func.avg(RaymondsIndex.investment_gap).label('avg_gap'),
+        )
+
+        if year:
+            stats_query = stats_query.where(RaymondsIndex.fiscal_year == year)
+
+        stats_result = await db.execute(stats_query)
+        stats = stats_result.first()
+
+        # 등급별 분포
+        grade_query = (
+            select(
+                RaymondsIndex.grade,
+                func.count(RaymondsIndex.id).label('count')
+            )
+            .group_by(RaymondsIndex.grade)
+        )
+
+        if year:
+            grade_query = grade_query.where(RaymondsIndex.fiscal_year == year)
+
+        grade_result = await db.execute(grade_query)
+        grade_distribution = {row.grade: row.count for row in grade_result.all()}
+
+        return {
+            "total_companies": stats.total_count if stats else 0,
+            "average_score": float(stats.avg_score) if stats and stats.avg_score else 0,
+            "min_score": float(stats.min_score) if stats and stats.min_score else 0,
+            "max_score": float(stats.max_score) if stats and stats.max_score else 0,
+            "average_investment_gap": float(stats.avg_gap) if stats and stats.avg_gap else 0,
+            "grade_distribution": grade_distribution,
+            "year": year
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching statistics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/company/name/{company_name}")
+async def get_raymonds_index_by_name(
+    company_name: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    회사명으로 RaymondsIndex 조회 (프론트엔드 편의용)
+    """
+    try:
+        # 회사 조회
+        company_query = select(Company).where(Company.name == company_name)
+        company_result = await db.execute(company_query)
+        company = company_result.scalar_one_or_none()
+
+        if not company:
+            # 부분 매칭 시도
+            company_query = select(Company).where(Company.name.ilike(f"%{company_name}%"))
+            company_result = await db.execute(company_query)
+            company = company_result.scalar_one_or_none()
+
+        if not company:
+            raise HTTPException(status_code=404, detail=f"Company not found: {company_name}")
+
+        # RaymondsIndex 조회
+        index_query = (
+            select(RaymondsIndex)
+            .where(RaymondsIndex.company_id == company.id)
+            .order_by(desc(RaymondsIndex.fiscal_year))
+        )
+
+        index_result = await db.execute(index_query)
+        index = index_result.scalar_one_or_none()
+
+        if not index:
+            return None  # 데이터 없으면 null 반환 (프론트엔드에서 조건부 렌더링)
+
+        return format_index_response(index, company)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching by name {company_name}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

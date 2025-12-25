@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from typing import Optional, List, Literal
 from datetime import datetime, timedelta
 import logging
+import uuid as uuid_module
 
 from app.database import get_db
 from app.models.users import User
@@ -282,8 +283,16 @@ async def toggle_user_active(
     current_user: User = Depends(require_admin)
 ):
     """사용자 활성/비활성 토글 (관리자 전용)"""
+    try:
+        user_uuid = uuid_module.UUID(user_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="잘못된 사용자 ID 형식입니다."
+        )
+
     result = await db.execute(
-        select(User).where(User.id == user_id)
+        select(User).where(User.id == user_uuid)
     )
     user = result.scalar_one_or_none()
 
@@ -314,8 +323,16 @@ async def update_user_subscription(
     current_user: User = Depends(require_admin)
 ):
     """사용자 이용권 업데이트 (관리자 전용)"""
+    try:
+        user_uuid = uuid_module.UUID(user_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="잘못된 사용자 ID 형식입니다."
+        )
+
     result = await db.execute(
-        select(User).where(User.id == user_id)
+        select(User).where(User.id == user_uuid)
     )
     user = result.scalar_one_or_none()
 

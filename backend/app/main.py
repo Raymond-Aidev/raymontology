@@ -4,6 +4,7 @@ Raymontology FastAPI Application
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 import os
 import logging
@@ -22,9 +23,10 @@ from app.api.endpoints import (
     officers,
     convertible_bonds,
     cb_subscribers,
-    company_report
+    company_report,
+    raymonds_index
 )
-from app.routes import auth, oauth, admin, subscription
+from app.routes import auth, oauth, admin, subscription, content
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -42,7 +44,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,  # config.py에서 환경별 origin 관리
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
 )
 
@@ -70,6 +72,11 @@ app.include_router(auth.router)
 app.include_router(oauth.router)
 app.include_router(admin.router)
 app.include_router(subscription.router)
+app.include_router(content.router)
+
+# Static files (이미지 업로드)
+os.makedirs("uploads/content", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 app.include_router(graph.router, prefix="/api")
 app.include_router(graph_fallback.router, prefix="/api")
 app.include_router(financials.router, prefix="/api")
@@ -79,6 +86,7 @@ app.include_router(officers.router, prefix="/api")
 app.include_router(convertible_bonds.router, prefix="/api")
 app.include_router(cb_subscribers.router, prefix="/api")
 app.include_router(company_report.router, prefix="/api")
+app.include_router(raymonds_index.router, prefix="/api")
 
 @app.get("/")
 async def root():
@@ -89,6 +97,7 @@ async def root():
         "status": "healthy",
         "endpoints": {
             "report": "/api/report (회사 종합보고서)",
+            "raymonds_index": "/api/raymonds-index (자본배분 효율성 지수)",
             "graph": "/api/graph",
             "financials": "/api/financials",
             "risks": "/api/risks",

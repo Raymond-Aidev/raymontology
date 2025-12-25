@@ -1,7 +1,118 @@
 import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import RaymondsRiskLogo from '../components/common/RaymondsRiskLogo'
 
+interface PageContent {
+  [section: string]: {
+    [field: string]: string
+  }
+}
+
+// 기본값 (API 로딩 전 또는 실패 시)
+const DEFAULT_CONTENT: PageContent = {
+  hero: {
+    badge: "투자 인텔리전스 플랫폼",
+    title: "숨겨진 관계망을 AI로 분석하여\n투자 리스크를 조기 발견",
+    description: "공시 자료만으로는 파악할 수 없는 임원의 과거 경력, CB 인수자의 다른 참여 기업, 대주주의 특수관계인 네트워크를 3단계 관계망으로 자동 시각화합니다.",
+  },
+  why_section: {
+    title: "왜 RaymondsRisk인가요?",
+    description: "기관투자자만 접근하던 정보를 개인투자자도 동등하게 이용할 수 있습니다.",
+  },
+  advantage1: {
+    title: "정보 비대칭 해소",
+    description: "기관투자자는 전문 실사팀과 고가의 터미널로 기업을 분석하지만, 개인투자자는 공시 자료에만 의존합니다. RaymondsRisk는 이러한 정보 격차를 해소합니다.",
+  },
+  advantage2: {
+    title: "특허 기술 기반 신뢰성",
+    description: "대한민국 특허청에 출원 중인 '3단계 계층적 관계망 시각화' 및 '포트폴리오 학습 시스템' 특허 기술을 기반으로, 1.5초 이내에 복잡한 관계망을 구축하고 78.3% 정확도로 리스크를 예측합니다.",
+  },
+  advantage3: {
+    title: "실시간 업데이트",
+    description: "CB 발행, 대표이사 변경, 대주주 변동, 거래량 급증 등 7가지 위험 신호를 실시간으로 업데이트합니다. 시장 변화에 신속하게 대응할 수 있습니다.",
+  },
+  advantage4: {
+    title: "합법적이고 투명한 데이터",
+    description: "금융감독원 DART, 한국거래소 KRX, 대법원 판결문 등 모두 공개된 합법적 데이터만 사용합니다. 불법 내부정보는 절대 활용하지 않으며 PIPA를 완벽히 준수합니다.",
+  },
+  advantage5: {
+    title: "접근성과 경제성",
+    description: "합리적인 가격으로 기관투자자 수준의 분석 도구를 이용할 수 있으며, 간편하게 시작할 수 있습니다.",
+  },
+  features_section: {
+    title: "주요 기능",
+    description: "AI 기반 관계망 분석부터 실시간 모니터링까지, 투자 의사결정에 필요한 모든 기능을 제공합니다.",
+  },
+  feature1: {
+    badge: "기능 1",
+    title: "3단계 관계망 자동 분석",
+    description: "검색창에 종목코드나 기업명만 입력하면, AI가 자동으로 3단계 관계망을 1.5초 만에 구축합니다.",
+    image: "",
+  },
+  feature2: {
+    badge: "기능 2",
+    title: "AI 리스크 조기 경고",
+    description: "500개 이상의 부실 기업 패턴을 학습한 AI가 40개 이상의 변수를 종합 분석하여 0~100점의 리스크 점수를 산출합니다.",
+    image: "",
+  },
+  feature3: {
+    badge: "기능 3",
+    title: "포트폴리오 주가 패턴 예측",
+    description: "관계망으로 연결된 기업들을 묶어 포트폴리오로 저장하면, AI가 30차원 특징을 자동 추출하여 30일 후 수익률을 예측합니다.",
+    image: "",
+  },
+  feature4: {
+    badge: "기능 4",
+    title: "24시간 실시간 모니터링",
+    description: "내 포트폴리오에 등록된 모든 기업을 24시간 자동 감시하며, 7가지 이벤트 발생 시 즉시 알림을 발송합니다.",
+    image: "",
+  },
+  stats_section: {
+    title: "검증된 성과",
+  },
+  cta_section: {
+    title: "지금 바로 시작하세요",
+    description: "RaymondsRisk로 숨겨진 투자 리스크를 발견하세요.",
+  },
+}
+
 export default function AboutPage() {
+  const [content, setContent] = useState<PageContent>(DEFAULT_CONTENT)
+
+  useEffect(() => {
+    const loadContent = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/content/about`)
+        if (response.ok) {
+          const data = await response.json()
+          if (data.content) {
+            // 기본값과 API 값 병합
+            const merged = { ...DEFAULT_CONTENT }
+            for (const section of Object.keys(data.content)) {
+              if (merged[section]) {
+                merged[section] = { ...merged[section], ...data.content[section] }
+              } else {
+                merged[section] = data.content[section]
+              }
+            }
+            setContent(merged)
+          }
+        }
+      } catch {
+        // API 실패 시 기본값 사용
+        console.log('Using default content')
+      }
+    }
+    loadContent()
+  }, [])
+
+  // 이미지 URL 처리 (상대경로면 API URL 추가)
+  const getImageUrl = (url: string) => {
+    if (!url) return ''
+    if (url.startsWith('http')) return url
+    return `${import.meta.env.VITE_API_URL || ''}${url}`
+  }
+
   return (
     <div className="min-h-screen bg-theme-bg">
       {/* 헤더 - 메인과 동일한 네비게이션 */}
@@ -49,15 +160,18 @@ export default function AboutPage() {
           <div className="text-center max-w-3xl mx-auto">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#5E6AD2]/10 text-[#5E6AD2] rounded-full text-sm font-medium mb-6">
               <span className="w-2 h-2 bg-[#5E6AD2] rounded-full animate-pulse" />
-              투자 인텔리전스 플랫폼
+              {content.hero?.badge || '투자 인텔리전스 플랫폼'}
             </div>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-text-primary mb-6 leading-tight">
-              숨겨진 관계망을 AI로 분석하여<br />
-              <span className="text-[#5E6AD2]">투자 리스크를 조기 발견</span>
+              {(content.hero?.title || '').split('\n').map((line, i, arr) => (
+                <span key={i}>
+                  {i === arr.length - 1 ? <span className="text-[#5E6AD2]">{line}</span> : line}
+                  {i < arr.length - 1 && <br />}
+                </span>
+              ))}
             </h1>
             <p className="text-lg text-text-secondary mb-8 leading-relaxed">
-              공시 자료만으로는 파악할 수 없는 임원의 과거 경력, CB 인수자의 다른 참여 기업,
-              대주주의 특수관계인 네트워크를 3단계 관계망으로 자동 시각화합니다.
+              {content.hero?.description}
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
@@ -82,10 +196,10 @@ export default function AboutPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold text-text-primary mb-4">
-              왜 RaymondsRisk인가요?
+              {content.why_section?.title || '왜 RaymondsRisk인가요?'}
             </h2>
             <p className="text-text-secondary max-w-2xl mx-auto">
-              기관투자자만 접근하던 정보를 개인투자자도 동등하게 이용할 수 있습니다.
+              {content.why_section?.description}
             </p>
           </div>
 
@@ -97,10 +211,9 @@ export default function AboutPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-text-primary mb-2">정보 비대칭 해소</h3>
+              <h3 className="text-lg font-semibold text-text-primary mb-2">{content.advantage1?.title}</h3>
               <p className="text-sm text-text-secondary leading-relaxed">
-                기관투자자는 전문 실사팀과 고가의 터미널로 기업을 분석하지만,
-                개인투자자는 공시 자료에만 의존합니다. RaymondsRisk는 이러한 정보 격차를 해소합니다.
+                {content.advantage1?.description}
               </p>
             </div>
 
@@ -111,10 +224,9 @@ export default function AboutPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-text-primary mb-2">특허 기술 기반 신뢰성</h3>
+              <h3 className="text-lg font-semibold text-text-primary mb-2">{content.advantage2?.title}</h3>
               <p className="text-sm text-text-secondary leading-relaxed">
-                대한민국 특허청에 출원 중인 '3단계 계층적 관계망 시각화' 및 '포트폴리오 학습 시스템' 특허 기술을 기반으로,
-                1.5초 이내에 복잡한 관계망을 구축하고 78.3% 정확도로 리스크를 예측합니다.
+                {content.advantage2?.description}
               </p>
             </div>
 
@@ -125,10 +237,9 @@ export default function AboutPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-text-primary mb-2">실시간 업데이트</h3>
+              <h3 className="text-lg font-semibold text-text-primary mb-2">{content.advantage3?.title}</h3>
               <p className="text-sm text-text-secondary leading-relaxed">
-                CB 발행, 대표이사 변경, 대주주 변동, 거래량 급증 등 7가지 위험 신호를 실시간으로 업데이트합니다.
-                시장 변화에 신속하게 대응할 수 있습니다.
+                {content.advantage3?.description}
               </p>
             </div>
 
@@ -139,10 +250,9 @@ export default function AboutPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-text-primary mb-2">합법적이고 투명한 데이터</h3>
+              <h3 className="text-lg font-semibold text-text-primary mb-2">{content.advantage4?.title}</h3>
               <p className="text-sm text-text-secondary leading-relaxed">
-                금융감독원 DART, 한국거래소 KRX, 대법원 판결문 등 모두 공개된 합법적 데이터만 사용합니다.
-                불법 내부정보는 절대 활용하지 않으며 PIPA를 완벽히 준수합니다.
+                {content.advantage4?.description}
               </p>
             </div>
 
@@ -153,10 +263,9 @@ export default function AboutPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-text-primary mb-2">접근성과 경제성</h3>
+              <h3 className="text-lg font-semibold text-text-primary mb-2">{content.advantage5?.title}</h3>
               <p className="text-sm text-text-secondary leading-relaxed">
-                합리적인 가격으로 기관투자자 수준의 분석 도구를 이용할 수 있으며,
-                간편하게 시작할 수 있습니다.
+                {content.advantage5?.description}
               </p>
             </div>
           </div>
@@ -168,10 +277,10 @@ export default function AboutPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-16">
             <h2 className="text-2xl sm:text-3xl font-bold text-text-primary mb-4">
-              주요 기능
+              {content.features_section?.title || '주요 기능'}
             </h2>
             <p className="text-text-secondary max-w-2xl mx-auto">
-              AI 기반 관계망 분석부터 실시간 모니터링까지, 투자 의사결정에 필요한 모든 기능을 제공합니다.
+              {content.features_section?.description}
             </p>
           </div>
 
@@ -180,13 +289,13 @@ export default function AboutPage() {
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               <div>
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#5E6AD2]/10 text-[#5E6AD2] rounded-full text-sm font-medium mb-4">
-                  기능 1
+                  {content.feature1?.badge || '기능 1'}
                 </div>
                 <h3 className="text-xl sm:text-2xl font-bold text-text-primary mb-4">
-                  3단계 관계망 자동 분석
+                  {content.feature1?.title}
                 </h3>
                 <p className="text-text-secondary mb-6 leading-relaxed">
-                  검색창에 종목코드나 기업명만 입력하면, AI가 자동으로 3단계 관계망을 1.5초 만에 구축합니다.
+                  {content.feature1?.description}
                 </p>
                 <div className="space-y-3">
                   <div className="flex items-start gap-3">
@@ -219,13 +328,17 @@ export default function AboutPage() {
                 </div>
               </div>
               <div className="bg-theme-surface border border-theme-border rounded-xl p-6">
-                <div className="aspect-video bg-theme-card rounded-lg flex items-center justify-center">
-                  <div className="text-center">
-                    <svg className="w-16 h-16 text-text-muted mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                    </svg>
-                    <p className="text-sm text-text-muted">관계망 시각화 미리보기</p>
-                  </div>
+                <div className="aspect-video bg-theme-card rounded-lg flex items-center justify-center overflow-hidden">
+                  {content.feature1?.image ? (
+                    <img src={getImageUrl(content.feature1.image)} alt={content.feature1?.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="text-center">
+                      <svg className="w-16 h-16 text-text-muted mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                      </svg>
+                      <p className="text-sm text-text-muted">관계망 시각화 미리보기</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -276,13 +389,13 @@ export default function AboutPage() {
               </div>
               <div className="order-1 lg:order-2">
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-accent-danger/10 text-accent-danger rounded-full text-sm font-medium mb-4">
-                  기능 2
+                  {content.feature2?.badge || '기능 2'}
                 </div>
                 <h3 className="text-xl sm:text-2xl font-bold text-text-primary mb-4">
-                  AI 리스크 조기 경고
+                  {content.feature2?.title}
                 </h3>
                 <p className="text-text-secondary mb-6 leading-relaxed">
-                  500개 이상의 부실 기업 패턴을 학습한 AI가 40개 이상의 변수를 종합 분석하여 0~100점의 리스크 점수를 산출합니다.
+                  {content.feature2?.description}
                 </p>
                 <ul className="space-y-2 text-sm text-text-secondary">
                   <li className="flex items-center gap-2">
@@ -313,13 +426,13 @@ export default function AboutPage() {
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               <div>
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-accent-purple/10 text-accent-purple rounded-full text-sm font-medium mb-4">
-                  기능 3
+                  {content.feature3?.badge || '기능 3'}
                 </div>
                 <h3 className="text-xl sm:text-2xl font-bold text-text-primary mb-4">
-                  포트폴리오 주가 패턴 예측
+                  {content.feature3?.title}
                 </h3>
                 <p className="text-text-secondary mb-6 leading-relaxed">
-                  관계망으로 연결된 기업들을 묶어 포트폴리오로 저장하면, AI가 30차원 특징을 자동 추출하여 30일 후 수익률을 예측합니다.
+                  {content.feature3?.description}
                 </p>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-theme-surface border border-theme-border rounded-lg p-4">
@@ -388,13 +501,13 @@ export default function AboutPage() {
               </div>
               <div className="order-1 lg:order-2">
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-accent-warning/10 text-accent-warning rounded-full text-sm font-medium mb-4">
-                  기능 4
+                  {content.feature4?.badge || '기능 4'}
                 </div>
                 <h3 className="text-xl sm:text-2xl font-bold text-text-primary mb-4">
-                  24시간 실시간 모니터링
+                  {content.feature4?.title}
                 </h3>
                 <p className="text-text-secondary mb-6 leading-relaxed">
-                  내 포트폴리오에 등록된 모든 기업을 24시간 자동 감시하며, 7가지 이벤트 발생 시 즉시 알림을 발송합니다.
+                  {content.feature4?.description}
                 </p>
                 <ul className="space-y-2 text-sm text-text-secondary">
                   <li className="flex items-center gap-2">
@@ -421,7 +534,7 @@ export default function AboutPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold text-text-primary mb-4">
-              검증된 성과
+              {content.stats_section?.title || '검증된 성과'}
             </h2>
           </div>
 
@@ -473,10 +586,10 @@ export default function AboutPage() {
       <section className="py-16 sm:py-24 bg-gradient-to-r from-[#5E6AD2] to-[#4F5ABF]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
           <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">
-            지금 바로 시작하세요
+            {content.cta_section?.title || '지금 바로 시작하세요'}
           </h2>
           <p className="text-white/80 mb-8 max-w-2xl mx-auto">
-            RaymondsRisk로 숨겨진 투자 리스크를 발견하세요.
+            {content.cta_section?.description}
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link

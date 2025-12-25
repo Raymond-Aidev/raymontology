@@ -45,7 +45,30 @@ interface Stats {
   superusers: number
 }
 
-type TabType = 'users' | 'terms' | 'privacy'
+type TabType = 'users' | 'content' | 'terms' | 'privacy'
+
+interface ContentField {
+  field: string
+  type: 'text' | 'image'
+  default: string
+  recommended_size?: {
+    width: number
+    height: number
+    label: string
+  }
+}
+
+interface ContentSection {
+  page: string
+  section: string
+  fields: ContentField[]
+}
+
+interface PageContent {
+  [section: string]: {
+    [field: string]: string
+  }
+}
 
 function AdminPage() {
   const navigate = useNavigate()
@@ -78,6 +101,12 @@ function AdminPage() {
   const [selectedTier, setSelectedTier] = useState<SubscriptionTier>('free')
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null) // null = 무기한
   const [isUpdatingSubscription, setIsUpdatingSubscription] = useState(false)
+
+  // 콘텐츠 관리 상태
+  const [contentSections, setContentSections] = useState<ContentSection[]>([])
+  const [pageContent, setPageContent] = useState<PageContent>({})
+  const [editingField, setEditingField] = useState<{section: string, field: string, value: string} | null>(null)
+  const [uploadingImage, setUploadingImage] = useState<string | null>(null)
 
   // 로그인 여부 및 관리자 권한 체크
   useEffect(() => {
@@ -178,6 +207,98 @@ function AdminPage() {
       setError('사용자 상태 변경에 실패했습니다.')
     }
   }
+
+  // 콘텐츠 데이터 로드
+  const loadContentData = useCallback(async () => {
+    try {
+      const [sectionsRes, contentRes] = await Promise.all([
+        apiClient.get('/api/content/admin/sections'),
+        apiClient.get('/api/content/about')
+      ])
+      setContentSections(sectionsRes.data.sections || [])
+      setPageContent(contentRes.data.content || {})
+    } catch (err) {
+      console.error('Failed to load content data:', err)
+    }
+  }, [])
+
+  // 콘텐츠 필드 업데이트
+  const handleUpdateContent = async (section: string, field: string, value: string) => {
+    setIsSaving(true)
+    setError(null)
+    try {
+      await apiClient.put(`/api/content/about/${section}/${field}`, { value })
+      setPageContent(prev => ({
+        ...prev,
+        [section]: {
+          ...prev[section],
+          [field]: value
+        }
+      }))
+      setSaveSuccess('저장되었습니다.')
+      setTimeout(() => setSaveSuccess(null), 3000)
+      setEditingField(null)
+    } catch (err) {
+      console.error('Failed to update content:', err)
+      setError('저장에 실패했습니다.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // 이미지 업로드
+  const handleImageUpload = async (section: string, file: File) => {
+    setUploadingImage(section)
+    setError(null)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const response = await apiClient.post(`/api/content/about/${section}/image`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      setPageContent(prev => ({
+        ...prev,
+        [section]: {
+          ...prev[section],
+          image: response.data.image_url
+        }
+      }))
+      setSaveSuccess('이미지가 업로드되었습니다.')
+      setTimeout(() => setSaveSuccess(null), 3000)
+    } catch (err) {
+      console.error('Failed to upload image:', err)
+      setError('이미지 업로드에 실패했습니다.')
+    } finally {
+      setUploadingImage(null)
+    }
+  }
+
+  // 이미지 삭제
+  const handleDeleteImage = async (section: string) => {
+    if (!confirm('이미지를 삭제하시겠습니까?')) return
+    try {
+      await apiClient.delete(`/api/content/about/${section}/image`)
+      setPageContent(prev => ({
+        ...prev,
+        [section]: {
+          ...prev[section],
+          image: ''
+        }
+      }))
+      setSaveSuccess('이미지가 삭제되었습니다.')
+      setTimeout(() => setSaveSuccess(null), 3000)
+    } catch (err) {
+      console.error('Failed to delete image:', err)
+      setError('이미지 삭제에 실패했습니다.')
+    }
+  }
+
+  // 콘텐츠 탭 전환 시 데이터 로드
+  useEffect(() => {
+    if (activeTab === 'content' && user?.is_superuser) {
+      loadContentData()
+    }
+  }, [activeTab, user, loadContentData])
 
   // 이용권 관리 모달 열기
   const openSubscriptionModal = (u: User) => {
@@ -391,9 +512,10 @@ function AdminPage() {
         )}
 
         {/* 탭 */}
-        <div className="flex gap-2 mb-6 border-b border-theme-border">
+        <div className="flex gap-2 mb-6 border-b border-theme-border overflow-x-auto">
           {[
             { id: 'users', label: '회원 관리' },
+            { id: 'content', label: '콘텐츠 관리' },
             { id: 'terms', label: '이용약관' },
             { id: 'privacy', label: '개인정보처리방침' }
           ].map((tab) => (
@@ -530,6 +652,159 @@ function AdminPage() {
                     등록된 회원이 없습니다.
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* 콘텐츠 관리 탭 */}
+            {activeTab === 'content' && (
+              <div className="space-y-6">
+                <div className="bg-theme-card border border-theme-border rounded-xl p-6">
+                  <h3 className="text-lg font-semibold text-text-primary mb-4">서비스 소개 페이지 콘텐츠</h3>
+                  <p className="text-sm text-text-secondary mb-6">
+                    각 섹션의 텍스트와 이미지를 편집할 수 있습니다. 변경사항은 즉시 반영됩니다.
+                  </p>
+
+                  <div className="space-y-8">
+                    {contentSections.map((section) => {
+                      const sectionLabels: Record<string, string> = {
+                        hero: '히어로 섹션',
+                        why_section: '왜 RaymondsRisk인가요?',
+                        advantage1: '장점 1: 정보 비대칭 해소',
+                        advantage2: '장점 2: 특허 기술 기반 신뢰성',
+                        advantage3: '장점 3: 실시간 업데이트',
+                        advantage4: '장점 4: 합법적이고 투명한 데이터',
+                        advantage5: '장점 5: 접근성과 경제성',
+                        features_section: '주요 기능 섹션',
+                        feature1: '기능 1: 3단계 관계망 자동 분석',
+                        feature2: '기능 2: AI 리스크 조기 경고',
+                        feature3: '기능 3: 포트폴리오 주가 패턴 예측',
+                        feature4: '기능 4: 24시간 실시간 모니터링',
+                        stats_section: '검증된 성과 섹션',
+                        cta_section: 'CTA 섹션'
+                      }
+
+                      return (
+                        <div key={section.section} className="border border-theme-border rounded-lg p-4">
+                          <h4 className="text-sm font-medium text-accent-primary mb-4">
+                            {sectionLabels[section.section] || section.section}
+                          </h4>
+
+                          <div className="space-y-4">
+                            {section.fields.map((field) => {
+                              const currentValue = pageContent[section.section]?.[field.field] ?? field.default
+                              const isEditing = editingField?.section === section.section && editingField?.field === field.field
+                              const fieldLabels: Record<string, string> = {
+                                badge: '배지',
+                                title: '제목',
+                                description: '설명',
+                                image: '이미지'
+                              }
+
+                              if (field.type === 'image') {
+                                return (
+                                  <div key={field.field} className="space-y-2">
+                                    <label className="block text-xs font-medium text-text-secondary">
+                                      {fieldLabels[field.field] || field.field}
+                                      {field.recommended_size && (
+                                        <span className="ml-2 text-text-muted">
+                                          (권장: {field.recommended_size.width}x{field.recommended_size.height}px)
+                                        </span>
+                                      )}
+                                    </label>
+                                    <div className="flex items-center gap-4">
+                                      {currentValue ? (
+                                        <div className="relative">
+                                          <img
+                                            src={currentValue.startsWith('/') ? `${import.meta.env.VITE_API_URL || ''}${currentValue}` : currentValue}
+                                            alt="Preview"
+                                            className="w-32 h-20 object-cover rounded border border-theme-border"
+                                          />
+                                          <button
+                                            onClick={() => handleDeleteImage(section.section)}
+                                            className="absolute -top-2 -right-2 w-6 h-6 bg-accent-danger text-white rounded-full flex items-center justify-center text-xs hover:bg-accent-danger/80"
+                                          >
+                                            ×
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <div className="w-32 h-20 bg-theme-surface border border-dashed border-theme-border rounded flex items-center justify-center">
+                                          <span className="text-xs text-text-muted">No image</span>
+                                        </div>
+                                      )}
+                                      <label className="cursor-pointer">
+                                        <span className={`px-3 py-1.5 text-xs rounded border transition-colors ${
+                                          uploadingImage === section.section
+                                            ? 'bg-theme-surface border-theme-border text-text-muted cursor-wait'
+                                            : 'bg-accent-primary/10 border-accent-primary/30 text-accent-primary hover:bg-accent-primary/20'
+                                        }`}>
+                                          {uploadingImage === section.section ? '업로드 중...' : '이미지 업로드'}
+                                        </span>
+                                        <input
+                                          type="file"
+                                          accept="image/*"
+                                          className="hidden"
+                                          disabled={uploadingImage === section.section}
+                                          onChange={(e) => {
+                                            const file = e.target.files?.[0]
+                                            if (file) handleImageUpload(section.section, file)
+                                          }}
+                                        />
+                                      </label>
+                                    </div>
+                                  </div>
+                                )
+                              }
+
+                              return (
+                                <div key={field.field} className="space-y-2">
+                                  <label className="block text-xs font-medium text-text-secondary">
+                                    {fieldLabels[field.field] || field.field}
+                                  </label>
+                                  {isEditing ? (
+                                    <div className="flex gap-2">
+                                      <textarea
+                                        value={editingField.value}
+                                        onChange={(e) => setEditingField({...editingField, value: e.target.value})}
+                                        rows={field.field === 'description' ? 3 : 1}
+                                        className="flex-1 px-3 py-2 bg-theme-surface border border-accent-primary rounded text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/30"
+                                      />
+                                      <div className="flex flex-col gap-1">
+                                        <button
+                                          onClick={() => handleUpdateContent(section.section, field.field, editingField.value)}
+                                          disabled={isSaving}
+                                          className="px-3 py-1 text-xs bg-accent-primary text-white rounded hover:bg-accent-primary/90 disabled:opacity-50"
+                                        >
+                                          저장
+                                        </button>
+                                        <button
+                                          onClick={() => setEditingField(null)}
+                                          className="px-3 py-1 text-xs bg-theme-surface border border-theme-border text-text-secondary rounded hover:bg-theme-hover"
+                                        >
+                                          취소
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div
+                                      onClick={() => setEditingField({
+                                        section: section.section,
+                                        field: field.field,
+                                        value: currentValue
+                                      })}
+                                      className="px-3 py-2 bg-theme-surface border border-theme-border rounded text-sm text-text-primary cursor-pointer hover:border-accent-primary/50 transition-colors"
+                                    >
+                                      {currentValue || <span className="text-text-muted italic">비어있음 (클릭하여 편집)</span>}
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
               </div>
             )}
 

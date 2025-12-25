@@ -2,10 +2,14 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { RiskGauge, ScoreBreakdown, GradeCard, DataTabs, RiskSignalList } from '../components/report'
 import { getCompanyReport, type CompanyReportData } from '../api/report'
+import { getRaymondsIndexByName } from '../api/raymondsIndex'
+import type { RaymondsIndexData } from '../types/raymondsIndex'
+import { RaymondsIndexCard, SubIndexRadar, InvestmentGapMeter, RiskFlagsPanel } from '../components/RaymondsIndex'
 
 function ReportPage() {
   const { companyId } = useParams<{ companyId: string }>()
   const [reportData, setReportData] = useState<CompanyReportData | null>(null)
+  const [raymondsIndex, setRaymondsIndex] = useState<RaymondsIndexData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isApiConnected, setIsApiConnected] = useState<boolean | null>(null)
@@ -23,6 +27,17 @@ function ReportPage() {
         setReportData(data)
         // API 연결 여부 판단 (더미 데이터가 아닌 경우)
         setIsApiConnected(data.calculatedAt !== new Date().toISOString().slice(0, 10))
+
+        // RaymondsIndex 데이터 로드 (별도로 - 실패해도 보고서는 표시)
+        if (data.companyName) {
+          try {
+            const indexData = await getRaymondsIndexByName(data.companyName)
+            setRaymondsIndex(indexData)
+          } catch {
+            // RaymondsIndex 로드 실패는 무시 (Optional 데이터)
+            console.log('RaymondsIndex 데이터 없음')
+          }
+        }
       } catch (err) {
         setError('보고서 데이터를 불러오는데 실패했습니다')
         setIsApiConnected(false)
@@ -34,20 +49,30 @@ function ReportPage() {
     loadReportData()
   }, [companyId])
 
-  const handleRetry = useCallback(() => {
+  const handleRetry = useCallback(async () => {
     if (!companyId) return
     setIsLoading(true)
     setError(null)
-    getCompanyReport(companyId)
-      .then(data => {
-        setReportData(data)
-        setIsApiConnected(true)
-      })
-      .catch(() => {
-        setError('보고서 데이터를 불러오는데 실패했습니다')
-        setIsApiConnected(false)
-      })
-      .finally(() => setIsLoading(false))
+    try {
+      const data = await getCompanyReport(companyId)
+      setReportData(data)
+      setIsApiConnected(true)
+
+      // RaymondsIndex도 다시 로드
+      if (data.companyName) {
+        try {
+          const indexData = await getRaymondsIndexByName(data.companyName)
+          setRaymondsIndex(indexData)
+        } catch {
+          // 무시
+        }
+      }
+    } catch {
+      setError('보고서 데이터를 불러오는데 실패했습니다')
+      setIsApiConnected(false)
+    } finally {
+      setIsLoading(false)
+    }
   }, [companyId])
 
   // 로딩 상태
@@ -185,6 +210,59 @@ function ReportPage() {
         <h2 className="text-base md:text-lg font-bold text-text-primary mb-3 md:mb-4">리스크 신호 탐지</h2>
         <RiskSignalList signals={reportData.riskSignals} />
       </div>
+
+      {/* RaymondsIndex 섹션 - 데이터가 있을 때만 표시 */}
+      {raymondsIndex && (
+        <div className="bg-dark-card border border-dark-border rounded-xl shadow-card p-4 md:p-6 mb-4 md:mb-6">
+          <div className="flex items-center justify-between mb-4 md:mb-6">
+            <h2 className="text-base md:text-lg font-bold text-text-primary">
+              자본 배분 효율성 (RaymondsIndex)
+            </h2>
+            <span className="text-xs md:text-sm text-text-secondary">
+              {raymondsIndex.fiscalYear}년 기준
+            </span>
+          </div>
+
+          {/* 메인 그리드 */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
+            {/* 점수 카드 */}
+            <RaymondsIndexCard
+              score={raymondsIndex.totalScore}
+              grade={raymondsIndex.grade}
+              investmentGap={raymondsIndex.coreMetrics.investmentGap}
+              redFlags={raymondsIndex.redFlags}
+              yellowFlags={raymondsIndex.yellowFlags}
+              fiscalYear={raymondsIndex.fiscalYear}
+            />
+
+            {/* Sub-Index 레이더 */}
+            <SubIndexRadar
+              cei={raymondsIndex.subIndexScores.cei}
+              rii={raymondsIndex.subIndexScores.rii}
+              cgi={raymondsIndex.subIndexScores.cgi}
+              mai={raymondsIndex.subIndexScores.mai}
+            />
+          </div>
+
+          {/* 투자괴리율 게이지 */}
+          <div className="mb-4 md:mb-6">
+            <InvestmentGapMeter
+              gap={raymondsIndex.coreMetrics.investmentGap}
+              cashGrowth={raymondsIndex.coreMetrics.cashCagr}
+              capexGrowth={raymondsIndex.coreMetrics.capexGrowth}
+            />
+          </div>
+
+          {/* 리스크 분석 패널 */}
+          <RiskFlagsPanel
+            redFlags={raymondsIndex.redFlags}
+            yellowFlags={raymondsIndex.yellowFlags}
+            verdict={raymondsIndex.verdict}
+            keyRisk={raymondsIndex.keyRisk}
+            recommendation={raymondsIndex.recommendation}
+          />
+        </div>
+      )}
 
       {/* 데이터 탭 - 모바일 최적화 */}
       <div className="bg-dark-card border border-dark-border rounded-xl shadow-card p-4 md:p-6">

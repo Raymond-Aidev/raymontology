@@ -6,10 +6,19 @@
 
 ---
 
-## 상태: 서비스 운영 중 (2025-12-24)
-전체 11개 테이블 데이터 적재 완료. 프론트엔드/백엔드 연동 정상.
+## 상태: 서비스 운영 중 (2025-12-25)
+전체 15개 테이블 데이터 적재 완료. 프론트엔드/백엔드 연동 정상.
 
-### 최근 수정 (2025-12-24)
+### 최근 수정 (2025-12-25)
+- **RaymondsIndex 시스템 구현 중**: 자본 배분 효율성 지수
+- **financial_details 테이블 추가**: 상세 재무 데이터 (유동/비유동 자산·부채)
+- **raymonds_index 테이블 추가**: 지수 계산 결과 저장
+- **구독 시스템 구현**: Light (3,000원/월, 30건 조회), Max (30,000원/월, 무제한)
+- **조회 제한 시스템**: `user_query_usage` 테이블로 월별 사용량 추적
+- **콘텐츠 관리 시스템**: 어드민에서 AboutPage 텍스트/이미지 편집 가능
+- **page_contents 테이블**: 페이지별 콘텐츠 동적 관리
+
+### 이전 수정 (2025-12-24)
 - **임원 API 리팩토링**: `officer_positions` 테이블 기반으로 변경
 - **중복 데이터 정리**: 243,398건 삭제 → 64,265건
 - **OfficerPosition 모델 추가**: `backend/app/models/officer_positions.py`
@@ -166,7 +175,7 @@ disclosures: 0건 → 5,678건 (+5,678건)
 
 ---
 
-## 현재 DB 상태 (2025-12-24 기준)
+## 현재 DB 상태 (2025-12-25 기준)
 
 | 테이블 | 레코드 수 | 상태 | 비고 |
 |--------|----------|------|------|
@@ -181,6 +190,10 @@ disclosures: 0건 → 5,678건 (+5,678건)
 | risk_scores | 3,912 | ✅ 완료 | |
 | major_shareholders | 95,191 | ✅ 완료 | |
 | affiliates | 973 | ✅ 완료 | |
+| user_query_usage | - | ✅ 완료 | 조회 제한 추적 |
+| page_contents | - | ✅ 완료 | 페이지 콘텐츠 관리 |
+| financial_details | 0 | 🔄 스키마완료 | RaymondsIndex용 상세 재무 |
+| raymonds_index | 0 | 🔄 스키마완료 | 지수 계산 결과 |
 
 ---
 
@@ -209,6 +222,75 @@ query = select(Officer).where(Officer.current_company_id == company_id)
 ### Neo4j 미설정 시 PostgreSQL fallback
 
 `graph.py`의 `/officer/{id}/career` 엔드포인트는 Neo4j 없으면 자동으로 PostgreSQL 사용
+
+---
+
+## 구독 시스템 (2025-12-25 추가)
+
+### 이용권 종류
+
+| 이용권 | 가격 | 월 조회 제한 | 설명 |
+|--------|------|-------------|------|
+| Free | 무료 | 5건 | 기본 상태 (구독 없음) |
+| Light | 3,000원/월 | 30건 | 개인 투자자용 |
+| Max | 30,000원/월 | 무제한 | 전문 투자자용 |
+
+### 관련 파일
+
+```
+backend/app/models/subscriptions.py    - SUBSCRIPTION_LIMITS, UserQueryUsage 모델
+backend/app/services/usage_service.py  - 조회 제한 체크 및 사용량 추적
+backend/app/routes/subscription.py     - 구독 관리 API
+backend/app/api/endpoints/companies.py - 조회 제한 적용
+frontend/src/components/UsageIndicator.tsx - 사용량 표시 UI
+```
+
+### 조회 제한 로직
+
+```python
+# 회사 상세 조회 시 사용량 체크
+from app.services.usage_service import check_and_increment_usage
+
+can_query, remaining, limit = await check_and_increment_usage(db, user)
+if not can_query:
+    raise HTTPException(status_code=429, detail="월 조회 한도 초과")
+```
+
+---
+
+## 콘텐츠 관리 시스템 (2025-12-25 추가)
+
+### 개요
+
+어드민 페이지에서 서비스 소개(AboutPage) 콘텐츠를 동적으로 편집 가능
+
+### 관련 파일
+
+```
+backend/app/models/content.py      - PageContent 모델, DEFAULT_ABOUT_CONTENT
+backend/app/routes/content.py      - 콘텐츠 CRUD API
+frontend/src/pages/AdminPage.tsx   - 콘텐츠 편집 탭
+frontend/src/pages/AboutPage.tsx   - 동적 콘텐츠 로딩
+```
+
+### API 엔드포인트
+
+```
+GET    /api/content/{page}                    - 페이지 콘텐츠 조회 (공개)
+PUT    /api/content/{page}/{section}/{field}  - 텍스트 수정 (관리자)
+POST   /api/content/{page}/{section}/image    - 이미지 업로드 (관리자)
+DELETE /api/content/{page}/{section}/image    - 이미지 삭제 (관리자)
+```
+
+### 편집 가능 섹션 (AboutPage)
+
+- hero: 배지, 제목, 설명
+- why_section: 제목, 설명
+- advantage1~5: 각각 제목, 설명
+- features_section: 제목, 설명
+- feature1~4: 각각 배지, 제목, 설명, 이미지(640x360)
+- stats_section: 제목
+- cta_section: 제목, 설명
 
 ---
 

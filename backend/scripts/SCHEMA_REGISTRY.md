@@ -2,20 +2,22 @@
 
 > **중요**: 모든 테이블 접근 시 이 문서 참조 필수. 테이블명 추측 금지.
 >
-> **마지막 업데이트**: 2025-12-16
+> **마지막 업데이트**: 2025-12-25
 >
-> **현재 데이터 상태** (2025-12-16 23:30):
+> **현재 데이터 상태** (2025-12-25):
 > - companies: 3,922건
-> - officers: 42,263건
-> - officer_positions: 275,069건
+> - officers: 44,679건
+> - officer_positions: 64,265건 (중복 제거 완료)
 > - disclosures: 213,304건
-> - convertible_bonds: 1,140건
-> - cb_subscribers: 9,689건
+> - convertible_bonds: 1,463건
+> - cb_subscribers: 7,490건
 > - financial_statements: 9,432건
 > - risk_signals: 1,412건
 > - risk_scores: 3,912건
-> - major_shareholders: 60,926건
-> - affiliates: 973건 (ownership_ratio 321건/33%)
+> - major_shareholders: 95,191건
+> - affiliates: 973건
+> - user_query_usage: - (조회 제한 추적)
+> - page_contents: - (페이지 콘텐츠 관리)
 
 ---
 
@@ -269,6 +271,41 @@
 | notes | text | YES | 비고 |
 
 **용도**: 모든 파싱/데이터 작업 기록 추적
+
+---
+
+## 사용자/콘텐츠 관리 테이블 (2025-12-25 추가)
+
+### user_query_usage (사용자 조회 사용량)
+
+| 컬럼명 | 데이터타입 | NULL | 설명 |
+|--------|-----------|------|------|
+| id | uuid | NO | PK |
+| user_id | uuid | NO | FK → users |
+| year_month | varchar(7) | NO | 연월 (YYYY-MM) |
+| query_count | integer | NO | 조회 횟수 |
+| created_at | timestamp | NO | 생성일시 |
+| updated_at | timestamp | NO | 수정일시 |
+
+**용도**: 구독별 월간 조회 제한 추적
+**관련 파일**: `backend/app/models/subscriptions.py`, `backend/app/services/usage_service.py`
+
+---
+
+### page_contents (페이지 콘텐츠)
+
+| 컬럼명 | 데이터타입 | NULL | 설명 |
+|--------|-----------|------|------|
+| id | uuid | NO | PK |
+| page | varchar(50) | NO | 페이지명 (about, features 등) |
+| section | varchar(50) | NO | 섹션명 (hero, advantage1 등) |
+| field | varchar(50) | NO | 필드명 (title, description, image) |
+| value | text | YES | 콘텐츠 값 (텍스트 또는 이미지 URL) |
+| created_at | timestamp | NO | 생성일시 |
+| updated_at | timestamp | NO | 수정일시 |
+
+**용도**: 어드민에서 페이지 콘텐츠 동적 편집
+**관련 파일**: `backend/app/models/content.py`, `backend/app/routes/content.py`
 
 ---
 

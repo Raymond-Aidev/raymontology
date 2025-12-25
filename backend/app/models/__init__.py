@@ -18,6 +18,8 @@ from app.models.affiliates import Affiliate
 from app.models.convertible_bonds import ConvertibleBond
 from app.models.cb_subscribers import CBSubscriber
 from app.models.financial_statements import FinancialStatement
+from app.models.financial_details import FinancialDetails
+from app.models.raymonds_index import RaymondsIndex
 from app.models.users import User
 from app.models.major_shareholders import MajorShareholder
 from app.models.risk_scores import RiskScore
@@ -39,6 +41,8 @@ __all__ = [
     "ConvertibleBond",
     "CBSubscriber",
     "FinancialStatement",
+    "FinancialDetails",
+    "RaymondsIndex",
     "User",
     "MajorShareholder",
     "RiskScore",

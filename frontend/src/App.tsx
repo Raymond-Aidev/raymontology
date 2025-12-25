@@ -23,6 +23,7 @@ const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'))
 const PricingPage = lazy(() => import('./pages/PricingPage'))
 const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'))
 const PaymentFailPage = lazy(() => import('./pages/PaymentFailPage'))
+const RaymondsIndexRankingPage = lazy(() => import('./pages/RaymondsIndexRankingPage'))
 
 function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth)
@@ -54,6 +55,9 @@ function App() {
         <Route element={<MainLayout />}>
           <Route path="/" element={<MainSearchPage />} />
         </Route>
+
+        {/* RaymondsIndex Ranking Page (public) */}
+        <Route path="/raymonds-index" element={<RaymondsIndexRankingPage />} />
 
         {/* Protected routes */}
         <Route element={

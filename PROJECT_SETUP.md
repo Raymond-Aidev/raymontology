@@ -1,6 +1,6 @@
 # Raymontology 프로젝트 설정 및 구현 현황
 
-> **마지막 업데이트**: 2025-12-24
+> **마지막 업데이트**: 2025-12-25
 > **상태**: 서비스 운영 중
 
 ## 세션 시작 시 `/sc:load` 로 이 파일을 로드하세요
@@ -54,7 +54,7 @@ Railway 대시보드의 Neo4j 설정은 placeholder 상태입니다.
 
 ---
 
-## 3. 데이터베이스 현황 (2025-12-24)
+## 3. 데이터베이스 현황 (2025-12-25)
 
 | 테이블 | 레코드 수 | 설명 |
 |--------|----------|------|
@@ -69,6 +69,10 @@ Railway 대시보드의 Neo4j 설정은 placeholder 상태입니다.
 | risk_scores | 3,912 | 리스크 점수 |
 | major_shareholders | 95,191 | 대주주 |
 | affiliates | 973 | 계열회사 |
+| user_query_usage | - | 월별 조회 사용량 추적 |
+| page_contents | - | 페이지 콘텐츠 동적 관리 |
+| financial_details | 0 | RaymondsIndex용 상세 재무 (스키마 완료) |
+| raymonds_index | 0 | 지수 계산 결과 (스키마 완료) |
 
 ---
 
@@ -90,6 +94,13 @@ Railway 대시보드의 Neo4j 설정은 placeholder 상태입니다.
 /api/graph/company/{id}           - 회사 네트워크 그래프
 /api/graph/officer/{id}/career    - 임원 경력 (PostgreSQL fallback)
 /api/graph-fallback/*             - Neo4j 없을 때 대체 API
+
+/api/subscription/usage           - 월별 조회 사용량 조회
+/api/admin/users/{id}/subscription - 관리자: 사용자 구독 변경
+
+/api/content/{page}               - 페이지 콘텐츠 조회 (공개)
+/api/content/{page}/{section}/{field} - 콘텐츠 수정 (관리자)
+/api/content/{page}/{section}/image   - 이미지 업로드/삭제 (관리자)
 ```
 
 ### 4.2 임원 조회 로직 (중요!)
@@ -139,6 +150,48 @@ Company ──1:N── OfficerPosition ──N:1── Officer
 ---
 
 ## 6. 최근 변경사항
+
+### 2025-12-25: RaymondsIndex 시스템 개발
+
+**RaymondsIndex 스키마 구현**:
+- `financial_details` 테이블: 상세 재무 데이터 (유동/비유동 자산·부채)
+- `raymonds_index` 테이블: 지수 계산 결과 저장
+- 설계문서: `docs/RAYMONDS_INDEX_INTEGRATION_DESIGN.md`
+
+**financial_details 주요 컬럼**:
+- 유동자산: `current_assets`, `cash_and_equivalents`, `short_term_investments`, `trade_and_other_receivables`, `inventories`, `current_tax_assets`, `other_financial_assets_current`, `other_assets_current`
+- 비유동자산: `non_current_assets`, `fvpl_financial_assets`, `investments_in_associates`, `tangible_assets`, `intangible_assets`, `right_of_use_assets`, `net_defined_benefit_assets`, `deferred_tax_assets`, `other_financial_assets_non_current`, `other_assets_non_current`
+- 부채/자본: 유동부채, 비유동부채, 자본 세부항목
+
+**관련 파일**:
+- `backend/app/models/financial_details.py`
+- `backend/app/models/raymonds_index.py`
+- `backend/app/services/raymonds_index_calculator.py`
+- `backend/app/api/endpoints/raymonds_index.py`
+- `frontend/src/pages/RaymondsIndexRankingPage.tsx`
+
+### 2025-12-25: 구독 및 콘텐츠 관리 시스템
+
+**구독 시스템 구현**:
+- Light (3,000원/월): 30건 조회 제한
+- Max (30,000원/월): 무제한 조회
+- `user_query_usage` 테이블로 월별 사용량 추적
+- 어드민에서 사용자 구독 변경 가능
+
+**콘텐츠 관리 시스템 구현**:
+- AboutPage 텍스트/이미지 동적 편집
+- `page_contents` 테이블로 콘텐츠 저장
+- 이미지 업로드 (권장 사이즈 안내)
+
+**영향받은 파일**:
+- `backend/app/models/subscriptions.py` - SUBSCRIPTION_LIMITS, UserQueryUsage 추가
+- `backend/app/services/usage_service.py` (신규)
+- `backend/app/routes/subscription.py` - 사용량 API 추가
+- `backend/app/models/content.py` (신규)
+- `backend/app/routes/content.py` (신규)
+- `frontend/src/pages/AdminPage.tsx` - 콘텐츠 편집 탭 추가
+- `frontend/src/pages/AboutPage.tsx` - 동적 콘텐츠 로딩
+- `frontend/src/components/UsageIndicator.tsx` (신규)
 
 ### 2025-12-24: 임원 API 리팩토링
 
@@ -248,6 +301,12 @@ b3cd8d9 fix: Neo4j 없을 때 PostgreSQL fallback으로 임원 경력 조회
 - [ ] 임원 네트워크 시각화 개선
 - [ ] 리스크 점수 계산 로직 고도화
 - [ ] 파싱 스크립트 UPSERT 로직 추가 (중복 방지)
+- [ ] RaymondsIndex 데이터 파싱 (financial_details 적재)
+- [ ] RaymondsIndex 계산 엔진 테스트
+- [x] RaymondsIndex 스키마 설계 - 2025-12-25 완료
+- [x] 구독 시스템 구현 (Light/Max 이용권) - 2025-12-25 완료
+- [x] 조회 제한 시스템 구현 - 2025-12-25 완료
+- [x] 콘텐츠 관리 시스템 (AboutPage 편집) - 2025-12-25 완료
 
 ---
 

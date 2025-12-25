@@ -57,6 +57,8 @@ class Company(Base):
 
     # Relationships
     disclosures = relationship("Disclosure", back_populates="company")
+    financial_details = relationship("FinancialDetails", back_populates="company")
+    raymonds_indices = relationship("RaymondsIndex", back_populates="company")
 
     # 인덱스
     __table_args__ = (
