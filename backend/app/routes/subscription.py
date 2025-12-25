@@ -28,6 +28,7 @@ from app.schemas.subscription import (
 )
 from app.core.security import get_current_user
 from app.services.payment_service import get_payment_service
+from app.services.usage_service import get_usage_stats, check_query_limit, increment_usage
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -316,3 +317,19 @@ async def handle_webhook(
                 logger.info(f"Payment status updated: {payment.id} -> {new_status}")
 
     return {"status": "ok"}
+
+
+# ============================================================================
+# 사용량 조회
+# ============================================================================
+
+@router.get("/usage")
+async def get_usage(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    현재 사용자의 조회 횟수 현황 조회
+    """
+    usage = await get_usage_stats(db, current_user.id)
+    return usage

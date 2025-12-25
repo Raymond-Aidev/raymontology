@@ -14,6 +14,9 @@ from app.schemas.company import (
     CompanyDetail,
 )
 from app.services.company_service import CompanyService
+from app.core.security import get_current_user_optional, get_current_user
+from app.models.users import User
+from app.services.usage_service import check_query_limit, increment_usage
 
 router = APIRouter(prefix="/api/companies", tags=["companies"])
 
@@ -87,9 +90,10 @@ async def get_company(
     company_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     redis: Optional[Redis] = Depends(get_redis),
+    current_user: User = Depends(get_current_user),
 ):
     """
-    회사 상세 정보 조회
+    회사 상세 정보 조회 (로그인 필요, 조회 횟수 차감)
 
     **경로 파라미터:**
     - `company_id`: 회사 UUID
@@ -103,8 +107,23 @@ async def get_company(
     ```
 
     **에러:**
+    - `401`: 로그인 필요
+    - `403`: 조회 한도 초과
     - `404`: 회사를 찾을 수 없음
     """
+    # 조회 제한 체크
+    allowed, message, current_count, limit = await check_query_limit(db, current_user.id, "query")
+    if not allowed:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "message": message,
+                "code": "QUERY_LIMIT_EXCEEDED",
+                "used": current_count,
+                "limit": limit
+            }
+        )
+
     # 서비스 호출
     service = CompanyService(db=db, redis=redis)
     company = await service.get_company_by_id(company_id)
@@ -115,6 +134,9 @@ async def get_company(
             detail=f"Company with id {company_id} not found"
         )
 
+    # 조회 횟수 증가
+    await increment_usage(db, current_user.id, "query")
+
     return company
 
 
@@ -123,9 +145,10 @@ async def get_company_by_ticker(
     ticker: str,
     db: AsyncSession = Depends(get_db),
     redis: Optional[Redis] = Depends(get_redis),
+    current_user: User = Depends(get_current_user),
 ):
     """
-    티커로 회사 조회
+    티커로 회사 조회 (로그인 필요, 조회 횟수 차감)
 
     **경로 파라미터:**
     - `ticker`: 종목 코드 (예: 005930)
@@ -139,8 +162,23 @@ async def get_company_by_ticker(
     ```
 
     **에러:**
+    - `401`: 로그인 필요
+    - `403`: 조회 한도 초과
     - `404`: 회사를 찾을 수 없음
     """
+    # 조회 제한 체크
+    allowed, message, current_count, limit = await check_query_limit(db, current_user.id, "query")
+    if not allowed:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "message": message,
+                "code": "QUERY_LIMIT_EXCEEDED",
+                "used": current_count,
+                "limit": limit
+            }
+        )
+
     # 서비스 호출
     service = CompanyService(db=db, redis=redis)
     company = await service.get_company_by_ticker(ticker)
@@ -150,5 +188,8 @@ async def get_company_by_ticker(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Company with ticker {ticker} not found"
         )
+
+    # 조회 횟수 증가
+    await increment_usage(db, current_user.id, "query")
 
     return company

@@ -60,6 +60,8 @@ class UserMe(BaseModel):
     full_name: Optional[str]
     is_active: bool
     is_superuser: bool
+    subscription_tier: Optional[str] = None
+    subscription_expires_at: Optional[datetime] = None
     created_at: datetime
 
 

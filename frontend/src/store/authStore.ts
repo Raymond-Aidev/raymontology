@@ -10,6 +10,8 @@ export interface User {
   full_name: string | null
   is_active: boolean
   is_superuser: boolean
+  subscription_tier: string | null
+  subscription_expires_at: string | null
   created_at: string
 }
 

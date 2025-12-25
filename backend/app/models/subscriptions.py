@@ -1,7 +1,7 @@
 """
 Subscription 모델 - 결제 이력 및 구독 관리
 """
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Enum
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Enum, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -25,6 +25,42 @@ class PaymentStatus(str, enum.Enum):
     FAILED = "failed"        # 결제 실패
     CANCELLED = "cancelled"  # 결제 취소
     REFUNDED = "refunded"    # 환불
+
+
+class UserQueryUsage(Base):
+    """
+    사용자 조회 횟수 추적 테이블
+    월별로 조회 횟수를 기록
+    """
+    __tablename__ = "user_query_usage"
+
+    # Primary Key
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+    # 사용자 정보
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    # 조회 기간 (YYYY-MM 형식)
+    year_month = Column(String(7), nullable=False, index=True)  # 예: '2025-01'
+
+    # 조회 횟수
+    query_count = Column(Integer, default=0, nullable=False)    # 회사 상세 조회
+    report_count = Column(Integer, default=0, nullable=False)   # 리포트 조회
+
+    # 메타데이터
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    # Unique constraint: 사용자별 월별 1개 레코드
+    __table_args__ = (
+        UniqueConstraint('user_id', 'year_month', name='uq_user_query_usage_user_month'),
+    )
+
+    # Relationship
+    user = relationship("User", backref="query_usage")
+
+    def __repr__(self):
+        return f"<UserQueryUsage(user_id={self.user_id}, year_month='{self.year_month}', query_count={self.query_count})>"
 
 
 class SubscriptionPayment(Base):
@@ -68,6 +104,23 @@ class SubscriptionPayment(Base):
         return f"<SubscriptionPayment(id={self.id}, user_id={self.user_id}, tier='{self.tier}', amount={self.amount}, status='{self.status}')>"
 
 
+# 이용권별 조회 제한 설정
+SUBSCRIPTION_LIMITS = {
+    "free": {
+        "monthly_queries": 0,       # 조회 불가 (비로그인은 검색만 가능)
+        "monthly_reports": 0,       # 리포트 불가
+    },
+    "light": {
+        "monthly_queries": 30,      # 월 30건 조회
+        "monthly_reports": 30,      # 월 30건 리포트
+    },
+    "max": {
+        "monthly_queries": -1,      # 무제한 (-1)
+        "monthly_reports": -1,      # 무제한 (-1)
+    }
+}
+
+
 # 이용권 플랜 정보 (상수)
 SUBSCRIPTION_PLANS = {
     "free": {
@@ -76,9 +129,8 @@ SUBSCRIPTION_PLANS = {
         "price": 0,
         "price_display": "무료",
         "features": [
-            "기본 리스크 조회",
             "회사 검색",
-            "월 10회 상세 리포트"
+            "로그인 필요"
         ]
     },
     "light": {
@@ -87,11 +139,10 @@ SUBSCRIPTION_PLANS = {
         "price": 3000,
         "price_display": "3,000원/월",
         "features": [
-            "무제한 리스크 조회",
+            "월 30건 조회",
+            "리스크 분석 리포트",
             "CB 네트워크 분석",
-            "임원 경력 추적",
-            "월 100회 상세 리포트",
-            "이메일 알림"
+            "임원 경력 추적"
         ]
     },
     "max": {
@@ -100,8 +151,8 @@ SUBSCRIPTION_PLANS = {
         "price": 30000,
         "price_display": "30,000원/월",
         "features": [
+            "무제한 조회",
             "Light 플랜 모든 기능",
-            "무제한 상세 리포트",
             "API 액세스",
             "대량 조회 기능",
             "맞춤 알림 설정",

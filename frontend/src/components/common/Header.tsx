@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore, selectUserName } from '../../store/authStore'
 import { ApiStatusDot } from './ApiStatusIndicator'
 import RaymondsRiskLogo from './RaymondsRiskLogo'
+import UsageIndicator from './UsageIndicator'
 
 function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -56,6 +57,9 @@ function Header() {
 
           {/* User Menu (Desktop) */}
           <div className="hidden md:flex items-center gap-3">
+            {/* Usage Indicator */}
+            <UsageIndicator />
+
             {isAuthenticated && user ? (
               <div className="relative">
                 <button
