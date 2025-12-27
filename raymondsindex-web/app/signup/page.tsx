@@ -5,6 +5,156 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/auth';
 
+// 이용약관 내용
+const TERMS_OF_SERVICE = `# RaymondsIndex 서비스 이용약관
+
+**시행일자**: 2025년 1월 1일
+
+본 약관은 코넥트 (이하 "회사")가 제공하는 RaymondsIndex 서비스(이하 "서비스")의 이용과 관련하여 회사와 이용자 간의 권리, 의무 및 책임사항, 기타 필요한 사항을 규정함을 목적으로 합니다.
+
+---
+
+## 제1조 (목적)
+
+본 약관은 회사가 제공하는 RaymondsIndex 서비스의 이용 조건 및 절차, 회사와 이용자 간의 권리, 의무 및 책임사항을 규정함을 목적으로 합니다.
+
+---
+
+## 제2조 (용어의 정의)
+
+1. **"서비스"**란 DART(금융감독원 전자공시시스템) 공개 데이터를 기반으로 기업의 자본 배분 효율성을 분석하고 RaymondsIndex를 제공하는 정보 서비스를 말합니다.
+
+2. **"이용자"**란 본 약관에 동의하고 회사가 제공하는 서비스를 이용하는 자를 말합니다.
+
+3. **"구독"**이란 이용자가 일정 기간 동안 서비스를 이용할 수 있는 권한을 말합니다.
+
+4. **"콘텐츠"**란 서비스를 통해 제공되는 기업 정보, RaymondsIndex 점수, 분석 자료 등 모든 정보를 말합니다.
+
+---
+
+## 제3조 (약관의 효력 및 변경)
+
+1. 본 약관은 서비스 화면에 게시하거나 기타의 방법으로 이용자에게 공지함으로써 효력이 발생합니다.
+
+2. 회사는 필요한 경우 관련 법령을 위배하지 않는 범위에서 본 약관을 변경할 수 있으며, 변경된 약관은 시행일자 7일 전부터 공지합니다.
+
+3. 이용자가 변경된 약관에 동의하지 않는 경우, 서비스 이용을 중단하고 구독을 해지할 수 있습니다.
+
+---
+
+## 제4조 (서비스의 제공)
+
+1. 회사는 다음과 같은 서비스를 제공합니다:
+   - 기업 검색 및 RaymondsIndex 조회
+   - 기업 스크리닝 및 필터링
+   - 상세 재무 분석 정보
+   - 기타 회사가 정하는 부가 서비스
+
+2. 서비스는 연중무휴, 1일 24시간 제공함을 원칙으로 합니다. 단, 회사의 업무상 또는 기술상의 이유로 서비스가 일시 중지될 수 있습니다.
+
+---
+
+## 제5조 (서비스 이용 계약의 성립)
+
+1. 서비스 이용 계약은 이용자가 본 약관에 동의하고 회원가입 절차를 완료함으로써 성립됩니다.
+
+2. 회사는 다음 각 호에 해당하는 경우 이용 계약을 거절할 수 있습니다:
+   - 본인의 실명으로 신청하지 않은 경우
+   - 타인의 명의를 도용한 경우
+   - 허위 정보를 기재한 경우
+   - 관련 법령 위반 목적으로 신청한 경우
+
+---
+
+## 제6조 (구독 및 결제)
+
+1. 서비스 이용을 위해서는 구독료를 결제해야 합니다.
+
+2. 구독은 결제 완료 시점부터 유효하며, 구독 종류에 따라 기간이 다릅니다.
+
+3. 구독료는 VAT가 포함된 금액입니다.
+
+---
+
+## 제7조 (구독 해지 및 환불)
+
+1. 이용자는 언제든지 구독을 해지할 수 있습니다.
+
+2. 환불 정책은 다음과 같습니다:
+   - **7일 이내**: 전액 환불
+   - **7일 경과 후**: 사용 기간을 일할 계산하여 잔여 기간에 해당하는 금액 환불
+
+---
+
+## 제8조 (이용자의 의무)
+
+1. 이용자는 다음 행위를 하여서는 안 됩니다:
+   - 타인의 정보를 도용하는 행위
+   - 서비스의 정보를 무단으로 수집, 복제, 배포하는 행위
+   - 자동화된 수단(크롤링, 봇 등)을 이용한 무단 접근
+   - 서비스의 정상적인 운영을 방해하는 행위
+   - 관련 법령을 위반하는 행위
+
+2. 이용자는 본 서비스를 통해 취득한 정보를 상업적 목적으로 재배포할 수 없습니다.
+
+---
+
+## 제9조 (회사의 의무)
+
+1. 회사는 관련 법령과 본 약관이 정하는 권리의 행사와 의무의 이행을 신의에 따라 성실하게 준수합니다.
+
+2. 회사는 이용자의 개인정보 보호를 위해 개인정보처리방침을 수립하고 준수합니다.
+
+---
+
+## 제10조 (면책사항)
+
+1. **투자 판단 관련 면책**
+   - 본 서비스는 DART 공개 데이터를 기반으로 한 정보 제공 서비스이며, **투자 권유, 투자 자문, 금융 상품 판매를 목적으로 하지 않습니다**.
+   - 본 서비스를 통해 제공되는 모든 정보는 **참고용**일 뿐이며, **투자 판단의 최종 책임은 전적으로 이용자에게 있습니다**.
+   - 회사는 서비스 이용으로 인한 투자 손실, 수익 감소 등 **어떠한 금전적 손해에 대해서도 책임지지 않습니다**.
+
+2. **데이터 정확성 관련 면책**
+   - 본 서비스는 금융감독원 DART 시스템의 공개 데이터를 기반으로 하며, 회사는 **데이터의 정확성, 완전성, 최신성을 보증하지 않습니다**.
+
+---
+
+## 제11조 (저작권 및 지적재산권)
+
+1. 회사가 제공하는 서비스의 디자인, 소프트웨어, 분석 알고리즘 등에 대한 저작권 및 지적재산권은 회사에 귀속됩니다.
+
+2. 이용자는 서비스를 이용함으로써 얻은 정보를 회사의 사전 승낙 없이 복제, 송신, 출판, 배포, 방송 등의 방법으로 이용하거나 제3자에게 이용하게 하여서는 안 됩니다.
+
+---
+
+## 제12조 (분쟁 해결)
+
+1. 회사와 이용자는 서비스와 관련하여 발생한 분쟁을 원만하게 해결하기 위하여 필요한 모든 노력을 해야 합니다.
+
+2. 분쟁이 해결되지 않을 경우, 양 당사자는 대한민국 법률에 따라 관할 법원에 소를 제기할 수 있습니다.
+
+---
+
+## 부칙
+
+**제1조 (시행일)**: 본 약관은 2025년 1월 1일부터 시행합니다.
+
+---
+
+## 고객센터
+
+- **이메일**: support@raymondsindex.com
+- **운영시간**: 평일 09:00 ~ 18:00 (주말 및 공휴일 휴무)
+
+---
+
+**코넥트**
+대표: 박재준
+사업자등록번호: 686-19-02309
+
+© 2025 코넥트. All rights reserved.
+`;
+
 export default function SignupPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading, register, error, clearError } = useAuthStore();
@@ -26,6 +176,7 @@ export default function SignupPage() {
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
   const [touched, setTouched] = useState({
     username: false,
     fullName: false,
@@ -286,8 +437,22 @@ export default function SignupPage() {
                 className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
               <label htmlFor="agreeTerms" className="text-sm text-gray-600">
-                <span className="text-blue-600 hover:underline cursor-pointer">이용약관</span> 및{' '}
-                <span className="text-blue-600 hover:underline cursor-pointer">개인정보 처리방침</span>에 동의합니다
+                <button
+                  type="button"
+                  onClick={() => setShowTermsModal(true)}
+                  className="text-blue-600 hover:underline"
+                >
+                  이용약관
+                </button>
+                {' '}및{' '}
+                <button
+                  type="button"
+                  onClick={() => setShowTermsModal(true)}
+                  className="text-blue-600 hover:underline"
+                >
+                  개인정보 처리방침
+                </button>
+                에 동의합니다
                 <span className="text-red-500 ml-1">*</span>
               </label>
             </div>
@@ -356,6 +521,73 @@ export default function SignupPage() {
             >
               로그인하러 가기
             </Link>
+          </div>
+        </div>
+      )}
+
+      {/* 이용약관 모달 */}
+      {showTermsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white border border-gray-200 rounded-2xl w-full max-w-2xl max-h-[80vh] shadow-2xl flex flex-col">
+            {/* 모달 헤더 */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">이용약관</h3>
+              <button
+                type="button"
+                onClick={() => setShowTermsModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* 모달 내용 */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="prose prose-sm max-w-none text-gray-700">
+                {TERMS_OF_SERVICE.split('\n').map((line, index) => {
+                  if (line.startsWith('# ')) {
+                    return <h1 key={index} className="text-xl font-bold text-gray-900 mt-4 mb-2">{line.slice(2)}</h1>;
+                  } else if (line.startsWith('## ')) {
+                    return <h2 key={index} className="text-lg font-semibold text-gray-800 mt-6 mb-2">{line.slice(3)}</h2>;
+                  } else if (line.startsWith('**') && line.endsWith('**')) {
+                    return <p key={index} className="font-semibold text-gray-900 mt-2">{line.slice(2, -2)}</p>;
+                  } else if (line.startsWith('---')) {
+                    return <hr key={index} className="my-4 border-gray-200" />;
+                  } else if (line.startsWith('   - ')) {
+                    return <li key={index} className="ml-6 text-gray-600">{line.slice(5)}</li>;
+                  } else if (line.startsWith('1. ') || line.startsWith('2. ') || line.startsWith('3. ') || line.startsWith('4. ')) {
+                    return <p key={index} className="mt-2 text-gray-700">{line}</p>;
+                  } else if (line.trim() === '') {
+                    return <br key={index} />;
+                  } else {
+                    return <p key={index} className="text-gray-700">{line}</p>;
+                  }
+                })}
+              </div>
+            </div>
+
+            {/* 모달 푸터 */}
+            <div className="flex items-center justify-end gap-3 p-4 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={() => setShowTermsModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                닫기
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAgreeTerms(true);
+                  setShowTermsModal(false);
+                }}
+                className="px-6 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+              >
+                동의하고 닫기
+              </button>
+            </div>
           </div>
         </div>
       )}
