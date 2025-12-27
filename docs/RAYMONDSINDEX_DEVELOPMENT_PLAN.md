@@ -1,0 +1,327 @@
+# RaymondsIndex™ 독립 사이트 개발 계획서
+
+> **작성일**: 2025-12-27
+> **버전**: 1.0
+> **도메인**: konnect-ai.net/raymondsindex
+> **백엔드 연동**: raymontology-production.up.railway.app
+
+---
+
+## 1. 프로젝트 개요
+
+### 1.1 목적
+기존 Raymontology 프로젝트의 RaymondsIndex 기능을 **독립적인 웹사이트**로 분리하여 운영
+
+### 1.2 핵심 요구사항
+- Raymontology 사이트와 **별개의 독립 사이트**로 구현
+- 기존 백엔드 API (`raymontology-production.up.railway.app`) 활용
+- 신규 프론트엔드 프로젝트 생성 (Next.js 14+)
+- 도메인: `konnect-ai.net/raymondsindex`
+
+### 1.3 기술 스택
+
+| 영역 | 기술 |
+|------|------|
+| Framework | Next.js 14+ (App Router) |
+| Language | TypeScript |
+| Styling | Tailwind CSS |
+| UI Components | shadcn/ui |
+| Charts | Recharts |
+| State Management | React Query (TanStack Query) |
+| Icons | Lucide React |
+| Deployment | Vercel / Railway Static |
+
+---
+
+## 2. 프로젝트 구조
+
+```
+raymondsindex-web/                 # 새로운 독립 프로젝트
+├── app/
+│   ├── layout.tsx                 # 루트 레이아웃
+│   ├── page.tsx                   # 홈페이지
+│   ├── screener/
+│   │   └── page.tsx               # 스크리너
+│   ├── company/
+│   │   └── [id]/
+│   │       └── page.tsx           # 기업 상세
+│   └── methodology/
+│       └── page.tsx               # 방법론
+├── components/
+│   ├── ui/                        # shadcn/ui 기본 컴포넌트
+│   ├── layout/
+│   │   ├── header.tsx
+│   │   └── footer.tsx
+│   ├── grade-badge.tsx            # 등급 뱃지
+│   ├── score-display.tsx          # 점수 표시
+│   ├── metric-card.tsx            # 지표 카드
+│   ├── company-search-bar.tsx     # 검색바
+│   ├── sub-index-radar.tsx        # 레이더 차트
+│   ├── trend-chart.tsx            # 추세 차트
+│   ├── risk-flags-panel.tsx       # 위험 신호 패널
+│   ├── top-companies-table.tsx    # TOP 기업 테이블
+│   ├── grade-distribution.tsx     # 등급 분포 차트
+│   └── alert-zone.tsx             # 경고 영역
+├── lib/
+│   ├── api.ts                     # API 클라이언트
+│   ├── types.ts                   # 타입 정의
+│   ├── constants.ts               # 상수 (등급 색상 등)
+│   └── utils.ts                   # 유틸리티 함수
+├── hooks/
+│   ├── use-ranking.ts             # 랭킹 조회
+│   ├── use-company.ts             # 기업 상세
+│   ├── use-search.ts              # 검색
+│   └── use-statistics.ts          # 통계
+├── styles/
+│   └── globals.css                # 글로벌 스타일
+├── public/
+│   ├── logo.svg
+│   └── og-image.png
+├── next.config.js
+├── tailwind.config.ts
+├── tsconfig.json
+└── package.json
+```
+
+---
+
+## 3. 개발 단계
+
+### Phase 1: 프로젝트 초기화 (1일)
+
+#### 3.1.1 프로젝트 생성
+```bash
+# 프로젝트 디렉토리 생성
+cd /Users/jaejoonpark/raymontology
+mkdir raymondsindex-web
+cd raymondsindex-web
+
+# Next.js 프로젝트 초기화
+npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir=false --import-alias="@/*"
+
+# 의존성 설치
+npm install @tanstack/react-query recharts lucide-react
+npm install -D @types/node
+npx shadcn@latest init
+```
+
+#### 3.1.2 shadcn/ui 컴포넌트 설치
+```bash
+npx shadcn@latest add button card input table badge dialog
+npx shadcn@latest add select slider checkbox tabs separator
+```
+
+#### 3.1.3 환경 변수 설정
+```env
+# .env.local
+NEXT_PUBLIC_API_URL=https://raymontology-production.up.railway.app/api
+```
+
+---
+
+### Phase 2: 기본 레이아웃 및 디자인 시스템 (1일)
+
+#### 3.2.1 글로벌 스타일 설정
+- Tailwind 테마 커스터마이징 (등급 색상)
+- Pretendard 폰트 설정
+- CSS 변수 정의
+
+#### 3.2.2 레이아웃 컴포넌트
+- Header (로고 + 네비게이션 + 검색)
+- Footer (저작권 + 면책조항)
+
+#### 3.2.3 기본 UI 컴포넌트
+- GradeBadge
+- ScoreDisplay
+- MetricCard
+
+---
+
+### Phase 3: API 연동 레이어 (1일)
+
+#### 3.3.1 API 클라이언트 구현
+```typescript
+// lib/api.ts
+const API_BASE = process.env.NEXT_PUBLIC_API_URL;
+
+export const api = {
+  ranking: {
+    getAll: (params: RankingParams) => fetch(...),
+    getByGrade: (grade: string) => fetch(...),
+  },
+  company: {
+    getById: (id: string) => fetch(...),
+    search: (query: string) => fetch(...),
+  },
+  statistics: {
+    getDistribution: () => fetch(...),
+    getDowngraded: (days: number) => fetch(...),
+  },
+};
+```
+
+#### 3.3.2 React Query 훅 구현
+- `useRanking()` - 랭킹 목록 조회
+- `useCompany(id)` - 기업 상세 조회
+- `useSearch(query)` - 검색 (디바운스)
+- `useStatistics()` - 통계 조회
+
+#### 3.3.3 타입 정의
+- RaymondsIndexResponse
+- RankingParams
+- StatisticsResponse
+
+---
+
+### Phase 4: 페이지 구현 (3일)
+
+#### 3.4.1 홈페이지 (`/`) - 1일
+- Hero Section (서비스 소개 + 검색바)
+- TOP 10 기업 테이블
+- 등급 분포 차트 (Horizontal Bar)
+- Alert Zone (등급 하락 기업)
+
+#### 3.4.2 Screener 페이지 (`/screener`) - 1일
+- 필터 패널 (등급, 점수, 업종, 시가총액)
+- 결과 테이블 (정렬, 페이지네이션)
+- 상세 페이지 연결
+
+#### 3.4.3 기업 상세 페이지 (`/company/[id]`) - 1일
+- 헤더 (기업명, 등급, 점수)
+- Sub-Index 레이더 차트
+- 핵심 지표 카드 그리드
+- 위험 신호 패널
+- AI 해석 섹션
+- 추세 차트 (5년)
+
+---
+
+### Phase 5: 추가 기능 및 최적화 (2일)
+
+#### 3.5.1 방법론 페이지 (`/methodology`)
+- 평가 체계 설명
+- Sub-Index 상세 설명
+- 특별 규칙 안내
+
+#### 3.5.2 반응형 최적화
+- 모바일 레이아웃 조정
+- 터치 인터랙션 개선
+- 차트 크기 조정
+
+#### 3.5.3 SEO 및 메타데이터
+- Open Graph 태그
+- 페이지별 title/description
+- sitemap.xml
+
+---
+
+## 4. 백엔드 API 현황
+
+### 4.1 기존 API 엔드포인트 (사용 가능)
+
+| 엔드포인트 | 설명 | 상태 |
+|-----------|------|------|
+| `GET /api/raymonds-index/ranking` | 랭킹 목록 | ✅ 사용 가능 |
+| `GET /api/raymonds-index/company/{id}` | 기업 상세 | ✅ 사용 가능 |
+| `GET /api/raymonds-index/statistics` | 통계 | ✅ 사용 가능 |
+| `GET /api/raymonds-index/search` | 검색 | ✅ 사용 가능 |
+
+### 4.2 신규 API 필요 여부
+
+| 기능 | 엔드포인트 | 필요 여부 |
+|------|-----------|----------|
+| 등급 하락 기업 | `GET /api/raymonds-index/downgraded` | 신규 필요 |
+| 연도별 추세 | `GET /api/raymonds-index/history/{id}` | 신규 필요 |
+| 업종별 통계 | `GET /api/raymonds-index/statistics/sector` | 신규 필요 |
+
+---
+
+## 5. 일정 계획
+
+| Phase | 작업 내용 | 예상 기간 |
+|-------|----------|----------|
+| 1 | 프로젝트 초기화 | 1일 |
+| 2 | 레이아웃 + 디자인 시스템 | 1일 |
+| 3 | API 연동 레이어 | 1일 |
+| 4 | 페이지 구현 (홈, 스크리너, 상세) | 3일 |
+| 5 | 방법론 + 반응형 + SEO | 2일 |
+| **합계** | | **8일** |
+
+---
+
+## 6. 배포 전략
+
+### 6.1 개발 환경
+- 로컬: `npm run dev` → `localhost:3000`
+- API: `https://raymontology-production.up.railway.app`
+
+### 6.2 스테이징
+- Vercel Preview 또는 Railway Preview
+
+### 6.3 프로덕션
+- 도메인: `konnect-ai.net/raymondsindex`
+- 호스팅: Vercel 또는 Railway Static
+
+### 6.4 CORS 설정 필요
+기존 백엔드에 새 도메인 CORS 허용 추가:
+```python
+# backend/app/main.py
+origins = [
+    "https://raymontology.com",
+    "https://konnect-ai.net",  # 추가 필요
+]
+```
+
+---
+
+## 7. 체크리스트
+
+### 개발 착수 전
+
+- [ ] 프로젝트 디렉토리 생성 (`raymondsindex-web/`)
+- [ ] Next.js 프로젝트 초기화
+- [ ] shadcn/ui 설정
+- [ ] 환경 변수 설정
+- [ ] 백엔드 CORS 설정 확인
+
+### 개발 완료 후
+
+- [ ] 모든 페이지 반응형 테스트
+- [ ] API 에러 핸들링 확인
+- [ ] 로딩 상태 UI 확인
+- [ ] SEO 메타태그 설정
+- [ ] 성능 최적화 (이미지, 번들)
+- [ ] 접근성 (a11y) 검토
+
+---
+
+## 8. 참조 문서
+
+| 문서 | 경로 |
+|------|------|
+| 화면기획서 | `docs/RAYMONDSINDEX_UI_SPEC_v2.md` |
+| RaymondsIndex 설계 | `docs/RAYMONDS_INDEX_INTEGRATION_DESIGN.md` |
+| 백엔드 모델 | `backend/app/models/raymonds_index.py` |
+| API 라우터 | `backend/app/api/endpoints/raymonds_index.py` |
+
+---
+
+## 9. 시작 명령어
+
+```bash
+# 1. 프로젝트 디렉토리 생성
+cd /Users/jaejoonpark/raymontology
+mkdir raymondsindex-web && cd raymondsindex-web
+
+# 2. Next.js 프로젝트 초기화
+npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir=false --import-alias="@/*"
+
+# 3. 의존성 설치
+npm install @tanstack/react-query recharts lucide-react
+
+# 4. shadcn/ui 초기화
+npx shadcn@latest init
+
+# 5. 개발 서버 시작
+npm run dev
+```

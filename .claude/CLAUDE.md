@@ -19,6 +19,8 @@
 | 표준 작업 프로세스 | 모든 DB 작업 체크리스트 | `scripts/STANDARD_PROCESS.md` |
 | 파싱 상태 | 상세 파싱 진행 상황 | `scripts/PARSING_STATUS.md` |
 | **앱인토스 가이드** | **토스 앱인앱 연동 개발** | **`docs/APPS_IN_TOSS_GUIDE.md`** |
+| **RaymondsIndex 화면기획** | **독립 사이트 UI/UX 설계** | **`docs/RAYMONDSINDEX_UI_SPEC_v2.md`** |
+| **RaymondsIndex 개발계획** | **독립 사이트 개발 일정** | **`docs/RAYMONDSINDEX_DEVELOPMENT_PLAN.md`** |
 
 ---
 
@@ -153,6 +155,42 @@ Neo4j 미설정 시 `graph.py`가 자동으로 PostgreSQL fallback 사용
 - `backend/app/models/raymonds_index.py`
 - `backend/app/services/raymonds_index_calculator.py`
 - `frontend/src/pages/RaymondsIndexRankingPage.tsx`
+
+---
+
+## RaymondsIndex 독립 사이트 (신규 프로젝트)
+
+### 개발 시 필수 확인
+```
+RaymondsIndex 독립 사이트 개발 전 반드시 아래 문서 확인:
+- docs/RAYMONDSINDEX_UI_SPEC_v2.md (화면기획서)
+- docs/RAYMONDSINDEX_DEVELOPMENT_PLAN.md (개발계획서)
+```
+
+### 프로젝트 정보
+- **도메인**: `konnect-ai.net/raymondsindex`
+- **프로젝트 경로**: `raymondsindex-web/` (별도 프로젝트)
+- **기술 스택**: Next.js 14+, TypeScript, Tailwind CSS, shadcn/ui, Recharts
+- **백엔드 연동**: `https://raymontology-production.up.railway.app/api`
+
+### 9등급 체계
+| 등급 | 점수 범위 | 색상 |
+|------|----------|------|
+| A++ | 95+ | #1E40AF |
+| A+ | 90-94 | #2563EB |
+| A | 85-89 | #3B82F6 |
+| A- | 80-84 | #60A5FA |
+| B+ | 70-79 | #22C55E |
+| B | 60-69 | #84CC16 |
+| B- | 50-59 | #EAB308 |
+| C+ | 40-49 | #F97316 |
+| C | <40 | #EF4444 |
+
+### 페이지 구조
+- `/` - 홈 (Hero + TOP 10 + 등급분포)
+- `/screener` - 기업 스크리닝
+- `/company/[id]` - 기업 상세
+- `/methodology` - 평가 방법론
 
 ---
 
