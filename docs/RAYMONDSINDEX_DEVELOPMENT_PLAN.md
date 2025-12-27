@@ -1,9 +1,10 @@
 # RaymondsIndex™ 독립 사이트 개발 계획서
 
 > **작성일**: 2025-12-27
-> **버전**: 1.0
-> **도메인**: konnect-ai.net/raymondsindex
-> **백엔드 연동**: raymontology-production.up.railway.app
+> **버전**: 1.1 (배포 완료)
+> **프로덕션 URL**: https://raymondsindex.konnect-ai.net
+> **백엔드 연동**: https://raymontology-production.up.railway.app/api
+> **상태**: ✅ 배포 완료 (2025-12-27)
 
 ---
 
@@ -217,14 +218,15 @@ export const api = {
 
 ## 4. 백엔드 API 현황
 
-### 4.1 기존 API 엔드포인트 (사용 가능)
+### 4.1 API 엔드포인트 현황
 
 | 엔드포인트 | 설명 | 상태 |
 |-----------|------|------|
-| `GET /api/raymonds-index/ranking` | 랭킹 목록 | ✅ 사용 가능 |
-| `GET /api/raymonds-index/company/{id}` | 기업 상세 | ✅ 사용 가능 |
-| `GET /api/raymonds-index/statistics` | 통계 | ✅ 사용 가능 |
-| `GET /api/raymonds-index/search` | 검색 | ✅ 사용 가능 |
+| `GET /api/raymonds-index/ranking/list` | 랭킹 목록 | ✅ 사용 중 |
+| `GET /api/raymonds-index/{company_id}` | 기업 상세 | ✅ 사용 중 |
+| `GET /api/raymonds-index/statistics/summary` | 통계 (중복 제거됨) | ✅ 수정 완료 |
+| `GET /api/raymonds-index/search/companies?q=` | 기업 검색 (자동완성) | ✅ 신규 추가 |
+| `GET /api/raymonds-index/search/filter` | 조건 검색 | ✅ 사용 가능 |
 
 ### 4.2 신규 API 필요 여부
 
@@ -236,16 +238,18 @@ export const api = {
 
 ---
 
-## 5. 일정 계획
+## 5. 일정 계획 (완료)
 
-| Phase | 작업 내용 | 예상 기간 |
-|-------|----------|----------|
-| 1 | 프로젝트 초기화 | 1일 |
-| 2 | 레이아웃 + 디자인 시스템 | 1일 |
-| 3 | API 연동 레이어 | 1일 |
-| 4 | 페이지 구현 (홈, 스크리너, 상세) | 3일 |
-| 5 | 방법론 + 반응형 + SEO | 2일 |
-| **합계** | | **8일** |
+| Phase | 작업 내용 | 예상 기간 | 상태 |
+|-------|----------|----------|------|
+| 1 | 프로젝트 초기화 | 1일 | ✅ 완료 |
+| 2 | 레이아웃 + 디자인 시스템 | 1일 | ✅ 완료 |
+| 3 | API 연동 레이어 | 1일 | ✅ 완료 |
+| 4 | 페이지 구현 (홈, 스크리너, 상세) | 3일 | ✅ 완료 |
+| 5 | 방법론 + 반응형 + SEO | 2일 | ✅ 완료 |
+| 6 | 인증 시스템 (로그인/회원가입/관리자) | 1일 | ✅ 완료 |
+| 7 | 검색 API 및 통계 수정 | 1일 | ✅ 완료 |
+| **합계** | | **10일** | ✅ |
 
 ---
 
@@ -276,22 +280,31 @@ origins = [
 
 ## 7. 체크리스트
 
-### 개발 착수 전
+### 개발 착수 전 ✅
 
-- [ ] 프로젝트 디렉토리 생성 (`raymondsindex-web/`)
-- [ ] Next.js 프로젝트 초기화
-- [ ] shadcn/ui 설정
-- [ ] 환경 변수 설정
-- [ ] 백엔드 CORS 설정 확인
+- [x] 프로젝트 디렉토리 생성 (`raymondsindex-web/`)
+- [x] Next.js 프로젝트 초기화
+- [x] shadcn/ui 설정
+- [x] 환경 변수 설정
+- [x] 백엔드 CORS 설정 확인
 
-### 개발 완료 후
+### 개발 완료 후 ✅
 
-- [ ] 모든 페이지 반응형 테스트
-- [ ] API 에러 핸들링 확인
-- [ ] 로딩 상태 UI 확인
-- [ ] SEO 메타태그 설정
-- [ ] 성능 최적화 (이미지, 번들)
-- [ ] 접근성 (a11y) 검토
+- [x] 모든 페이지 반응형 테스트
+- [x] API 에러 핸들링 확인
+- [x] 로딩 상태 UI 확인
+- [x] SEO 메타태그 설정
+- [x] 성능 최적화 (이미지, 번들)
+- [x] 접근성 (a11y) 검토
+
+### 추가 구현 (2025-12-27) ✅
+
+- [x] 회원가입 페이지 (`/signup`) - 이용약관 모달 포함
+- [x] 로그인 페이지 (`/login`)
+- [x] 관리자 페이지 (`/admin`) - superuser 전용
+- [x] HTTPS/SSL 인증서 적용 (Let's Encrypt)
+- [x] 기업 검색 API 수정 (`/search/companies` 엔드포인트 추가)
+- [x] 통계 API 수정 (중복 기업 제거)
 
 ---
 

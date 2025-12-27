@@ -4,8 +4,9 @@
 
 ---
 
-## 상태: 서비스 운영 중 (2025-12-26)
+## 상태: 서비스 운영 중 (2025-12-27)
 전체 17개 테이블 데이터 적재 완료. RaymondsIndex 시스템 운영 중.
+**RaymondsIndex 독립 사이트**: https://raymondsindex.konnect-ai.net 배포 완료.
 
 ---
 
@@ -86,7 +87,7 @@
 
 ---
 
-## 현재 DB 상태 (2025-12-26 기준)
+## 현재 DB 상태 (2025-12-27 기준)
 
 | 테이블 | 레코드 수 | 상태 |
 |--------|----------|------|
@@ -102,7 +103,7 @@
 | major_shareholders | 47,453 | ✅ |
 | affiliates | 973 | ✅ |
 | **financial_details** | **10,314** | ✅ |
-| **raymonds_index** | **4,951** | ✅ |
+| **raymonds_index** | **7,646** (2,695개 기업) | ✅ |
 | user_query_usage | - | ✅ |
 | page_contents | - | ✅ |
 
@@ -158,20 +159,29 @@ Neo4j 미설정 시 `graph.py`가 자동으로 PostgreSQL fallback 사용
 
 ---
 
-## RaymondsIndex 독립 사이트 (신규 프로젝트)
+## RaymondsIndex 독립 사이트 (배포 완료 ✅)
 
-### 개발 시 필수 확인
-```
-RaymondsIndex 독립 사이트 개발 전 반드시 아래 문서 확인:
-- docs/RAYMONDSINDEX_UI_SPEC_v2.md (화면기획서)
-- docs/RAYMONDSINDEX_DEVELOPMENT_PLAN.md (개발계획서)
-```
+### 프로덕션 URL
+- **사이트**: https://raymondsindex.konnect-ai.net
+- **백엔드 API**: https://raymontology-production.up.railway.app/api
 
 ### 프로젝트 정보
-- **도메인**: `konnect-ai.net/raymondsindex`
-- **프로젝트 경로**: `raymondsindex-web/` (별도 프로젝트)
+- **프로젝트 경로**: `raymondsindex-web/` (별도 디렉토리)
 - **기술 스택**: Next.js 14+, TypeScript, Tailwind CSS, shadcn/ui, Recharts
-- **백엔드 연동**: `https://raymontology-production.up.railway.app/api`
+- **인증**: Zustand 기반 (JWT 토큰)
+- **배포**: Railway
+
+### 구현 완료 기능 (2025-12-27)
+| 기능 | 상태 | 비고 |
+|------|------|------|
+| 홈페이지 (Hero + TOP 10 + 등급분포) | ✅ | |
+| 스크리너 (필터, 정렬, 페이징) | ✅ | |
+| 기업 상세 (레이더 차트, 지표 카드) | ✅ | |
+| 평가 방법론 | ✅ | |
+| 기업 검색 (자동완성) | ✅ | `/search/companies` API 사용 |
+| 회원가입/로그인 | ✅ | 이용약관 모달 포함 |
+| 관리자 페이지 | ✅ | superuser 전용 |
+| HTTPS/SSL | ✅ | Let's Encrypt 자동 발급 |
 
 ### 9등급 체계
 | 등급 | 점수 범위 | 색상 |
@@ -191,6 +201,9 @@ RaymondsIndex 독립 사이트 개발 전 반드시 아래 문서 확인:
 - `/screener` - 기업 스크리닝
 - `/company/[id]` - 기업 상세
 - `/methodology` - 평가 방법론
+- `/login` - 로그인
+- `/signup` - 회원가입
+- `/admin` - 관리자 (superuser 전용)
 
 ---
 
