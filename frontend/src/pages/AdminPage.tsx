@@ -735,9 +735,11 @@ function AdminPage() {
                                         <span className={`px-3 py-1.5 text-xs rounded border transition-colors ${
                                           uploadingImage === section.section
                                             ? 'bg-theme-surface border-theme-border text-text-muted cursor-wait'
-                                            : 'bg-accent-primary/10 border-accent-primary/30 text-accent-primary hover:bg-accent-primary/20'
+                                            : currentValue
+                                              ? 'bg-accent-warning/10 border-accent-warning/30 text-accent-warning hover:bg-accent-warning/20'
+                                              : 'bg-accent-primary/10 border-accent-primary/30 text-accent-primary hover:bg-accent-primary/20'
                                         }`}>
-                                          {uploadingImage === section.section ? '업로드 중...' : '이미지 업로드'}
+                                          {uploadingImage === section.section ? '업로드 중...' : (currentValue ? '이미지 교체' : '이미지 업로드')}
                                         </span>
                                         <input
                                           type="file"
