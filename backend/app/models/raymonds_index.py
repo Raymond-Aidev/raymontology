@@ -12,14 +12,20 @@ from app.database import Base
 
 class RaymondsIndex(Base):
     """
-    RaymondsIndex 계산 결과 테이블
+    RaymondsIndex v4.0 계산 결과 테이블
 
     자본 배분 효율성을 측정하는 종합 지수로,
     4개의 Sub-Index로 구성됨:
-    - CEI: Capital Efficiency Index (20%)
-    - RII: Reinvestment Intensity Index (35%) ⭐ 핵심
-    - CGI: Cash Governance Index (25%)
-    - MAI: Momentum Alignment Index (20%)
+    - CEI: Capital Efficiency Index (15%) - 자본 효율성
+    - RII: Reinvestment Intensity Index (40%) ⭐ 핵심 - 재투자 강도
+    - CGI: Cash Governance Index (30%) ⭐ 핵심 - 현금 거버넌스
+    - MAI: Momentum Alignment Index (15%) - 모멘텀 정합성
+
+    특별 규칙:
+    - 현금-유형자산 비율 > 30:1 → 최대 B-
+    - 조달자금 전환율 < 30% → 최대 B-
+    - 단기금융상품비율 > 65% + CAPEX 감소 → 최대 B
+    - 위 조건 2개 이상 해당 → 최대 C+
     """
     __tablename__ = "raymonds_index"
 
@@ -48,7 +54,7 @@ class RaymondsIndex(Base):
     mai_score = Column(Numeric(5, 2), nullable=True)     # Momentum Alignment Index (20%)
 
     # ═══════════════════════════════════════════════════════════════
-    # 핵심 지표
+    # 핵심 지표 (기존)
     # ═══════════════════════════════════════════════════════════════
     investment_gap = Column(Numeric(6, 2), nullable=True)     # 투자괴리율 (%) = Cash CAGR - CAPEX Growth
     cash_cagr = Column(Numeric(6, 2), nullable=True)          # 현금 증가율 CAGR (%)
@@ -57,6 +63,17 @@ class RaymondsIndex(Base):
     asset_turnover = Column(Numeric(5, 3), nullable=True)     # 자산회전율 (회)
     reinvestment_rate = Column(Numeric(5, 2), nullable=True)  # 재투자율 (%)
     shareholder_return = Column(Numeric(5, 2), nullable=True) # 주주환원율 (%)
+
+    # ═══════════════════════════════════════════════════════════════
+    # v4.0 신규 지표
+    # ═══════════════════════════════════════════════════════════════
+    cash_tangible_ratio = Column(Numeric(10, 2), nullable=True)    # 현금-유형자산 증가비율 (X:1)
+    fundraising_utilization = Column(Numeric(5, 2), nullable=True) # 조달자금 투자전환율 (%)
+    short_term_ratio = Column(Numeric(5, 2), nullable=True)        # 단기금융상품 비율 (%)
+    capex_trend = Column(String(20), nullable=True)                # CAPEX 추세 (increasing/stable/decreasing)
+    roic = Column(Numeric(6, 2), nullable=True)                    # 투하자본수익률 ROIC (%)
+    capex_cv = Column(Numeric(5, 3), nullable=True)                # CAPEX 변동계수 (투자 지속성)
+    violation_count = Column(Integer, default=0)                   # 특별규칙 위반 개수
 
     # ═══════════════════════════════════════════════════════════════
     # 위험 신호 (JSONB 배열)
@@ -103,10 +120,12 @@ class RaymondsIndex(Base):
             "calculation_date": self.calculation_date.isoformat() if self.calculation_date else None,
             "total_score": float(self.total_score) if self.total_score else None,
             "grade": self.grade,
+            # Sub-Index 점수
             "cei_score": float(self.cei_score) if self.cei_score else None,
             "rii_score": float(self.rii_score) if self.rii_score else None,
             "cgi_score": float(self.cgi_score) if self.cgi_score else None,
             "mai_score": float(self.mai_score) if self.mai_score else None,
+            # 기존 핵심 지표
             "investment_gap": float(self.investment_gap) if self.investment_gap else None,
             "cash_cagr": float(self.cash_cagr) if self.cash_cagr else None,
             "capex_growth": float(self.capex_growth) if self.capex_growth else None,
@@ -114,8 +133,18 @@ class RaymondsIndex(Base):
             "asset_turnover": float(self.asset_turnover) if self.asset_turnover else None,
             "reinvestment_rate": float(self.reinvestment_rate) if self.reinvestment_rate else None,
             "shareholder_return": float(self.shareholder_return) if self.shareholder_return else None,
+            # v4.0 신규 지표
+            "cash_tangible_ratio": float(self.cash_tangible_ratio) if self.cash_tangible_ratio else None,
+            "fundraising_utilization": float(self.fundraising_utilization) if self.fundraising_utilization else None,
+            "short_term_ratio": float(self.short_term_ratio) if self.short_term_ratio else None,
+            "capex_trend": self.capex_trend,
+            "roic": float(self.roic) if self.roic else None,
+            "capex_cv": float(self.capex_cv) if self.capex_cv else None,
+            "violation_count": self.violation_count or 0,
+            # 위험 신호
             "red_flags": self.red_flags or [],
             "yellow_flags": self.yellow_flags or [],
+            # 해석
             "verdict": self.verdict,
             "key_risk": self.key_risk,
             "recommendation": self.recommendation,

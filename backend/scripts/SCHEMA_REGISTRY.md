@@ -2,20 +2,22 @@
 
 > **중요**: 모든 테이블 접근 시 이 문서 참조 필수. 테이블명 추측 금지.
 >
-> **마지막 업데이트**: 2025-12-25
+> **마지막 업데이트**: 2025-12-26
 >
-> **현재 데이터 상태** (2025-12-25):
+> **현재 데이터 상태** (2025-12-26):
 > - companies: 3,922건
 > - officers: 44,679건
-> - officer_positions: 64,265건 (중복 제거 완료)
+> - officer_positions: 64,265건
 > - disclosures: 213,304건
 > - convertible_bonds: 1,463건
 > - cb_subscribers: 7,490건
 > - financial_statements: 9,432건
 > - risk_signals: 1,412건
 > - risk_scores: 3,912건
-> - major_shareholders: 95,191건
+> - major_shareholders: 47,453건
 > - affiliates: 973건
+> - **financial_details: 10,314건** (RaymondsIndex용 상세 재무)
+> - **raymonds_index: 4,951건** (자본 배분 효율성 지수)
 > - user_query_usage: - (조회 제한 추적)
 > - page_contents: - (페이지 콘텐츠 관리)
 
@@ -234,6 +236,101 @@
 
 ---
 
+### 12. financial_details (상세 재무 데이터)
+
+| 컬럼명 | 데이터타입 | NULL | 설명 |
+|--------|-----------|------|------|
+| id | uuid | NO | PK |
+| company_id | uuid | NO | FK → companies |
+| fiscal_year | integer | NO | 사업연도 |
+| fiscal_quarter | integer | NO | 분기 (1-4) |
+| report_type | varchar | YES | 보고서 유형 (annual, q1, q2, q3) |
+| current_assets | bigint | YES | 유동자산 |
+| cash_and_equivalents | bigint | YES | 현금및현금성자산 |
+| short_term_investments | bigint | YES | 단기금융상품 |
+| non_current_assets | bigint | YES | 비유동자산 |
+| tangible_assets | bigint | YES | 유형자산 |
+| total_assets | bigint | YES | 자산총계 |
+| current_liabilities | bigint | YES | 유동부채 |
+| non_current_liabilities | bigint | YES | 비유동부채 |
+| total_liabilities | bigint | YES | 부채총계 |
+| total_equity | bigint | YES | 자본총계 |
+| revenue | bigint | YES | 매출액 |
+| operating_income | bigint | YES | 영업이익 |
+| net_income | bigint | YES | 당기순이익 |
+| operating_cash_flow | bigint | YES | 영업활동현금흐름 |
+| investing_cash_flow | bigint | YES | 투자활동현금흐름 |
+| financing_cash_flow | bigint | YES | 재무활동현금흐름 |
+| capex | bigint | YES | 유형자산취득 (CAPEX) |
+| dividend_paid | bigint | YES | 배당금지급 |
+| fs_type | varchar | YES | 재무제표 유형 (CFS/OFS) |
+| data_source | varchar | YES | 데이터 출처 |
+| source_rcept_no | varchar | YES | 출처 공시번호 |
+
+**연관 스크립트**: `parse_q3_reports_2025.py`, `parse_local_financial_details.py`
+**UNIQUE 제약**: company_id + fiscal_year + fiscal_quarter + fs_type
+
+---
+
+### 13. raymonds_index (자본 배분 효율성 지수 v4.0)
+
+| 컬럼명 | 데이터타입 | NULL | 설명 |
+|--------|-----------|------|------|
+| id | uuid | NO | PK |
+| company_id | uuid | NO | FK → companies |
+| calculation_date | date | NO | 계산일 |
+| fiscal_year | integer | NO | 기준 사업연도 |
+| total_score | numeric(5,2) | NO | 총점 (0-100) |
+| grade | varchar(5) | NO | 등급 (A++/A+/A/A-/B+/B/B-/C+/C) |
+| cei_score | numeric(5,2) | YES | Capital Efficiency Index (15%) |
+| rii_score | numeric(5,2) | YES | Reinvestment Intensity Index (40%) ⭐ |
+| cgi_score | numeric(5,2) | YES | Cash Governance Index (30%) ⭐ |
+| mai_score | numeric(5,2) | YES | Momentum Alignment Index (15%) |
+| investment_gap | numeric(6,2) | YES | 투자괴리율 (%) |
+| cash_cagr | numeric(6,2) | YES | 현금 CAGR (%) |
+| capex_growth | numeric(6,2) | YES | CAPEX 성장률 (%) |
+| idle_cash_ratio | numeric(5,2) | YES | 유휴현금비율 (%) |
+| asset_turnover | numeric(5,3) | YES | 자산회전율 (회) |
+| reinvestment_rate | numeric(5,2) | YES | 재투자율 (%) |
+| shareholder_return | numeric(5,2) | YES | 주주환원율 (%) |
+| **cash_tangible_ratio** | numeric(10,2) | YES | 현금-유형자산 증가비율 (X:1) ⭐ v4.0 |
+| **fundraising_utilization** | numeric(5,2) | YES | 조달자금 투자전환율 (%) ⭐ v4.0 |
+| **short_term_ratio** | numeric(5,2) | YES | 단기금융상품 비율 (%) ⭐ v4.0 |
+| **capex_trend** | varchar(20) | YES | CAPEX 추세 (increasing/stable/decreasing) v4.0 |
+| **roic** | numeric(6,2) | YES | 투하자본수익률 ROIC (%) v4.0 |
+| **capex_cv** | numeric(5,3) | YES | CAPEX 변동계수 (투자 지속성) v4.0 |
+| **violation_count** | integer | YES | 특별규칙 위반 개수 (0-3) v4.0 |
+| red_flags | jsonb | YES | 적색 경고 배열 |
+| yellow_flags | jsonb | YES | 황색 경고 배열 |
+| verdict | varchar(200) | YES | 한 줄 요약 |
+| key_risk | text | YES | 핵심 리스크 |
+| recommendation | text | YES | 투자자 권고 |
+| watch_trigger | text | YES | 재검토 시점 |
+| data_quality_score | numeric(3,2) | YES | 데이터 품질 점수 (0-1) |
+| created_at | timestamp | NO | 생성일시 |
+
+**연관 스크립트**: `calculate_raymonds_index.py`
+**UNIQUE 제약**: company_id + fiscal_year
+
+**v4.0 등급 기준**:
+- A++ (95-100): 모범
+- A+ (88-94): 우수
+- A (80-87): 양호
+- A- (72-79): 양호-
+- B+ (64-71): 관찰
+- B (55-63): 주의
+- B- (45-54): 경고
+- C+ (30-44): 심각
+- C (0-29): 부적격
+
+**v4.0 특별 규칙**:
+- 현금-유형자산 비율 > 30:1 → 최대 B-
+- 조달자금 전환율 < 30% → 최대 B-
+- 단기금융상품비율 > 65% + CAPEX 감소 → 최대 B
+- 위 조건 2개 이상 해당 → 최대 C+
+
+---
+
 ## 자주 혼동되는 테이블명
 
 | 틀린 이름 | 올바른 이름 | 비고 |
@@ -335,6 +432,10 @@ companies (1) ─────┬────── (N) officers
                    │
                    ├────── (N) financial_statements
                    │
+                   ├────── (N) financial_details
+                   │
+                   ├────── (N) raymonds_index
+                   │
                    ├────── (N) risk_signals
                    │
                    ├────── (N) risk_scores
@@ -358,6 +459,8 @@ UNION ALL SELECT 'disclosures', COUNT(*) FROM disclosures
 UNION ALL SELECT 'convertible_bonds', COUNT(*) FROM convertible_bonds
 UNION ALL SELECT 'cb_subscribers', COUNT(*) FROM cb_subscribers
 UNION ALL SELECT 'financial_statements', COUNT(*) FROM financial_statements
+UNION ALL SELECT 'financial_details', COUNT(*) FROM financial_details
+UNION ALL SELECT 'raymonds_index', COUNT(*) FROM raymonds_index
 UNION ALL SELECT 'risk_signals', COUNT(*) FROM risk_signals
 UNION ALL SELECT 'risk_scores', COUNT(*) FROM risk_scores
 UNION ALL SELECT 'major_shareholders', COUNT(*) FROM major_shareholders

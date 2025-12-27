@@ -1,9 +1,7 @@
 # Raymontology 프로젝트 설정 및 구현 현황
 
-> **마지막 업데이트**: 2025-12-25
-> **상태**: 서비스 운영 중
-
-## 세션 시작 시 `/sc:load` 로 이 파일을 로드하세요
+> **마지막 업데이트**: 2025-12-26
+> **상태**: 서비스 운영 중 (RaymondsIndex 포함)
 
 ---
 
@@ -49,30 +47,29 @@ npm run dev
 
 ### 2.3 Neo4j (미설정)
 
-Railway 대시보드의 Neo4j 설정은 placeholder 상태입니다.
 `graph.py`에서 PostgreSQL fallback을 사용합니다.
 
 ---
 
-## 3. 데이터베이스 현황 (2025-12-25)
+## 3. 데이터베이스 현황 (2025-12-26)
 
 | 테이블 | 레코드 수 | 설명 |
 |--------|----------|------|
 | companies | 3,922 | 상장사 목록 |
 | officers | 44,679 | 임원 정보 |
-| officer_positions | 64,265 | 임원-회사 연결 (중복 제거 완료) |
+| officer_positions | 64,265 | 임원-회사 연결 |
 | disclosures | 213,304 | 공시 원본 |
 | convertible_bonds | 1,463 | CB 발행 정보 |
 | cb_subscribers | 7,490 | CB 인수자 |
 | financial_statements | 9,432 | 재무제표 |
 | risk_signals | 1,412 | 리스크 신호 |
 | risk_scores | 3,912 | 리스크 점수 |
-| major_shareholders | 95,191 | 대주주 |
+| major_shareholders | 47,453 | 대주주 |
 | affiliates | 973 | 계열회사 |
+| **financial_details** | **10,314** | **RaymondsIndex용 상세 재무** |
+| **raymonds_index** | **7,646** | **자본 배분 효율성 지수 (2025 포함)** |
 | user_query_usage | - | 월별 조회 사용량 추적 |
 | page_contents | - | 페이지 콘텐츠 동적 관리 |
-| financial_details | 0 | RaymondsIndex용 상세 재무 (스키마 완료) |
-| raymonds_index | 0 | 지수 계산 결과 (스키마 완료) |
 
 ---
 
@@ -151,69 +148,29 @@ Company ──1:N── OfficerPosition ──N:1── Officer
 
 ## 6. 최근 변경사항
 
-### 2025-12-25: RaymondsIndex 시스템 개발
+### 2025-12-26: RaymondsIndex 시스템 완료
 
-**RaymondsIndex 스키마 구현**:
-- `financial_details` 테이블: 상세 재무 데이터 (유동/비유동 자산·부채)
-- `raymonds_index` 테이블: 지수 계산 결과 저장
-- 설계문서: `docs/RAYMONDS_INDEX_INTEGRATION_DESIGN.md`
-
-**financial_details 주요 컬럼**:
-- 유동자산: `current_assets`, `cash_and_equivalents`, `short_term_investments`, `trade_and_other_receivables`, `inventories`, `current_tax_assets`, `other_financial_assets_current`, `other_assets_current`
-- 비유동자산: `non_current_assets`, `fvpl_financial_assets`, `investments_in_associates`, `tangible_assets`, `intangible_assets`, `right_of_use_assets`, `net_defined_benefit_assets`, `deferred_tax_assets`, `other_financial_assets_non_current`, `other_assets_non_current`
-- 부채/자본: 유동부채, 비유동부채, 자본 세부항목
+**RaymondsIndex (자본 배분 효율성 지수)**:
+- `financial_details`: 10,314건 (2025 Q3 보고서 기반)
+- `raymonds_index`: 7,646건 (2025 Q3 데이터 포함)
+- 등급 분포: A(121), B(1,740), C(3,722), D(2,063)
 
 **관련 파일**:
 - `backend/app/models/financial_details.py`
 - `backend/app/models/raymonds_index.py`
 - `backend/app/services/raymonds_index_calculator.py`
-- `backend/app/api/endpoints/raymonds_index.py`
 - `frontend/src/pages/RaymondsIndexRankingPage.tsx`
 
 ### 2025-12-25: 구독 및 콘텐츠 관리 시스템
 
-**구독 시스템 구현**:
-- Light (3,000원/월): 30건 조회 제한
-- Max (30,000원/월): 무제한 조회
-- `user_query_usage` 테이블로 월별 사용량 추적
-- 어드민에서 사용자 구독 변경 가능
-
-**콘텐츠 관리 시스템 구현**:
-- AboutPage 텍스트/이미지 동적 편집
-- `page_contents` 테이블로 콘텐츠 저장
-- 이미지 업로드 (권장 사이즈 안내)
-
-**영향받은 파일**:
-- `backend/app/models/subscriptions.py` - SUBSCRIPTION_LIMITS, UserQueryUsage 추가
-- `backend/app/services/usage_service.py` (신규)
-- `backend/app/routes/subscription.py` - 사용량 API 추가
-- `backend/app/models/content.py` (신규)
-- `backend/app/routes/content.py` (신규)
-- `frontend/src/pages/AdminPage.tsx` - 콘텐츠 편집 탭 추가
-- `frontend/src/pages/AboutPage.tsx` - 동적 콘텐츠 로딩
-- `frontend/src/components/UsageIndicator.tsx` (신규)
+**구독 시스템**: Light (3,000원/월, 30건), Max (30,000원/월, 무제한)
+**콘텐츠 관리**: AboutPage 동적 편집
 
 ### 2025-12-24: 임원 API 리팩토링
 
-**문제**: `officers.current_company_id`가 대부분 NULL (8명만 존재)
-
-**해결**:
-1. 중복 데이터 243,398건 삭제
-2. `OfficerPosition` SQLAlchemy 모델 추가
-3. API를 `officer_positions` 테이블 기반으로 변경
-4. `graph.py`에 PostgreSQL fallback 추가
-
-**영향받은 파일**:
-- `backend/app/models/officer_positions.py` (신규)
-- `backend/app/models/__init__.py`
-- `backend/app/api/endpoints/officers.py`
-- `backend/app/api/endpoints/companies.py`
-- `backend/app/api/endpoints/graph.py`
-
-### 2025-12-17: 임원-회사 매칭 정제
-
-- 잘못된 데이터 7,277건 삭제
-- 검증 스크립트: `scripts/verify_officer_company_match.py`
+- `officer_positions` 테이블 기반으로 변경
+- 중복 243,398건 삭제
+- PostgreSQL fallback 추가
 
 ---
 
@@ -301,12 +258,12 @@ b3cd8d9 fix: Neo4j 없을 때 PostgreSQL fallback으로 임원 경력 조회
 - [ ] 임원 네트워크 시각화 개선
 - [ ] 리스크 점수 계산 로직 고도화
 - [ ] 파싱 스크립트 UPSERT 로직 추가 (중복 방지)
-- [ ] RaymondsIndex 데이터 파싱 (financial_details 적재)
-- [ ] RaymondsIndex 계산 엔진 테스트
 - [x] RaymondsIndex 스키마 설계 - 2025-12-25 완료
-- [x] 구독 시스템 구현 (Light/Max 이용권) - 2025-12-25 완료
+- [x] RaymondsIndex 데이터 파싱 - 2025-12-26 완료 (10,314건)
+- [x] RaymondsIndex 계산 엔진 - 2025-12-26 완료 (4,951건)
+- [x] 구독 시스템 구현 - 2025-12-25 완료
 - [x] 조회 제한 시스템 구현 - 2025-12-25 완료
-- [x] 콘텐츠 관리 시스템 (AboutPage 편집) - 2025-12-25 완료
+- [x] 콘텐츠 관리 시스템 - 2025-12-25 완료
 
 ---
 
