@@ -435,6 +435,58 @@ async def get_raymonds_index_statistics(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/search/companies")
+async def search_companies(
+    q: str = Query(..., min_length=1, description="검색어 (회사명 또는 종목코드)"),
+    limit: int = Query(10, ge=1, le=50),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    회사명/종목코드로 검색 (자동완성용)
+
+    - q: 검색어 (부분 매칭)
+    - limit: 최대 결과 수
+    """
+    try:
+        # 각 회사의 최신 연도만 조회
+        subquery = (
+            select(
+                RaymondsIndex.company_id,
+                func.max(RaymondsIndex.fiscal_year).label('max_year')
+            )
+            .group_by(RaymondsIndex.company_id)
+        ).subquery()
+
+        query = (
+            select(RaymondsIndex, Company)
+            .join(Company, RaymondsIndex.company_id == Company.id)
+            .join(
+                subquery,
+                (RaymondsIndex.company_id == subquery.c.company_id) &
+                (RaymondsIndex.fiscal_year == subquery.c.max_year)
+            )
+            .where(
+                (Company.name.ilike(f"%{q}%")) |
+                (Company.ticker.ilike(f"%{q}%"))
+            )
+            .order_by(desc(RaymondsIndex.total_score))
+            .limit(limit)
+        )
+
+        result = await db.execute(query)
+        rows = result.all()
+
+        return {
+            "query": q,
+            "total": len(rows),
+            "results": [format_index_response(index, company) for index, company in rows]
+        }
+
+    except Exception as e:
+        logger.error(f"Error searching companies: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/company/name/{company_name}")
 async def get_raymonds_index_by_name(
     company_name: str,
