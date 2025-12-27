@@ -81,19 +81,14 @@ export const api = {
 
   search: {
     query: async (q: string, limit: number = 10): Promise<SearchResult[]> => {
-      // Use search/filter endpoint with company name search
+      // Use dedicated search endpoint with server-side filtering
       const data = await fetchAPI<{
+        query: string;
         total: number;
         results: RaymondsIndexResponse[];
-      }>(`/raymonds-index/search/filter?limit=${limit}`);
+      }>(`/raymonds-index/search/companies?q=${encodeURIComponent(q)}&limit=${limit}`);
 
-      // Filter by name on client side for now
-      const filtered = data.results.filter(item =>
-        item.company_name?.toLowerCase().includes(q.toLowerCase()) ||
-        item.stock_code?.includes(q)
-      );
-
-      return filtered.map(item => ({
+      return data.results.map(item => ({
         company_id: item.company_id,
         company_name: item.company_name,
         stock_code: item.stock_code || '',
