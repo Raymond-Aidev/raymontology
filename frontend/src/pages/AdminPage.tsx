@@ -715,7 +715,7 @@ function AdminPage() {
                                       {currentValue ? (
                                         <div className="relative">
                                           <img
-                                            src={currentValue.startsWith('/') ? `${import.meta.env.VITE_API_URL || ''}${currentValue}` : currentValue}
+                                            src={currentValue.startsWith('data:') ? currentValue : (currentValue.startsWith('/') ? `${import.meta.env.VITE_API_URL || ''}${currentValue}` : currentValue)}
                                             alt="Preview"
                                             className="w-32 h-20 object-cover rounded border border-theme-border"
                                           />

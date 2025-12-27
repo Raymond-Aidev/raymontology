@@ -4,10 +4,7 @@ Content Routes - 페이지 콘텐츠 관리 API
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from typing import Optional, Dict, Any
-import uuid
-import os
-import aiofiles
+from typing import Dict, Any
 from datetime import datetime
 
 from app.database import get_db
@@ -123,7 +120,10 @@ async def upload_image(
 ):
     """
     이미지 업로드 (관리자 전용)
+    이미지를 Base64 Data URL로 DB에 직접 저장 (Railway 영구 보존)
     """
+    import base64
+
     if not current_user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -137,29 +137,18 @@ async def upload_image(
             detail="이미지 파일만 업로드 가능합니다."
         )
 
-    # 파일 크기 제한 (5MB)
+    # 파일 크기 제한 (2MB - Base64는 더 크므로 제한 강화)
     content = await file.read()
-    if len(content) > 5 * 1024 * 1024:
+    if len(content) > 2 * 1024 * 1024:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="파일 크기는 5MB 이하여야 합니다."
+            detail="파일 크기는 2MB 이하여야 합니다."
         )
 
-    # 파일명 생성
-    ext = file.filename.split(".")[-1] if file.filename and "." in file.filename else "jpg"
-    filename = f"{page}_{section}_{uuid.uuid4().hex[:8]}.{ext}"
-
-    # 저장 경로
-    upload_dir = "uploads/content"
-    os.makedirs(upload_dir, exist_ok=True)
-    file_path = os.path.join(upload_dir, filename)
-
-    # 파일 저장
-    async with aiofiles.open(file_path, "wb") as f:
-        await f.write(content)
-
-    # 이미지 URL
-    image_url = f"/uploads/content/{filename}"
+    # Base64 인코딩
+    base64_data = base64.b64encode(content).decode('utf-8')
+    mime_type = file.content_type
+    data_url = f"data:{mime_type};base64,{base64_data}"
 
     # DB에 저장
     result = await db.execute(
@@ -172,19 +161,14 @@ async def upload_image(
     existing = result.scalar_one_or_none()
 
     if existing:
-        # 기존 이미지 파일 삭제 (선택적)
-        if existing.value and existing.value.startswith("/uploads/"):
-            old_path = existing.value.lstrip("/")
-            if os.path.exists(old_path):
-                os.remove(old_path)
-        existing.value = image_url
+        existing.value = data_url
         existing.updated_at = datetime.utcnow()
     else:
         new_content = PageContent(
             page=page,
             section=section,
             field="image",
-            value=image_url
+            value=data_url
         )
         db.add(new_content)
 
@@ -196,8 +180,8 @@ async def upload_image(
 
     return {
         "success": True,
-        "image_url": image_url,
-        "filename": filename,
+        "image_url": data_url,
+        "filename": file.filename,
         "recommended_size": recommended_size
     }
 
@@ -228,13 +212,7 @@ async def delete_image(
     existing = result.scalar_one_or_none()
 
     if existing and existing.value:
-        # 파일 삭제
-        if existing.value.startswith("/uploads/"):
-            file_path = existing.value.lstrip("/")
-            if os.path.exists(file_path):
-                os.remove(file_path)
-
-        # DB 레코드 삭제
+        # DB 레코드 삭제 (Base64는 DB에만 저장되므로 파일 삭제 불필요)
         await db.delete(existing)
         await db.commit()
 

@@ -106,9 +106,10 @@ export default function AboutPage() {
     loadContent()
   }, [])
 
-  // 이미지 URL 처리 (상대경로면 API URL 추가)
+  // 이미지 URL 처리 (Data URL 또는 상대경로 지원)
   const getImageUrl = (url: string) => {
     if (!url) return ''
+    if (url.startsWith('data:')) return url  // Base64 Data URL
     if (url.startsWith('http')) return url
     return `${import.meta.env.VITE_API_URL || ''}${url}`
   }
