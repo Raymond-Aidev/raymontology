@@ -123,6 +123,9 @@ class RaymondsIndexBatchCalculator:
                 inventories, tangible_assets, intangible_assets,
                 total_assets, current_liabilities, non_current_liabilities,
                 total_liabilities, total_equity,
+                -- 재무상태표 (투자괴리율 v2용 추가 컬럼)
+                right_of_use_assets, investments_in_associates,
+                fvpl_financial_assets, other_financial_assets_non_current,
                 -- 손익계산서
                 revenue, cost_of_sales, selling_admin_expenses,
                 operating_income, net_income,
