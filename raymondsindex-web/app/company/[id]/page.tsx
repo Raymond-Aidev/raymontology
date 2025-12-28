@@ -13,7 +13,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Calendar, Building2, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { GRADE_COLORS, type Grade } from '@/lib/constants';
+import { GRADE_COLORS, METRIC_DESCRIPTIONS, type Grade } from '@/lib/constants';
 
 export default function CompanyDetailPage() {
   const params = useParams();
@@ -160,6 +160,7 @@ export default function CompanyDetailPage() {
             unit="%"
             status={getStatus(company.investment_gap, { good: 0, warning: -20 })}
             description="현금증가 대비 CAPEX 증가 차이"
+            tooltip={METRIC_DESCRIPTIONS.investment_gap.description}
           />
           <MetricCard
             label="재투자율"
@@ -167,6 +168,7 @@ export default function CompanyDetailPage() {
             unit="%"
             status={getStatus(company.reinvestment_rate, { good: 30, warning: 15 })}
             description="영업현금흐름 대비 CAPEX 비율"
+            tooltip={METRIC_DESCRIPTIONS.reinvestment_rate.description}
           />
           <MetricCard
             label="ROIC"
@@ -174,6 +176,7 @@ export default function CompanyDetailPage() {
             unit="%"
             status={getStatus(company.roic, { good: 10, warning: 5 })}
             description="투하자본수익률"
+            tooltip={METRIC_DESCRIPTIONS.roic.description}
           />
           <MetricCard
             label="현금/유형자산 비율"
@@ -187,6 +190,7 @@ export default function CompanyDetailPage() {
                 : 'good'
             }
             description="현금 대비 유형자산 증가율 비율"
+            tooltip={METRIC_DESCRIPTIONS.cash_tangible_ratio.description}
           />
           <MetricCard
             label="단기금융비율"
@@ -200,6 +204,7 @@ export default function CompanyDetailPage() {
                 : 'good'
             }
             description="현금 중 단기금융상품 비율"
+            tooltip={METRIC_DESCRIPTIONS.short_term_ratio.description}
           />
           <MetricCard
             label="주주환원율"
@@ -207,6 +212,7 @@ export default function CompanyDetailPage() {
             unit="%"
             status={getStatus(company.shareholder_return, { good: 30, warning: 10 })}
             description="배당 및 자사주 매입 비율"
+            tooltip={METRIC_DESCRIPTIONS.shareholder_return.description}
           />
         </div>
       </div>
@@ -224,12 +230,14 @@ export default function CompanyDetailPage() {
                 ? 'warning'
                 : 'neutral'
             }
+            tooltip={METRIC_DESCRIPTIONS.idle_cash_ratio.description}
           />
           <MetricCard
             label="조달자금 전환율"
             value={company.fundraising_utilization?.toFixed(1)}
             unit="%"
             status={getStatus(company.fundraising_utilization, { good: 50, warning: 30 })}
+            tooltip={METRIC_DESCRIPTIONS.fundraising_utilization.description}
           />
           <MetricCard
             label="CAPEX 변동계수"
@@ -240,6 +248,7 @@ export default function CompanyDetailPage() {
                 : 'good'
             }
             description="투자 지속성 (낮을수록 안정)"
+            tooltip={METRIC_DESCRIPTIONS.capex_cv.description}
           />
           <MetricCard
             label="CAPEX 추세"
@@ -251,6 +260,7 @@ export default function CompanyDetailPage() {
               company.capex_trend === 'increasing' ? 'good' :
               company.capex_trend === 'decreasing' ? 'warning' : 'neutral'
             }
+            tooltip={METRIC_DESCRIPTIONS.capex_trend.description}
           />
         </div>
       </div>

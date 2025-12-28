@@ -212,6 +212,75 @@ class RaymondsIndexCalculator:
         val = d.get(key)
         return float(val) if val is not None else default
 
+    def _calculate_investment_gap_v2(
+        self,
+        oldest: Optional[Dict],
+        current: Dict
+    ) -> float:
+        """
+        투자괴리율 v2 계산 (2025년 업데이트)
+
+        현금성자산 증가비율 - CAPEX 증가비율을 계산합니다.
+
+        현금성자산 = 현금 + 단기금융상품 + 장기금융상품
+        CAPEX = 유형자산 + 무형자산 + 사용권자산 + 관계기업투자 (재무상태표 기준)
+
+        Args:
+            oldest: 가장 오래된 기간 데이터 (2022년 결산 등)
+            current: 현재 기간 데이터 (2024년 또는 2025년 3분기)
+
+        Returns:
+            투자괴리율 (%)
+        """
+        if oldest is None:
+            return 0.0
+
+        # 현금성자산 계산 (현금 + 단기금융상품 + 장기금융상품)
+        def calc_cash_equivalent(d: Dict) -> float:
+            return (
+                self._safe_get(d, 'cash_and_equivalents') +
+                self._safe_get(d, 'short_term_investments') +
+                self._safe_get(d, 'fvpl_financial_assets') +  # 당기손익공정가치측정금융자산
+                self._safe_get(d, 'other_financial_assets_non_current')  # 기타금융자산(비유동)
+            )
+
+        # CAPEX 계산 (유형자산 + 무형자산 + 사용권자산 + 관계기업투자)
+        def calc_capex_total(d: Dict) -> float:
+            return (
+                self._safe_get(d, 'tangible_assets') +
+                self._safe_get(d, 'intangible_assets') +
+                self._safe_get(d, 'right_of_use_assets') +
+                self._safe_get(d, 'investments_in_associates')
+            )
+
+        oldest_cash = calc_cash_equivalent(oldest)
+        current_cash = calc_cash_equivalent(current)
+
+        oldest_capex = calc_capex_total(oldest)
+        current_capex = calc_capex_total(current)
+
+        # 현금성자산 증가비율 계산
+        cash_growth = 0.0
+        if oldest_cash > 0:
+            cash_growth = ((current_cash - oldest_cash) / oldest_cash) * 100
+        elif current_cash > 0 and oldest_cash == 0:
+            cash_growth = 100.0  # 0에서 증가 시 100%로 처리
+
+        # CAPEX 증가비율 계산
+        capex_growth = 0.0
+        if oldest_capex > 0:
+            capex_growth = ((current_capex - oldest_capex) / oldest_capex) * 100
+        elif current_capex > 0 and oldest_capex == 0:
+            capex_growth = 100.0  # 0에서 증가 시 100%로 처리
+
+        # 투자괴리율 = 현금성자산 증가비율 - CAPEX 증가비율
+        # 양수: 현금이 CAPEX보다 더 많이 증가 (현금 쌓기)
+        # 음수: CAPEX가 현금보다 더 많이 증가 (적극 투자)
+        investment_gap = round(cash_growth - capex_growth, 2)
+
+        # 범위 제한 (-999 ~ 999)
+        return max(-999.0, min(999.0, investment_gap))
+
     def _analyze_trend(self, values: List[float]) -> str:
         """추세 분석 (선형 회귀 기반)"""
         n = len(values)
@@ -299,23 +368,23 @@ class RaymondsIndexCalculator:
                 ((dividend + treasury) / operating_cf) * 100, 2
             )
 
-        # 5. 현금 CAGR (3년)
+        # 5. 현금 CAGR (3년) - 기존 방식 유지 (참고용)
         if oldest_total_cash and oldest_total_cash > 0 and total_cash > 0:
             years = len(all_data) - 1 if len(all_data) > 1 else 1
             metrics.cash_cagr = round(
                 (pow(total_cash / oldest_total_cash, 1 / years) - 1) * 100, 2
             )
 
-        # 6. CAPEX 증가율
+        # 6. CAPEX 증가율 - 기존 방식 유지 (참고용)
         if prev_capex > 0:
             metrics.capex_growth = round(
                 ((capex - prev_capex) / prev_capex) * 100, 2
             )
 
-        # 7. 투자괴리율
-        metrics.investment_gap = round(
-            metrics.cash_cagr - metrics.capex_growth, 2
-        )
+        # 7. 투자괴리율 v2 (2025년 업데이트)
+        # 현금성자산 = 현금 + 단기금융상품 + 장기금융상품
+        # CAPEX = 유형자산 + 무형자산 + 사용권자산 + 관계기업투자 (재무상태표 기준)
+        metrics.investment_gap = self._calculate_investment_gap_v2(oldest, current)
 
         # ═══════════════════════════════════════════════════════════════
         # v4.0 신규 지표

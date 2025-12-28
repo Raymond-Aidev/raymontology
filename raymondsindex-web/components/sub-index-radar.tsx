@@ -7,17 +7,66 @@ import {
   PolarRadiusAxis,
   Radar,
   ResponsiveContainer,
-  Tooltip,
+  Tooltip as RechartsTooltip,
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart3 } from 'lucide-react';
+import { BarChart3, HelpCircle } from 'lucide-react';
 import { SUB_INDEX_INFO } from '@/lib/constants';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface SubIndexRadarProps {
   cei: number | null;
   rii: number | null;
   cgi: number | null;
   mai: number | null;
+}
+
+// Sub-Index 항목 컴포넌트
+function SubIndexItem({
+  code,
+  value,
+  highlighted = false,
+}: {
+  code: 'CEI' | 'RII' | 'CGI' | 'MAI';
+  value: number | null;
+  highlighted?: boolean;
+}) {
+  const info = SUB_INDEX_INFO[code];
+  const bgClass = highlighted ? 'bg-blue-50' : 'bg-gray-50';
+  const codeClass = highlighted ? 'text-blue-500' : 'text-gray-500';
+  const valueClass = highlighted ? 'text-blue-700' : 'text-gray-900';
+  const labelClass = highlighted ? 'text-blue-400' : 'text-gray-400';
+
+  return (
+    <div className={`text-center p-2 ${bgClass} rounded`}>
+      <div className="flex items-center justify-center gap-1">
+        <p className={`text-xs ${codeClass}`}>{code}</p>
+        <TooltipProvider delayDuration={0}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                className="text-gray-400 hover:text-gray-600 focus:outline-none"
+                aria-label={`${code} 설명`}
+              >
+                <HelpCircle className="w-3 h-3" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs">
+              <p className="text-sm font-medium mb-1">{info.label} ({info.weight}%)</p>
+              <p className="text-sm text-gray-600">{info.description}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+      <p className={`font-semibold ${valueClass}`}>{value?.toFixed(1) || '-'}</p>
+      <p className={`text-xs ${labelClass}`}>{info.label}</p>
+    </div>
+  );
 }
 
 export function SubIndexRadar({ cei, rii, cgi, mai }: SubIndexRadarProps) {
@@ -74,7 +123,7 @@ export function SubIndexRadar({ cei, rii, cgi, mai }: SubIndexRadarProps) {
                 fillOpacity={0.3}
                 strokeWidth={2}
               />
-              <Tooltip
+              <RechartsTooltip
                 formatter={(value) => [`${Number(value).toFixed(1)}점`, '점수']}
                 contentStyle={{
                   backgroundColor: 'white',
@@ -86,28 +135,12 @@ export function SubIndexRadar({ cei, rii, cgi, mai }: SubIndexRadarProps) {
           </ResponsiveContainer>
         </div>
 
-        {/* Sub-Index Legend */}
+        {/* Sub-Index Legend with Tooltips */}
         <div className="grid grid-cols-2 gap-3 mt-4">
-          <div className="text-center p-2 bg-gray-50 rounded">
-            <p className="text-xs text-gray-500">CEI</p>
-            <p className="font-semibold">{cei?.toFixed(1) || '-'}</p>
-            <p className="text-xs text-gray-400">{SUB_INDEX_INFO.CEI.label}</p>
-          </div>
-          <div className="text-center p-2 bg-blue-50 rounded">
-            <p className="text-xs text-blue-500">RII</p>
-            <p className="font-semibold text-blue-700">{rii?.toFixed(1) || '-'}</p>
-            <p className="text-xs text-blue-400">{SUB_INDEX_INFO.RII.label}</p>
-          </div>
-          <div className="text-center p-2 bg-gray-50 rounded">
-            <p className="text-xs text-gray-500">CGI</p>
-            <p className="font-semibold">{cgi?.toFixed(1) || '-'}</p>
-            <p className="text-xs text-gray-400">{SUB_INDEX_INFO.CGI.label}</p>
-          </div>
-          <div className="text-center p-2 bg-gray-50 rounded">
-            <p className="text-xs text-gray-500">MAI</p>
-            <p className="font-semibold">{mai?.toFixed(1) || '-'}</p>
-            <p className="text-xs text-gray-400">{SUB_INDEX_INFO.MAI.label}</p>
-          </div>
+          <SubIndexItem code="CEI" value={cei} />
+          <SubIndexItem code="RII" value={rii} highlighted />
+          <SubIndexItem code="CGI" value={cgi} />
+          <SubIndexItem code="MAI" value={mai} />
         </div>
       </CardContent>
     </Card>

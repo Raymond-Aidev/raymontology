@@ -3,6 +3,12 @@
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { CheckCircle2, AlertTriangle, XCircle, HelpCircle, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface MetricCardProps {
   label: string;
@@ -10,6 +16,7 @@ interface MetricCardProps {
   unit?: string;
   status?: 'good' | 'warning' | 'danger' | 'neutral';
   description?: string;
+  tooltip?: string;  // 위험요소 관점 설명
   trend?: 'up' | 'down' | 'stable';
   className?: string;
 }
@@ -53,6 +60,7 @@ export function MetricCard({
   unit,
   status = 'neutral',
   description,
+  tooltip,
   trend,
   className,
 }: MetricCardProps) {
@@ -67,7 +75,26 @@ export function MetricCard({
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <p className="text-sm text-gray-600 mb-1">{label}</p>
+            <div className="flex items-center gap-1 mb-1">
+              <p className="text-sm text-gray-600">{label}</p>
+              {tooltip && (
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        className="text-gray-400 hover:text-gray-600 focus:outline-none"
+                        aria-label={`${label} 설명`}
+                      >
+                        <HelpCircle className="w-3.5 h-3.5" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs">
+                      <p className="text-sm">{tooltip}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
             <div className="flex items-baseline gap-1">
               <span className="text-2xl font-bold text-gray-900">
                 {displayValue}
