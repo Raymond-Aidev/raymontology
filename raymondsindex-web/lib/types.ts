@@ -25,13 +25,19 @@ export interface RaymondsIndexResponse {
   reinvestment_rate: number | null;
   shareholder_return: number | null;
 
-  // v4.0 신규 지표
+  // v4.0 기존 지표
   cash_tangible_ratio: number | null;
   fundraising_utilization: number | null;
   short_term_ratio: number | null;
   capex_trend: 'increasing' | 'stable' | 'decreasing' | null;
   capex_cv: number | null;
   violation_count: number;
+
+  // v2.0 신규 지표
+  investment_gap_v2: number | null;
+  cash_utilization: number | null;
+  industry_sector: string | null;
+  weight_adjustment: Record<string, number> | null;
 
   // 위험 신호
   red_flags: string[];

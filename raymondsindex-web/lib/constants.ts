@@ -20,25 +20,25 @@ export const SUB_INDEX_INFO = {
   CEI: {
     name: 'Capital Efficiency Index',
     label: '자본 효율성',
-    weight: 15,
+    weight: 20,  // v2.0: 15% → 20%
     description: '투입한 자본 대비 수익 창출 능력을 평가합니다. 자본 효율성이 낮으면 투자금이 성장에 기여하지 못하고 있을 수 있습니다.'
   },
   RII: {
     name: 'Reinvestment Intensity Index',
     label: '재투자 강도',
-    weight: 40,
-    description: '벌어들인 이익을 성장에 재투자하는지 평가합니다. 재투자가 부족하면 현금만 쌓아두며 성장 기회를 놓치고 있을 수 있습니다.'
+    weight: 35,
+    description: '벌어들인 이익을 성장에 재투자하는지 평가합니다. CAPEX 강도, 투자괴리율, 재투자율, 투자 지속성을 종합 평가합니다.'
   },
   CGI: {
     name: 'Cash Governance Index',
     label: '현금 거버넌스',
-    weight: 30,
-    description: '보유 현금을 생산적 자산으로 전환하는지 평가합니다. 단기금융상품에만 묻어두면 투자금이 유용될 위험이 있습니다.'
+    weight: 25,
+    description: '보유 현금을 생산적 자산으로 전환하는지 평가합니다. 현금 활용도, 자금조달 효율성, 주주환원 균형, 현금 적정성을 평가합니다.'
   },
   MAI: {
     name: 'Momentum Alignment Index',
     label: '모멘텀 정합성',
-    weight: 15,
+    weight: 20,  // v2.0: 15% → 20%
     description: '매출 성장과 투자 방향이 일치하는지 평가합니다. 불일치하면 경영진의 자본 배분 판단에 의문이 생깁니다.'
   },
 } as const;
@@ -46,16 +46,24 @@ export const SUB_INDEX_INFO = {
 // 핵심 지표 설명 (위험요소 파악 관점)
 export const METRIC_DESCRIPTIONS = {
   investment_gap: {
-    label: '투자괴리율',
-    description: '현금 증가 대비 투자 증가 차이입니다. 괴리율이 높으면 현금만 쌓고 투자는 안 하고 있을 가능성이 있습니다.',
+    label: '투자괴리율 (레거시)',
+    description: '현금 증가 대비 투자 증가 차이입니다. (구버전 호환용)',
+  },
+  investment_gap_v2: {
+    label: '투자괴리율 v2',
+    description: '초기 2년 재투자율 대비 최근 2년 재투자율 변화입니다. 양수(+)면 투자가 줄어든 것이고, 음수(-)면 투자가 늘어난 것입니다.',
   },
   reinvestment_rate: {
     label: '재투자율',
-    description: '영업이익 대비 설비투자 비율입니다. 재투자율이 낮으면 성장에 대한 의지가 부족할 수 있습니다.',
+    description: '영업현금흐름(OCF) 대비 설비투자(CAPEX) 비율입니다. 재투자율이 낮으면 성장에 대한 의지가 부족할 수 있습니다.',
   },
   roic: {
     label: 'ROIC',
     description: '투하자본수익률로, 투자금이 얼마나 효율적으로 수익을 창출하는지 보여줍니다. 낮으면 투자 효율성 문제입니다.',
+  },
+  cash_utilization: {
+    label: '현금 활용도',
+    description: '(CAPEX + 배당 + 자사주매입) / (기초현금 + 영업현금흐름)입니다. 60-90%가 적정하며, 너무 낮으면 현금 활용 부족입니다.',
   },
   cash_tangible_ratio: {
     label: '현금/유형자산 비율',
