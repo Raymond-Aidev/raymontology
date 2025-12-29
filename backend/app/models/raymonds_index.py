@@ -12,18 +12,24 @@ from app.database import Base
 
 class RaymondsIndex(Base):
     """
-    RaymondsIndex v2.0 계산 결과 테이블
+    RaymondsIndex v2.1 계산 결과 테이블
 
     자본 배분 효율성을 측정하는 종합 지수로,
     4개의 Sub-Index로 구성됨:
     - CEI: Capital Efficiency Index (20%) - 자본 효율성
+      → 자산회전율(25%) + 유형자산효율성(20%) + 현금수익률(20%) + ROIC(25%) + 추세(10%)
     - RII: Reinvestment Intensity Index (35%) ⭐ 핵심 - 재투자 강도
+      → CAPEX강도(30%) + 투자괴리율(30%) + 재투자율(25%) + 지속성(15%)
     - CGI: Cash Governance Index (25%) ⭐ 핵심 - 현금 거버넌스
+      → 현금활용도(20%) + 자금조달효율성(25%) + 주주환원균형(20%) + 현금적정성(15%) + 부채건전성(20%)
     - MAI: Momentum Alignment Index (20%) - 모멘텀 정합성
+      → 매출-투자동조성(30%) + 이익품질(25%) + 투자지속성(20%) + 성장투자비율(15%) + FCF추세(10%)
 
-    v2.0 주요 변경:
-    - 투자괴리율: (초기 2년 재투자율) - (최근 2년 재투자율)
-    - 업종별 가중치 조정 지원
+    v2.1 주요 변경 (v2.0 대비):
+    - 투자괴리율: 현금 CAGR - CAPEX 성장률 (v2.0: 재투자율 기반)
+    - 재투자율: CAPEX / OCF (v2.0: CAPEX / 영업이익)
+    - 등급 기준 완화 (A+: 90→88, A: 85→80, etc.)
+    - 신규 지표: 유형자산효율성, 현금수익률, 부채건전성, 성장투자비율
 
     특별 규칙:
     - 현금-유형자산 비율 > 30:1 → 최대 B-
@@ -80,15 +86,23 @@ class RaymondsIndex(Base):
     violation_count = Column(Integer, default=0)                   # 특별규칙 위반 개수
 
     # ═══════════════════════════════════════════════════════════════
-    # v2.0 신규 지표
+    # v2.0/v2.1 지표
     # ═══════════════════════════════════════════════════════════════
-    investment_gap_v2 = Column(Numeric(6, 2), nullable=True)       # 투자괴리율 v2 (초기2년 - 최근2년 재투자율)
+    investment_gap_v2 = Column(Numeric(6, 2), nullable=True)       # 투자괴리율 v2 (레거시: 초기2년 - 최근2년 재투자율)
+    investment_gap_v21 = Column(Numeric(6, 2), nullable=True)      # 투자괴리율 v2.1 ⭐핵심 (현금 CAGR - CAPEX 성장률)
     rd_intensity = Column(Numeric(5, 2), nullable=True)            # R&D 강도 - 미사용 (데이터 없음)
-    ebitda = Column(Numeric(20, 0), nullable=True)                 # EBITDA - 미사용 (감가상각비 데이터 없음)
-    debt_to_ebitda = Column(Numeric(6, 2), nullable=True)          # 부채/EBITDA - 미사용
+    ebitda = Column(Numeric(20, 0), nullable=True)                 # EBITDA
+    debt_to_ebitda = Column(Numeric(6, 2), nullable=True)          # 부채/EBITDA (CGI용)
     cash_utilization = Column(Numeric(5, 2), nullable=True)        # 현금 활용도 (%)
     industry_sector = Column(String(50), nullable=True)            # 업종 분류
     weight_adjustment = Column(JSONB, nullable=True)               # 업종별 가중치 조정 내역
+
+    # ═══════════════════════════════════════════════════════════════
+    # v2.1 신규 지표
+    # ═══════════════════════════════════════════════════════════════
+    tangible_efficiency = Column(Numeric(6, 3), nullable=True)     # 유형자산 효율성 (매출/유형자산)
+    cash_yield = Column(Numeric(6, 2), nullable=True)              # 현금 수익률 (영업이익/총현금 %)
+    growth_investment_ratio = Column(Numeric(5, 2), nullable=True) # 성장 투자 비율 (성장CAPEX/총CAPEX %)
 
     # ═══════════════════════════════════════════════════════════════
     # 위험 신호 (JSONB 배열)
@@ -156,11 +170,17 @@ class RaymondsIndex(Base):
             "roic": float(self.roic) if self.roic else None,
             "capex_cv": float(self.capex_cv) if self.capex_cv else None,
             "violation_count": self.violation_count or 0,
-            # v2.0 신규 지표
+            # v2.0/v2.1 지표
             "investment_gap_v2": float(self.investment_gap_v2) if self.investment_gap_v2 else None,
+            "investment_gap_v21": float(self.investment_gap_v21) if self.investment_gap_v21 else None,
             "cash_utilization": float(self.cash_utilization) if self.cash_utilization else None,
             "industry_sector": self.industry_sector,
             "weight_adjustment": self.weight_adjustment,
+            # v2.1 신규 지표
+            "tangible_efficiency": float(self.tangible_efficiency) if self.tangible_efficiency else None,
+            "cash_yield": float(self.cash_yield) if self.cash_yield else None,
+            "debt_to_ebitda": float(self.debt_to_ebitda) if self.debt_to_ebitda else None,
+            "growth_investment_ratio": float(self.growth_investment_ratio) if self.growth_investment_ratio else None,
             # 위험 신호
             "red_flags": self.red_flags or [],
             "yellow_flags": self.yellow_flags or [],

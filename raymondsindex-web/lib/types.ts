@@ -33,11 +33,18 @@ export interface RaymondsIndexResponse {
   capex_cv: number | null;
   violation_count: number;
 
-  // v2.0 신규 지표
-  investment_gap_v2: number | null;
+  // v2.0/v2.1 지표
+  investment_gap_v2: number | null;      // 투자괴리율 v2 (레거시: 재투자율 기반)
+  investment_gap_v21: number | null;     // 투자괴리율 v2.1 ⭐핵심 (현금 CAGR - CAPEX 성장률)
   cash_utilization: number | null;
   industry_sector: string | null;
   weight_adjustment: Record<string, number> | null;
+
+  // v2.1 신규 지표
+  tangible_efficiency: number | null;     // 유형자산 효율성 (매출/유형자산)
+  cash_yield: number | null;              // 현금 수익률 (영업이익/총현금 %)
+  debt_to_ebitda: number | null;          // 부채/EBITDA
+  growth_investment_ratio: number | null; // 성장 투자 비율 (성장CAPEX/총CAPEX %)
 
   // 위험 신호
   red_flags: string[];

@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """
-RaymondsIndex v2.0 배치 계산 스크립트
+RaymondsIndex v2.1 배치 계산 스크립트
 
 financial_details 테이블의 데이터를 기반으로
-raymonds_index 테이블에 v2.0 알고리즘 계산 결과를 저장합니다.
+raymonds_index 테이블에 v2.1 알고리즘 계산 결과를 저장합니다.
 
-v2.0 특징:
+v2.1 특징:
 - Sub-Index 가중치: CEI 20%, RII 35%, CGI 25%, MAI 20%
-- 투자괴리율 v2.0: (초기 2년 재투자율) - (최근 2년 재투자율)
-- 업종별 가중치 조정 지원
+- 투자괴리율 v2.1: 현금 CAGR - CAPEX 성장률 (핵심 변경)
+- 재투자율: CAPEX / OCF (v2.0: CAPEX / 영업이익)
+- 신규 지표: tangible_efficiency, cash_yield, debt_to_ebitda, growth_investment_ratio
+- 등급 기준 완화: A+: 88+, A: 80+, A-: 72+, B+: 64+, B: 55+, B-: 45+, C+: 30+
 
 사용법:
     python scripts/calculate_raymonds_index.py --limit 100  # 100개 회사만
@@ -153,7 +155,7 @@ class RaymondsIndexBatchCalculator:
         return max(min_val, min(max_val, value))
 
     async def save_raymonds_index(self, conn, result_dict: Dict) -> bool:
-        """계산 결과 저장 (v2.0)"""
+        """계산 결과 저장 (v2.1)"""
         try:
             await conn.execute("""
                 INSERT INTO raymonds_index (
@@ -164,9 +166,11 @@ class RaymondsIndexBatchCalculator:
                     asset_turnover, reinvestment_rate, shareholder_return,
                     cash_tangible_ratio, fundraising_utilization, short_term_ratio,
                     capex_trend, roic, capex_cv, violation_count,
-                    -- v2.0 신규 컬럼
-                    investment_gap_v2,
+                    -- v2.0/v2.1 컬럼
+                    investment_gap_v2, investment_gap_v21,
                     cash_utilization, industry_sector, weight_adjustment,
+                    -- v2.1 신규 컬럼
+                    tangible_efficiency, cash_yield, debt_to_ebitda, growth_investment_ratio,
                     red_flags, yellow_flags,
                     verdict, key_risk, recommendation, watch_trigger,
                     data_quality_score, created_at
@@ -179,11 +183,12 @@ class RaymondsIndexBatchCalculator:
                     $14, $15, $16,
                     $17, $18, $19,
                     $20, $21, $22, $23,
-                    $24,
-                    $25, $26, $27,
-                    $28, $29,
-                    $30, $31, $32, $33,
-                    $34, NOW()
+                    $24, $25,
+                    $26, $27, $28,
+                    $29, $30, $31, $32,
+                    $33, $34,
+                    $35, $36, $37, $38,
+                    $39, NOW()
                 )
                 ON CONFLICT (company_id, fiscal_year)
                 DO UPDATE SET
@@ -209,9 +214,14 @@ class RaymondsIndexBatchCalculator:
                     capex_cv = EXCLUDED.capex_cv,
                     violation_count = EXCLUDED.violation_count,
                     investment_gap_v2 = EXCLUDED.investment_gap_v2,
+                    investment_gap_v21 = EXCLUDED.investment_gap_v21,
                     cash_utilization = EXCLUDED.cash_utilization,
                     industry_sector = EXCLUDED.industry_sector,
                     weight_adjustment = EXCLUDED.weight_adjustment,
+                    tangible_efficiency = EXCLUDED.tangible_efficiency,
+                    cash_yield = EXCLUDED.cash_yield,
+                    debt_to_ebitda = EXCLUDED.debt_to_ebitda,
+                    growth_investment_ratio = EXCLUDED.growth_investment_ratio,
                     red_flags = EXCLUDED.red_flags,
                     yellow_flags = EXCLUDED.yellow_flags,
                     verdict = EXCLUDED.verdict,
@@ -244,11 +254,17 @@ class RaymondsIndexBatchCalculator:
                 self._clamp(result_dict.get('roic', 0), -999, 999),  # DECIMAL(6,2)
                 self._clamp(result_dict.get('capex_cv', 0), 0, 9.999),  # DECIMAL(5,3)
                 result_dict.get('violation_count', 0),  # INTEGER
-                # v2.0 신규 지표
+                # v2.0/v2.1 지표
                 self._clamp(result_dict.get('investment_gap_v2', 0), -100, 100),  # DECIMAL(6,2)
+                self._clamp(result_dict.get('investment_gap_v21', 0), -100, 100),  # DECIMAL(6,2) ⭐v2.1 핵심
                 self._clamp(result_dict.get('cash_utilization', 0), 0, 999),  # DECIMAL(5,2)
                 result_dict.get('industry_sector', ''),  # VARCHAR(50)
                 json.dumps(result_dict.get('weight_adjustment', {}), ensure_ascii=False),  # JSONB
+                # v2.1 신규 지표
+                self._clamp(result_dict.get('tangible_efficiency', 0), 0, 999.999),  # DECIMAL(6,3)
+                self._clamp(result_dict.get('cash_yield', 0), -999, 999),  # DECIMAL(6,2)
+                self._clamp(result_dict.get('debt_to_ebitda', 0), 0, 999),  # DECIMAL(6,2)
+                self._clamp(result_dict.get('growth_investment_ratio', 0), 0, 100),  # DECIMAL(5,2)
                 json.dumps(result_dict['red_flags'], ensure_ascii=False),
                 json.dumps(result_dict['yellow_flags'], ensure_ascii=False),
                 result_dict['verdict'],
@@ -277,7 +293,7 @@ class RaymondsIndexBatchCalculator:
             self.stats['total'] = len(companies)
 
             logger.info("=" * 80)
-            logger.info("RaymondsIndex v2.0 배치 계산 시작")
+            logger.info("RaymondsIndex v2.1 배치 계산 시작")
             logger.info("=" * 80)
             logger.info(f"대상 회사: {self.stats['total']}개")
             if target_year:
@@ -319,12 +335,13 @@ class RaymondsIndexBatchCalculator:
 
                     if success:
                         self.stats['saved'] += 1
-                        # v4.0: 위반 개수와 핵심 지표 표시
+                        # v2.1: 위반 개수와 핵심 지표(투자괴리율 v2.1) 표시
                         violation_info = f" [위반:{result.violation_count}]" if result.violation_count > 0 else ""
+                        inv_gap_v21 = result.core_metrics.investment_gap_v21 if result.core_metrics.investment_gap_v21 else 0
                         logger.info(
                             f"[{self.stats['processed']}/{self.stats['total']}] "
                             f"{company['name']}: {result.grade} ({result.total_score:.1f}점){violation_info} "
-                            f"현금-투자비율: {result.core_metrics.cash_tangible_ratio:.1f}:1"
+                            f"투자괴리율:{inv_gap_v21:+.1f}%p"
                         )
 
                 except Exception as e:
@@ -354,12 +371,12 @@ class RaymondsIndexBatchCalculator:
 
 
 async def show_statistics():
-    """통계 조회 (v2.0)"""
+    """통계 조회 (v2.1)"""
     db_url = DATABASE_URL.replace('postgresql+asyncpg://', 'postgresql://')
     conn = await asyncpg.connect(db_url)
 
     try:
-        # v2.0 등급별 분포 (9단계 순서)
+        # v2.1 등급별 분포 (9단계 순서)
         grade_order = ['A++', 'A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C']
         grade_dist = await conn.fetch("""
             SELECT grade, COUNT(*) as cnt
@@ -374,38 +391,44 @@ async def show_statistics():
                 END
         """)
 
-        logger.info("\n[RaymondsIndex v2.0 등급 분포]")
+        logger.info("\n[RaymondsIndex v2.1 등급 분포]")
         for row in grade_dist:
             logger.info(f"  {row['grade']}: {row['cnt']:,}건")
 
-        # 점수 통계 (v2.0 신규 지표 포함)
+        # 점수 통계 (v2.1 신규 지표 포함)
         stats = await conn.fetchrow("""
             SELECT
                 COUNT(*) as total,
                 ROUND(AVG(total_score)::numeric, 2) as avg_score,
                 ROUND(MIN(total_score)::numeric, 2) as min_score,
                 ROUND(MAX(total_score)::numeric, 2) as max_score,
-                ROUND(AVG(investment_gap_v2)::numeric, 2) as avg_inv_gap_v2,
+                ROUND(AVG(investment_gap_v21)::numeric, 2) as avg_inv_gap_v21,
                 ROUND(AVG(cash_utilization)::numeric, 2) as avg_cash_util,
+                ROUND(AVG(tangible_efficiency)::numeric, 3) as avg_tangible_eff,
+                ROUND(AVG(cash_yield)::numeric, 2) as avg_cash_yield,
                 SUM(CASE WHEN violation_count > 0 THEN 1 ELSE 0 END) as violation_companies
             FROM raymonds_index
         """)
 
         if stats:
-            logger.info("\n[점수 통계 (v2.0)]")
+            logger.info("\n[점수 통계 (v2.1)]")
             logger.info(f"  총 레코드: {stats['total']:,}건")
             logger.info(f"  평균 점수: {stats['avg_score']}")
             logger.info(f"  점수 범위: {stats['min_score']} ~ {stats['max_score']}")
-            if stats['avg_inv_gap_v2']:
-                logger.info(f"  평균 투자괴리율 v2: {stats['avg_inv_gap_v2']}%p")
+            if stats['avg_inv_gap_v21']:
+                logger.info(f"  평균 투자괴리율 v2.1: {stats['avg_inv_gap_v21']}%p")
             if stats['avg_cash_util']:
                 logger.info(f"  평균 현금 활용도: {stats['avg_cash_util']}%")
+            if stats['avg_tangible_eff']:
+                logger.info(f"  평균 유형자산 효율성: {stats['avg_tangible_eff']}")
+            if stats['avg_cash_yield']:
+                logger.info(f"  평균 현금 수익률: {stats['avg_cash_yield']}%")
             logger.info(f"  특별규칙 위반 기업: {stats['violation_companies']}개")
 
-        # Top 10 (v2.0)
+        # Top 10 (v2.1)
         top10 = await conn.fetch("""
             SELECT
-                ri.total_score, ri.grade, ri.investment_gap_v2, ri.violation_count,
+                ri.total_score, ri.grade, ri.investment_gap_v21, ri.violation_count,
                 c.name, c.market
             FROM raymonds_index ri
             JOIN companies c ON c.id = ri.company_id
@@ -413,10 +436,10 @@ async def show_statistics():
             LIMIT 10
         """)
 
-        logger.info("\n[Top 10 기업 (v2.0)]")
+        logger.info("\n[Top 10 기업 (v2.1)]")
         for i, row in enumerate(top10, 1):
             violation_info = f" [위반:{row['violation_count']}]" if row['violation_count'] and row['violation_count'] > 0 else ""
-            inv_gap = row['investment_gap_v2'] if row['investment_gap_v2'] is not None else 0
+            inv_gap = row['investment_gap_v21'] if row['investment_gap_v21'] is not None else 0
             logger.info(
                 f"  {i}. {row['name']} ({row['market']}): "
                 f"{row['grade']} ({row['total_score']:.1f}점){violation_info} "
