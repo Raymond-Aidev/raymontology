@@ -358,9 +358,35 @@ origins = [
 | 조달자금 전환율 | 조달한 자금 대비 투자 전환 비율입니다. 30% 미만이면 조달금을 목적대로 사용하지 않는 위험 신호입니다. |
 | CAPEX 변동계수 | 투자의 일관성을 측정합니다. 변동이 크면 투자 계획이 불안정하고 예측 가능성이 낮습니다. |
 
-#### 빌드 상태
+#### Phase 4: 배치 스크립트 SQL 쿼리 버그 수정
+
+수정 파일: `backend/scripts/calculate_raymonds_index.py`
+
+**문제**: `get_financial_data()` 함수의 SQL 쿼리에서 투자괴리율 v2 계산에 필요한 4개 컬럼이 누락되어 있었음
+
+**추가된 컬럼:**
+- `right_of_use_assets` (사용권자산)
+- `investments_in_associates` (관계기업투자)
+- `fvpl_financial_assets` (장기금융상품)
+- `other_financial_assets_non_current` (기타금융자산-비유동)
+
+**영향**: 이 컬럼들이 없어서 `_calculate_investment_gap_v2()` 함수가 모든 값을 0으로 처리하던 버그 수정
+
+#### Phase 5: HTTPS 보안 헤더 추가
+
+수정 파일: `raymondsindex-web/next.config.ts`
+
+**추가된 보안 헤더:**
+- `Strict-Transport-Security`: 1년간 HTTPS 강제
+- `Content-Security-Policy`: upgrade-insecure-requests
+- `X-Frame-Options`: DENY (클릭재킹 방지)
+- `X-Content-Type-Options`: nosniff
+- `X-XSS-Protection`: 1; mode=block
+
+#### 빌드 및 배치 상태
 
 - [x] 프론트엔드 빌드 성공 (`npm run build`)
+- [x] 배치 재계산 완료 (2025-12-28 11:27, 2,695개 기업)
 
 ---
 
