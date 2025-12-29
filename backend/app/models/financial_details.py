@@ -97,6 +97,12 @@ class FinancialDetails(Base):
     operating_income = Column(BigInteger, nullable=True)          # 영업이익
     net_income = Column(BigInteger, nullable=True)                # 당기순이익
 
+    # --- v2.0 신규 손익 항목 ---
+    r_and_d_expense = Column(BigInteger, nullable=True)           # 연구개발비
+    depreciation_expense = Column(BigInteger, nullable=True)      # 감가상각비
+    interest_expense = Column(BigInteger, nullable=True)          # 이자비용
+    tax_expense = Column(BigInteger, nullable=True)               # 법인세비용
+
     # ═══════════════════════════════════════════════════════════════
     # 현금흐름표 (Cash Flow Statement) - RaymondsIndex 핵심
     # ═══════════════════════════════════════════════════════════════

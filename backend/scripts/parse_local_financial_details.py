@@ -188,6 +188,30 @@ class LocalDARTFinancialParser:
         ],
 
         # ═══════════════════════════════════════════════════════════════
+        # 손익계산서 - v2.0 신규 항목 (R&D, 감가상각, 이자, 법인세)
+        # ═══════════════════════════════════════════════════════════════
+        'r_and_d_expense': [
+            '연구개발비', '연구비', '개발비', '경상연구개발비',
+            '연구및개발비', 'R&D비용', '연구개발관련비용',
+            '경상개발비', '연구개발비용', '연구개발활동비'
+        ],
+        'depreciation_expense': [
+            '감가상각비', '감가상각비용', '유형자산감가상각비',
+            '사용권자산감가상각비', '무형자산상각비', '상각비',
+            '감가상각및상각비', '감가상각비 및 상각비', '감가상각누계액'
+        ],
+        'interest_expense': [
+            '이자비용', '금융비용', '이자지급', '차입금이자',
+            '사채이자', '금융원가', '이자비용(금융비용)',
+            '금융이자비용', '차입금이자비용'
+        ],
+        'tax_expense': [
+            '법인세비용', '법인세', '소득세비용',
+            '법인세비용(수익)', '당기법인세비용', '법인세등',
+            '법인세비용(이익)', '계속사업법인세비용'
+        ],
+
+        # ═══════════════════════════════════════════════════════════════
         # 현금흐름표 (Cash Flow Statement) - RaymondsIndex 핵심
         # ═══════════════════════════════════════════════════════════════
         'operating_cash_flow': [
@@ -618,6 +642,8 @@ class FinancialDetailsCollectorLocal:
                     -- 손익계산서
                     revenue, cost_of_sales, selling_admin_expenses,
                     operating_income, net_income,
+                    -- 손익계산서 v2.0 신규
+                    r_and_d_expense, depreciation_expense, interest_expense, tax_expense,
                     -- 현금흐름표
                     operating_cash_flow, investing_cash_flow, financing_cash_flow,
                     capex, intangible_acquisition, dividend_paid,
@@ -631,8 +657,9 @@ class FinancialDetailsCollectorLocal:
                     $13, $14, $15, $16, $17, $18, $19, $20, $21, $22,
                     $23, $24, $25, $26, $27,
                     $28, $29, $30, $31, $32,
-                    $33, $34, $35, $36, $37, $38, $39, $40, $41,
-                    $42, $43, $44, NOW(), NOW()
+                    $33, $34, $35, $36,
+                    $37, $38, $39, $40, $41, $42, $43, $44, $45,
+                    $46, $47, $48, NOW(), NOW()
                 )
                 ON CONFLICT (company_id, fiscal_year, fiscal_quarter, fs_type)
                 DO UPDATE SET
@@ -664,6 +691,10 @@ class FinancialDetailsCollectorLocal:
                     selling_admin_expenses = COALESCE(EXCLUDED.selling_admin_expenses, financial_details.selling_admin_expenses),
                     operating_income = COALESCE(EXCLUDED.operating_income, financial_details.operating_income),
                     net_income = COALESCE(EXCLUDED.net_income, financial_details.net_income),
+                    r_and_d_expense = COALESCE(EXCLUDED.r_and_d_expense, financial_details.r_and_d_expense),
+                    depreciation_expense = COALESCE(EXCLUDED.depreciation_expense, financial_details.depreciation_expense),
+                    interest_expense = COALESCE(EXCLUDED.interest_expense, financial_details.interest_expense),
+                    tax_expense = COALESCE(EXCLUDED.tax_expense, financial_details.tax_expense),
                     operating_cash_flow = COALESCE(EXCLUDED.operating_cash_flow, financial_details.operating_cash_flow),
                     investing_cash_flow = COALESCE(EXCLUDED.investing_cash_flow, financial_details.investing_cash_flow),
                     financing_cash_flow = COALESCE(EXCLUDED.financing_cash_flow, financial_details.financing_cash_flow),
@@ -711,6 +742,11 @@ class FinancialDetailsCollectorLocal:
                 data.get('selling_admin_expenses'),
                 data.get('operating_income'),
                 data.get('net_income'),
+                # 손익계산서 v2.0 신규
+                data.get('r_and_d_expense'),
+                data.get('depreciation_expense'),
+                data.get('interest_expense'),
+                data.get('tax_expense'),
                 # 현금흐름표
                 data.get('operating_cash_flow'),
                 data.get('investing_cash_flow'),

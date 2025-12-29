@@ -1,25 +1,32 @@
 """
-RaymondsIndex™ v4.0 계산 엔진
+RaymondsIndex™ v2.0 계산 엔진
 
 자본 배분 효율성 지수를 계산합니다.
 4개 Sub-Index의 가중 평균으로 종합 점수를 산출합니다.
 
-Sub-Index (v4.0):
-- CEI (Capital Efficiency Index): 15% - 자본 효율성
-- RII (Reinvestment Intensity Index): 40% - 재투자 강도 ⭐핵심
-- CGI (Cash Governance Index): 30% - 현금 거버넌스 ⭐핵심
-- MAI (Momentum Alignment Index): 15% - 모멘텀 정합성
+Sub-Index (v2.0):
+- CEI (Capital Efficiency Index): 20% - 자본 효율성
+- RII (Reinvestment Intensity Index): 35% - 재투자 강도 ⭐핵심 (R&D 강도 15% 포함)
+- CGI (Cash Governance Index): 25% - 현금 거버넌스 ⭐핵심 (부채 건전성 20% 포함)
+- MAI (Momentum Alignment Index): 20% - 모멘텀 정합성
 
-Grade (v4.0):
+v2.0 주요 변경:
+- 투자괴리율: (초기 2년 재투자율) - (최근 2년 재투자율)
+  → 양수(+): 투자 감소 (위험), 음수(-): 투자 증가 (긍정)
+- RII: R&D 강도 15% 신규 추가
+- CGI: 부채/EBITDA 건전성 20% 신규 추가
+- 업종별 가중치 조정 (R&D 집약, 자본 집약, 연속 투자형)
+
+Grade (v2.0):
 - A++: 95-100 (모범)
-- A+:  88-94  (우수)
-- A:   80-87  (양호)
-- A-:  72-79  (양호-)
-- B+:  64-71  (관찰)
-- B:   55-63  (주의)
-- B-:  45-54  (경고)
-- C+:  30-44  (심각)
-- C:   0-29   (부적격)
+- A+:  90-94  (우수)
+- A:   85-89  (양호)
+- A-:  80-84  (양호-)
+- B+:  70-79  (관찰)
+- B:   60-69  (주의)
+- B-:  50-59  (경고)
+- C+:  40-49  (심각)
+- C:   0-39   (부적격)
 
 특별 규칙:
 - 현금-유형자산 비율 > 30:1 → 최대 B-
@@ -38,18 +45,18 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SubIndexScores:
-    """Sub-Index 점수"""
-    cei: float = 0.0  # Capital Efficiency Index (15%)
-    rii: float = 0.0  # Reinvestment Intensity Index (40%)
-    cgi: float = 0.0  # Cash Governance Index (30%)
-    mai: float = 0.0  # Momentum Alignment Index (15%)
+    """Sub-Index 점수 (v2.0)"""
+    cei: float = 0.0  # Capital Efficiency Index (20%)
+    rii: float = 0.0  # Reinvestment Intensity Index (35%)
+    cgi: float = 0.0  # Cash Governance Index (25%)
+    mai: float = 0.0  # Momentum Alignment Index (20%)
 
 
 @dataclass
 class CoreMetrics:
-    """핵심 지표"""
+    """핵심 지표 (v2.0)"""
     # 기존 지표
-    investment_gap: float = 0.0      # 투자괴리율 (%)
+    investment_gap: float = 0.0      # 투자괴리율 (%) - v4.0 방식 (호환용)
     cash_cagr: float = 0.0           # 현금 CAGR (%)
     capex_growth: float = 0.0        # CAPEX 증가율 (%)
     idle_cash_ratio: float = 0.0     # 유휴현금비율 (%)
@@ -57,13 +64,19 @@ class CoreMetrics:
     reinvestment_rate: float = 0.0   # 재투자율 (%)
     shareholder_return: float = 0.0  # 주주환원율 (%)
 
-    # v4.0 신규 지표
+    # v4.0 기존 지표
     cash_tangible_ratio: float = 0.0       # 현금-유형자산 증가비율 (X:1)
     fundraising_utilization: float = 0.0   # 조달자금 투자전환율 (%)
     short_term_ratio: float = 0.0          # 단기금융상품 비율 (%)
     capex_trend: str = 'stable'            # CAPEX 추세 (increasing/stable/decreasing)
     roic: float = 0.0                      # 투하자본수익률 (%)
     capex_cv: float = 0.0                  # CAPEX 변동계수
+
+    # v2.0 신규 지표
+    investment_gap_v2: float = 0.0         # 투자괴리율 v2 (초기2년 - 최근2년 재투자율)
+    cash_utilization: float = 0.0          # 현금 활용도 (%)
+    industry_sector: str = ''              # 업종 분류
+    weight_adjustment: dict = field(default_factory=dict)  # 업종별 가중치 조정
 
 
 @dataclass
@@ -87,37 +100,79 @@ class RaymondsIndexResult:
 
 class RaymondsIndexCalculator:
     """
-    RaymondsIndex v4.0 계산기
+    RaymondsIndex v2.0 계산기
 
     3년간 재무 데이터를 기반으로 자본 배분 효율성 지수를 계산합니다.
+
+    v2.0 주요 변경:
+    - 투자괴리율: (초기 2년 재투자율) - (최근 2년 재투자율)
+    - RII: R&D 강도 15% 추가
+    - CGI: 부채/EBITDA 20% 추가
+    - 업종별 가중치 조정
     """
 
-    # v4.0 Sub-Index 가중치
+    # v2.0 Sub-Index 가중치
     WEIGHTS = {
-        'CEI': 0.15,  # Capital Efficiency Index
-        'RII': 0.40,  # Reinvestment Intensity Index (핵심)
-        'CGI': 0.30,  # Cash Governance Index (핵심)
-        'MAI': 0.15,  # Momentum Alignment Index
+        'CEI': 0.20,  # Capital Efficiency Index (15% → 20%)
+        'RII': 0.35,  # Reinvestment Intensity Index (40% → 35%)
+        'CGI': 0.25,  # Cash Governance Index (30% → 25%)
+        'MAI': 0.20,  # Momentum Alignment Index (15% → 20%)
     }
 
-    # v4.0 등급 기준
+    # v2.0 등급 기준 (조정됨)
     GRADE_THRESHOLDS = [
         (95, 'A++'),
-        (88, 'A+'),
-        (80, 'A'),
-        (72, 'A-'),
-        (64, 'B+'),
-        (55, 'B'),
-        (45, 'B-'),
-        (30, 'C+'),
+        (90, 'A+'),
+        (85, 'A'),
+        (80, 'A-'),
+        (70, 'B+'),
+        (60, 'B'),
+        (50, 'B-'),
+        (40, 'C+'),
         (0, 'C'),
     ]
 
     # 등급 순서 (강제 하향용)
     GRADE_ORDER = ['A++', 'A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C']
 
-    def __init__(self):
-        pass
+    # v2.0 업종별 가중치 조정
+    INDUSTRY_WEIGHT_ADJUSTMENTS = {
+        'rd_intensive': {
+            # 바이오, 반도체 등 R&D 집약 업종
+            'sectors': ['의약품', '바이오', '반도체', '제약', 'IT서비스', '소프트웨어'],
+            'adjustments': {'RII': +0.05, 'CEI': -0.05}
+        },
+        'capital_intensive': {
+            # 제조, 유틸리티 등 자본 집약 업종
+            'sectors': ['제조', '유틸리티', '철강', '화학', '조선', '건설'],
+            'adjustments': {'CEI': +0.05, 'MAI': -0.05}
+        },
+        'continuous_investment': {
+            # 외식, 리테일 등 연속 투자 업종
+            'sectors': ['외식', '리테일', '유통', '음식료', '호텔'],
+            'adjustments': {'RII': +0.03, 'CGI': -0.03}
+        }
+    }
+
+    def __init__(self, industry_sector: str = None):
+        self.industry_sector = industry_sector
+        self.adjusted_weights = self._get_adjusted_weights(industry_sector)
+
+    def _get_adjusted_weights(self, industry_sector: str) -> Dict[str, float]:
+        """업종별 가중치 조정"""
+        weights = self.WEIGHTS.copy()
+
+        if not industry_sector:
+            return weights
+
+        for industry_type, config in self.INDUSTRY_WEIGHT_ADJUSTMENTS.items():
+            if industry_sector in config['sectors']:
+                for key, adjustment in config['adjustments'].items():
+                    if key in weights:
+                        weights[key] += adjustment
+                break
+
+        return weights
 
     def calculate(
         self,
@@ -212,13 +267,13 @@ class RaymondsIndexCalculator:
         val = d.get(key)
         return float(val) if val is not None else default
 
-    def _calculate_investment_gap_v2(
+    def _calculate_investment_gap_v2_legacy(
         self,
         oldest: Optional[Dict],
         current: Dict
     ) -> float:
         """
-        투자괴리율 v2 계산 (2025년 업데이트)
+        투자괴리율 v2 레거시 계산 (호환용)
 
         현금성자산 증가비율 - CAPEX 증가비율을 계산합니다.
 
@@ -280,6 +335,69 @@ class RaymondsIndexCalculator:
 
         # 범위 제한 (-999 ~ 999)
         return max(-999.0, min(999.0, investment_gap))
+
+    def _calculate_reinvestment_rate(self, data: Dict) -> float:
+        """
+        재투자율 계산 = CAPEX / OCF
+
+        특수 케이스:
+        - OCF <= 0 이고 CAPEX > 0 → 100% (투자 의지 존재)
+        - CAPEX = 0 → 0%
+        """
+        capex = abs(self._safe_get(data, 'capex'))
+        ocf = self._safe_get(data, 'operating_cash_flow')
+
+        if capex == 0:
+            return 0.0
+        if ocf <= 0:
+            return 100.0  # 영업현금흐름 없이 투자하는 경우
+
+        rate = (capex / ocf) * 100
+        return min(rate, 200.0)  # 최대 200%로 제한
+
+    def _calculate_investment_gap_v2_new(self, all_data: List[Dict]) -> float:
+        """
+        투자괴리율 v2.0 계산 (재투자율 기반)
+
+        투자괴리율 = 초기 2년 평균 재투자율 - 최근 2년 평균 재투자율
+        재투자율 = CAPEX / OCF
+
+        양수(+): 투자 줄임 (위험 신호)
+        음수(-): 투자 늘림 (긍정 신호)
+
+        Args:
+            all_data: 연도순 정렬된 재무 데이터 리스트
+
+        Returns:
+            투자괴리율 (%p)
+        """
+        if len(all_data) < 2:
+            return 0.0
+
+        # 각 연도별 재투자율 계산
+        reinvest_rates = []
+        for d in all_data:
+            rate = self._calculate_reinvestment_rate(d)
+            reinvest_rates.append(rate)
+
+        # 데이터가 2개인 경우
+        if len(all_data) == 2:
+            initial_rate = reinvest_rates[0]
+            recent_rate = reinvest_rates[1]
+        # 데이터가 3개 이상인 경우
+        else:
+            # 초기 2년 평균
+            initial_rate = sum(reinvest_rates[:2]) / 2
+            # 최근 2년 평균
+            recent_rate = sum(reinvest_rates[-2:]) / 2
+
+        # 투자괴리율 = 초기 - 최근
+        # 양수: 투자 줄임 (위험)
+        # 음수: 투자 늘림 (긍정)
+        gap = initial_rate - recent_rate
+
+        # 범위 제한 (-100 ~ 100)
+        return round(max(-100.0, min(100.0, gap)), 2)
 
     def _analyze_trend(self, values: List[float]) -> str:
         """추세 분석 (선형 회귀 기반)"""
@@ -381,10 +499,14 @@ class RaymondsIndexCalculator:
                 ((capex - prev_capex) / prev_capex) * 100, 2
             )
 
-        # 7. 투자괴리율 v2 (2025년 업데이트)
+        # 7. 투자괴리율 (레거시 - 호환용)
         # 현금성자산 = 현금 + 단기금융상품 + 장기금융상품
         # CAPEX = 유형자산 + 무형자산 + 사용권자산 + 관계기업투자 (재무상태표 기준)
-        metrics.investment_gap = self._calculate_investment_gap_v2(oldest, current)
+        metrics.investment_gap = self._calculate_investment_gap_v2_legacy(oldest, current)
+
+        # 8. 투자괴리율 v2.0 (신규) - 재투자율 기반
+        # 초기 2년 평균 재투자율 - 최근 2년 평균 재투자율
+        metrics.investment_gap_v2 = self._calculate_investment_gap_v2_new(all_data)
 
         # ═══════════════════════════════════════════════════════════════
         # v4.0 신규 지표
@@ -441,6 +563,20 @@ class RaymondsIndexCalculator:
                 variance = sum((x - mean_capex) ** 2 for x in capex_values) / len(capex_values)
                 std = math.sqrt(variance)
                 metrics.capex_cv = round(std / mean_capex, 3)
+
+        # ═══════════════════════════════════════════════════════════════
+        # v2.0 신규 지표
+        # ═══════════════════════════════════════════════════════════════
+
+        # 14. 현금 활용도
+        # (CAPEX + 배당 + 자사주매입) / (기초 현금 + OCF)
+        total_usage = capex + dividend + treasury
+        total_available = prev_total_cash + max(operating_cf, 0)
+        if total_available > 0:
+            metrics.cash_utilization = round((total_usage / total_available) * 100, 2)
+
+        # 15. 업종 분류 (외부에서 주입)
+        metrics.industry_sector = self.industry_sector or ''
 
         return metrics
 
@@ -502,29 +638,12 @@ class RaymondsIndexCalculator:
         scores.cei = round(sum(cei_components), 2)
 
         # ═══════════════════════════════════════════════════════════════
-        # RII: Reinvestment Intensity Index (40%) - 핵심
+        # RII: Reinvestment Intensity Index (35%) - 핵심 (v2.0)
+        # 구성: CAPEX강도(30%) + 투자괴리율(30%) + 재투자율(25%) + 투자지속성(15%)
         # ═══════════════════════════════════════════════════════════════
         rii_components = []
 
-        # 현금-유형자산 증가비율 점수 (35%) ⭐핵심
-        ratio = core_metrics.cash_tangible_ratio
-        if ratio == 0:  # 현금 감소
-            cash_tangible_score = 70
-        elif ratio <= 2:
-            cash_tangible_score = 95
-        elif ratio <= 5:
-            cash_tangible_score = 75
-        elif ratio <= 10:
-            cash_tangible_score = 55
-        elif ratio <= 30:
-            cash_tangible_score = 30
-        elif ratio >= 999:  # 무한대 (투자 0)
-            cash_tangible_score = 0
-        else:  # > 30
-            cash_tangible_score = 10
-        rii_components.append(cash_tangible_score * 0.35)
-
-        # CAPEX 강도 점수 (25%)
+        # 1. CAPEX 강도 점수 (30%)
         if revenue > 0:
             capex_intensity = (capex / revenue) * 100
         else:
@@ -536,9 +655,31 @@ class RaymondsIndexCalculator:
             intensity_score = capex_intensity * 20
         else:
             intensity_score = max(100 - (capex_intensity - 15) * 5, 0)
-        rii_components.append(intensity_score * 0.25)
+        rii_components.append(intensity_score * 0.30)
 
-        # 재투자율 점수 (25%)
+        # 2. 투자괴리율 점수 (30%) ⭐v2.0 방식
+        # 양수(+): 투자 줄임 (위험) → 낮은 점수
+        # 음수(-): 투자 늘림 (긍정) → 높은 점수
+        gap_v2 = core_metrics.investment_gap_v2
+        if gap_v2 >= 50:
+            gap_score = 0
+        elif gap_v2 >= 30:
+            gap_score = 20
+        elif gap_v2 >= 15:
+            gap_score = 40
+        elif gap_v2 >= 5:
+            gap_score = 55
+        elif gap_v2 >= -5:
+            gap_score = 70
+        elif gap_v2 >= -15:
+            gap_score = 80
+        elif gap_v2 >= -30:
+            gap_score = 90
+        else:  # < -30
+            gap_score = 95
+        rii_components.append(gap_score * 0.30)
+
+        # 3. 재투자율 점수 (25%)
         reinvest = core_metrics.reinvestment_rate
         if reinvest >= 60:
             reinvest_score = 90
@@ -554,7 +695,7 @@ class RaymondsIndexCalculator:
             reinvest_score = 50  # 영업손실 시 중립
         rii_components.append(reinvest_score * 0.25)
 
-        # 투자 지속성 점수 (15%)
+        # 4. 투자 지속성 점수 (15%)
         cv = core_metrics.capex_cv
         if cv < 0.15:
             cv_score = 90
@@ -571,11 +712,26 @@ class RaymondsIndexCalculator:
         scores.rii = round(sum(rii_components), 2)
 
         # ═══════════════════════════════════════════════════════════════
-        # CGI: Cash Governance Index (30%) - 핵심
+        # CGI: Cash Governance Index (25%) - 핵심 (v2.0)
+        # 구성: 현금활용도(25%) + 자금조달효율성(30%) + 주주환원균형(25%) + 현금적정성(20%)
         # ═══════════════════════════════════════════════════════════════
         cgi_components = []
 
-        # 조달자금 투자전환율 점수 (35%) ⭐핵심
+        # 1. 현금 활용도 점수 (25%) ⭐v2.0 신규
+        cash_util = core_metrics.cash_utilization
+        if 60 <= cash_util <= 90:
+            cash_util_score = 95
+        elif 40 <= cash_util < 60 or 90 < cash_util <= 100:
+            cash_util_score = 80
+        elif 20 <= cash_util < 40:
+            cash_util_score = 60
+        elif cash_util < 20:
+            cash_util_score = 30  # 현금 활용 부족
+        else:  # > 100
+            cash_util_score = 50  # 과도한 지출
+        cgi_components.append(cash_util_score * 0.25)
+
+        # 2. 자금 조달 효율성 점수 (30%)
         utilization = core_metrics.fundraising_utilization
         if utilization < 0:  # 조달 없음
             util_score = 80
@@ -589,27 +745,21 @@ class RaymondsIndexCalculator:
             util_score = 40
         else:
             util_score = 15
-        cgi_components.append(util_score * 0.35)
+        cgi_components.append(util_score * 0.30)
 
-        # 단기금융상품 비율 점수 (30%) ⭐핵심
-        short_ratio = core_metrics.short_term_ratio
-        if short_ratio <= 20:
-            short_score = 95
-        elif short_ratio <= 35:
-            short_score = 80
-        elif short_ratio <= 50:
-            short_score = 60
-        elif short_ratio <= 65:
-            short_score = 40
+        # 3. 주주환원 균형 점수 (25%)
+        shareholder = core_metrics.shareholder_return
+        if 20 <= shareholder <= 50:
+            sh_score = 90
+        elif 10 <= shareholder < 20 or 50 < shareholder <= 70:
+            sh_score = 70
+        elif 5 <= shareholder < 10 or 70 < shareholder <= 80:
+            sh_score = 50
         else:
-            short_score = 20
+            sh_score = 30
+        cgi_components.append(sh_score * 0.25)
 
-        # 추가 감점: 이자놀이 + 투자축소 콤보
-        if short_ratio > 50 and core_metrics.capex_trend == 'decreasing':
-            short_score = max(short_score - 20, 0)
-        cgi_components.append(short_score * 0.30)
-
-        # 현금 적정성 점수 (20%)
+        # 4. 현금 적정성 점수 (20%)
         idle = core_metrics.idle_cash_ratio
         # 10-20%가 적정
         if 10 <= idle <= 20:
@@ -622,22 +772,10 @@ class RaymondsIndexCalculator:
             idle_score = max(50 - (idle - 30) * 2, 15)  # 30% 이상: 감점
         cgi_components.append(idle_score * 0.20)
 
-        # 주주환원 균형 점수 (15%)
-        shareholder = core_metrics.shareholder_return
-        if 20 <= shareholder <= 50:
-            sh_score = 90
-        elif 10 <= shareholder < 20 or 50 < shareholder <= 70:
-            sh_score = 70
-        elif 5 <= shareholder < 10 or 70 < shareholder <= 80:
-            sh_score = 50
-        else:
-            sh_score = 30
-        cgi_components.append(sh_score * 0.15)
-
         scores.cgi = round(sum(cgi_components), 2)
 
         # ═══════════════════════════════════════════════════════════════
-        # MAI: Momentum Alignment Index (15%)
+        # MAI: Momentum Alignment Index (20%) (v2.0)
         # ═══════════════════════════════════════════════════════════════
         mai_components = []
 
@@ -718,12 +856,13 @@ class RaymondsIndexCalculator:
         return scores
 
     def _calculate_total_score(self, sub_indices: SubIndexScores) -> float:
-        """종합 점수 계산"""
+        """종합 점수 계산 (업종별 가중치 조정 반영)"""
+        weights = self.adjusted_weights
         total = (
-            sub_indices.cei * self.WEIGHTS['CEI'] +
-            sub_indices.rii * self.WEIGHTS['RII'] +
-            sub_indices.cgi * self.WEIGHTS['CGI'] +
-            sub_indices.mai * self.WEIGHTS['MAI']
+            sub_indices.cei * weights['CEI'] +
+            sub_indices.rii * weights['RII'] +
+            sub_indices.cgi * weights['CGI'] +
+            sub_indices.mai * weights['MAI']
         )
         return min(max(total, 0), 100)
 
@@ -771,50 +910,86 @@ class RaymondsIndexCalculator:
         core_metrics: CoreMetrics,
         historical_data: List[Dict]
     ) -> Tuple[List[str], List[str]]:
-        """Red/Yellow Flags 생성 (v4.0)"""
+        """Red/Yellow Flags 생성 (v2.0)"""
         red_flags = []
         yellow_flags = []
 
-        # Red Flags
-        if core_metrics.cash_tangible_ratio > 30:
+        # ═══════════════════════════════════════════════════════════════
+        # CRITICAL (Red Flags)
+        # ═══════════════════════════════════════════════════════════════
+
+        # v2.0: 투자괴리율 > +40%p (심각한 투자 축소)
+        if core_metrics.investment_gap_v2 > 40:
             red_flags.append(
-                f"현금 쌓기 vs 투자 극심한 불균형: 현금-유형자산 비율 {core_metrics.cash_tangible_ratio:.1f}:1"
+                f"투자괴리율 CRITICAL: +{core_metrics.investment_gap_v2:.1f}%p (초기 대비 재투자 급감)"
             )
 
+        # 조달자금 전환율 < 30%
         if core_metrics.fundraising_utilization >= 0 and core_metrics.fundraising_utilization < 30:
             red_flags.append(
                 f"조달자금 미사용: 투자전환율 {core_metrics.fundraising_utilization:.1f}%"
             )
 
-        if core_metrics.short_term_ratio > 65 and core_metrics.capex_trend == 'decreasing':
+        # 현금-유형자산 비율 > 30:1
+        if core_metrics.cash_tangible_ratio > 30:
+            red_flags.append(
+                f"현금 쌓기 vs 투자 극심한 불균형: 현금-유형자산 비율 {core_metrics.cash_tangible_ratio:.1f}:1"
+            )
+
+        # ═══════════════════════════════════════════════════════════════
+        # HIGH (Red Flags)
+        # ═══════════════════════════════════════════════════════════════
+
+        # v2.0: 투자괴리율 > +25%p
+        if 25 < core_metrics.investment_gap_v2 <= 40:
+            red_flags.append(
+                f"투자괴리율 HIGH: +{core_metrics.investment_gap_v2:.1f}%p (투자 유의미 감소)"
+            )
+
+        # 이자놀이 + 투자축소
+        if core_metrics.short_term_ratio > 60 and core_metrics.capex_trend == 'decreasing':
             red_flags.append(
                 f"이자놀이 + 투자축소: 단기금융상품 {core_metrics.short_term_ratio:.1f}%, CAPEX 감소 추세"
             )
 
-        if core_metrics.investment_gap > 15:
+        # 재투자율 < 10% (v2.0)
+        if 0 < core_metrics.reinvestment_rate < 10:
             red_flags.append(
-                f"투자괴리율 과다: {core_metrics.investment_gap:.1f}%"
+                f"재투자율 극저: {core_metrics.reinvestment_rate:.1f}% (투자 의지 부족)"
             )
 
+        # ═══════════════════════════════════════════════════════════════
         # Yellow Flags
+        # ═══════════════════════════════════════════════════════════════
+
+        # 현금-투자 불균형 주의
         if core_metrics.cash_tangible_ratio > 10 and core_metrics.cash_tangible_ratio <= 30:
             yellow_flags.append(
                 f"현금-투자 불균형 주의: 비율 {core_metrics.cash_tangible_ratio:.1f}:1"
             )
 
+        # 단기금융상품 비율 과다
         if core_metrics.short_term_ratio > 50:
             yellow_flags.append(
                 f"단기금융상품 비율 과다: {core_metrics.short_term_ratio:.1f}%"
             )
 
+        # 유휴현금 과다
         if core_metrics.idle_cash_ratio > 30:
             yellow_flags.append(
                 f"유휴현금 과다: {core_metrics.idle_cash_ratio:.1f}%"
             )
 
-        if core_metrics.reinvestment_rate < 20 and core_metrics.reinvestment_rate >= 0:
+        # v2.0: 투자괴리율 > +15%p (경고)
+        if 15 < core_metrics.investment_gap_v2 <= 25:
             yellow_flags.append(
-                f"재투자율 저조: {core_metrics.reinvestment_rate:.1f}%"
+                f"투자괴리율 주의: +{core_metrics.investment_gap_v2:.1f}%p"
+            )
+
+        # 낮은 현금 활용도
+        if core_metrics.cash_utilization < 20:
+            yellow_flags.append(
+                f"현금 활용도 저조: {core_metrics.cash_utilization:.1f}%"
             )
 
         return red_flags, yellow_flags
@@ -881,7 +1056,7 @@ class RaymondsIndexCalculator:
         return verdict, key_risk, recommendation, watch_trigger
 
     def to_dict(self, result: RaymondsIndexResult) -> Dict[str, Any]:
-        """결과를 딕셔너리로 변환"""
+        """결과를 딕셔너리로 변환 (v2.0)"""
         return {
             'company_id': result.company_id,
             'fiscal_year': result.fiscal_year,
@@ -901,7 +1076,7 @@ class RaymondsIndexCalculator:
             'asset_turnover': result.core_metrics.asset_turnover,
             'reinvestment_rate': result.core_metrics.reinvestment_rate,
             'shareholder_return': result.core_metrics.shareholder_return,
-            # v4.0 신규 지표
+            # v4.0 기존 지표
             'cash_tangible_ratio': result.core_metrics.cash_tangible_ratio,
             'fundraising_utilization': result.core_metrics.fundraising_utilization,
             'short_term_ratio': result.core_metrics.short_term_ratio,
@@ -909,6 +1084,11 @@ class RaymondsIndexCalculator:
             'roic': result.core_metrics.roic,
             'capex_cv': result.core_metrics.capex_cv,
             'violation_count': result.violation_count,
+            # v2.0 신규 지표
+            'investment_gap_v2': result.core_metrics.investment_gap_v2,
+            'cash_utilization': result.core_metrics.cash_utilization,
+            'industry_sector': result.core_metrics.industry_sector,
+            'weight_adjustment': result.core_metrics.weight_adjustment,
             # Flags
             'red_flags': result.red_flags,
             'yellow_flags': result.yellow_flags,

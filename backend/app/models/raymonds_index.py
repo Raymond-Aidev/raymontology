@@ -12,14 +12,18 @@ from app.database import Base
 
 class RaymondsIndex(Base):
     """
-    RaymondsIndex v4.0 계산 결과 테이블
+    RaymondsIndex v2.0 계산 결과 테이블
 
     자본 배분 효율성을 측정하는 종합 지수로,
     4개의 Sub-Index로 구성됨:
-    - CEI: Capital Efficiency Index (15%) - 자본 효율성
-    - RII: Reinvestment Intensity Index (40%) ⭐ 핵심 - 재투자 강도
-    - CGI: Cash Governance Index (30%) ⭐ 핵심 - 현금 거버넌스
-    - MAI: Momentum Alignment Index (15%) - 모멘텀 정합성
+    - CEI: Capital Efficiency Index (20%) - 자본 효율성
+    - RII: Reinvestment Intensity Index (35%) ⭐ 핵심 - 재투자 강도
+    - CGI: Cash Governance Index (25%) ⭐ 핵심 - 현금 거버넌스
+    - MAI: Momentum Alignment Index (20%) - 모멘텀 정합성
+
+    v2.0 주요 변경:
+    - 투자괴리율: (초기 2년 재투자율) - (최근 2년 재투자율)
+    - 업종별 가중치 조정 지원
 
     특별 규칙:
     - 현금-유형자산 비율 > 30:1 → 최대 B-
@@ -65,7 +69,7 @@ class RaymondsIndex(Base):
     shareholder_return = Column(Numeric(5, 2), nullable=True) # 주주환원율 (%)
 
     # ═══════════════════════════════════════════════════════════════
-    # v4.0 신규 지표
+    # v4.0 기존 지표
     # ═══════════════════════════════════════════════════════════════
     cash_tangible_ratio = Column(Numeric(10, 2), nullable=True)    # 현금-유형자산 증가비율 (X:1)
     fundraising_utilization = Column(Numeric(5, 2), nullable=True) # 조달자금 투자전환율 (%)
@@ -74,6 +78,17 @@ class RaymondsIndex(Base):
     roic = Column(Numeric(6, 2), nullable=True)                    # 투하자본수익률 ROIC (%)
     capex_cv = Column(Numeric(5, 3), nullable=True)                # CAPEX 변동계수 (투자 지속성)
     violation_count = Column(Integer, default=0)                   # 특별규칙 위반 개수
+
+    # ═══════════════════════════════════════════════════════════════
+    # v2.0 신규 지표
+    # ═══════════════════════════════════════════════════════════════
+    investment_gap_v2 = Column(Numeric(6, 2), nullable=True)       # 투자괴리율 v2 (초기2년 - 최근2년 재투자율)
+    rd_intensity = Column(Numeric(5, 2), nullable=True)            # R&D 강도 - 미사용 (데이터 없음)
+    ebitda = Column(Numeric(20, 0), nullable=True)                 # EBITDA - 미사용 (감가상각비 데이터 없음)
+    debt_to_ebitda = Column(Numeric(6, 2), nullable=True)          # 부채/EBITDA - 미사용
+    cash_utilization = Column(Numeric(5, 2), nullable=True)        # 현금 활용도 (%)
+    industry_sector = Column(String(50), nullable=True)            # 업종 분류
+    weight_adjustment = Column(JSONB, nullable=True)               # 업종별 가중치 조정 내역
 
     # ═══════════════════════════════════════════════════════════════
     # 위험 신호 (JSONB 배열)
@@ -133,7 +148,7 @@ class RaymondsIndex(Base):
             "asset_turnover": float(self.asset_turnover) if self.asset_turnover else None,
             "reinvestment_rate": float(self.reinvestment_rate) if self.reinvestment_rate else None,
             "shareholder_return": float(self.shareholder_return) if self.shareholder_return else None,
-            # v4.0 신규 지표
+            # v4.0 기존 지표
             "cash_tangible_ratio": float(self.cash_tangible_ratio) if self.cash_tangible_ratio else None,
             "fundraising_utilization": float(self.fundraising_utilization) if self.fundraising_utilization else None,
             "short_term_ratio": float(self.short_term_ratio) if self.short_term_ratio else None,
@@ -141,6 +156,11 @@ class RaymondsIndex(Base):
             "roic": float(self.roic) if self.roic else None,
             "capex_cv": float(self.capex_cv) if self.capex_cv else None,
             "violation_count": self.violation_count or 0,
+            # v2.0 신규 지표
+            "investment_gap_v2": float(self.investment_gap_v2) if self.investment_gap_v2 else None,
+            "cash_utilization": float(self.cash_utilization) if self.cash_utilization else None,
+            "industry_sector": self.industry_sector,
+            "weight_adjustment": self.weight_adjustment,
             # 위험 신호
             "red_flags": self.red_flags or [],
             "yellow_flags": self.yellow_flags or [],
