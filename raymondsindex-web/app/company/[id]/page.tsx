@@ -54,9 +54,10 @@ export default function CompanyDetailPage() {
   }
 
   const gradeColors = GRADE_COLORS[company.grade as Grade];
-  const capexTrendIcon = company.capex_trend === 'increasing' ? TrendingUp :
-                         company.capex_trend === 'decreasing' ? TrendingDown : Minus;
-  const CapexTrendIcon = capexTrendIcon;
+  // capexTrendIcon은 추후 CAPEX 추세 시각화에 사용 예정
+  const _capexTrendIcon = company.capex_trend === 'increasing' ? TrendingUp :
+                          company.capex_trend === 'decreasing' ? TrendingDown : Minus;
+  void _capexTrendIcon; // ESLint 경고 방지 (추후 사용 예정)
 
   // Determine status for metrics
   const getStatus = (value: number | null, thresholds: { good: number; warning: number }) => {
