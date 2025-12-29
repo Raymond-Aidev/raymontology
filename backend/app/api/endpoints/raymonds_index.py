@@ -39,6 +39,173 @@ def format_index_response(index: RaymondsIndex, company: Optional[Company] = Non
 # API Endpoints
 # ============================================================================
 
+@router.get("/downgraded")
+async def get_downgraded_companies(
+    days: int = Query(30, ge=1, le=365, description="기간 (일)"),
+    limit: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    등급 하락 기업 목록 (Alert Zone용)
+
+    전년 대비 등급이 하락한 기업을 조회합니다.
+    - days: 기간 필터 (현재는 연도 비교만 지원)
+    - limit: 최대 결과 수
+    """
+    try:
+        # 등급 순서 정의 (높은 것부터)
+        grade_order = ['A++', 'A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C']
+
+        # 2025년과 2024년 데이터 비교
+        current_year = 2025
+        previous_year = 2024
+
+        # 현재 연도 데이터
+        current_query = (
+            select(RaymondsIndex, Company)
+            .join(Company, RaymondsIndex.company_id == Company.id)
+            .where(RaymondsIndex.fiscal_year == current_year)
+        )
+        current_result = await db.execute(current_query)
+        current_data = {str(row[0].company_id): (row[0], row[1]) for row in current_result.all()}
+
+        # 이전 연도 데이터
+        previous_query = (
+            select(RaymondsIndex)
+            .where(RaymondsIndex.fiscal_year == previous_year)
+        )
+        previous_result = await db.execute(previous_query)
+        previous_data = {str(row.company_id): row for row in previous_result.scalars().all()}
+
+        # 등급 하락 기업 찾기
+        downgraded = []
+        for company_id, (current_index, company) in current_data.items():
+            if company_id in previous_data:
+                prev_index = previous_data[company_id]
+                current_grade = current_index.grade
+                previous_grade = prev_index.grade
+
+                # 등급 순서 비교
+                try:
+                    current_rank = grade_order.index(current_grade)
+                    previous_rank = grade_order.index(previous_grade)
+
+                    # 등급이 하락했으면 (rank가 더 커졌으면)
+                    if current_rank > previous_rank:
+                        downgraded.append({
+                            "company_id": company_id,
+                            "company_name": company.name,
+                            "company_ticker": company.ticker,
+                            "company_market": company.market,
+                            "previous_grade": previous_grade,
+                            "current_grade": current_grade,
+                            "previous_score": float(prev_index.total_score) if prev_index.total_score else 0,
+                            "current_score": float(current_index.total_score) if current_index.total_score else 0,
+                            "score_change": float(current_index.total_score - prev_index.total_score) if current_index.total_score and prev_index.total_score else 0,
+                            "grade_drop": current_rank - previous_rank,  # 몇 단계 하락
+                            "red_flags": current_index.red_flags or [],
+                        })
+                except ValueError:
+                    continue
+
+        # 점수 하락 폭이 큰 순으로 정렬
+        downgraded.sort(key=lambda x: x["score_change"])
+
+        return {
+            "total": len(downgraded),
+            "period": f"{previous_year} → {current_year}",
+            "results": downgraded[:limit]
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching downgraded companies: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/statistics/sector")
+async def get_sector_statistics(
+    year: Optional[int] = None,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    업종별 RaymondsIndex 통계
+
+    - year: 연도 필터 (기본: 최신)
+    """
+    try:
+        # 연도 결정
+        if not year:
+            year_query = select(func.max(RaymondsIndex.fiscal_year))
+            year_result = await db.execute(year_query)
+            year = year_result.scalar() or 2025
+
+        # 업종별 통계
+        sector_query = (
+            select(
+                Company.sector,
+                func.count(RaymondsIndex.id).label('company_count'),
+                func.avg(RaymondsIndex.total_score).label('avg_score'),
+                func.min(RaymondsIndex.total_score).label('min_score'),
+                func.max(RaymondsIndex.total_score).label('max_score'),
+                func.avg(RaymondsIndex.investment_gap).label('avg_gap'),
+            )
+            .select_from(RaymondsIndex)
+            .join(Company, RaymondsIndex.company_id == Company.id)
+            .where(RaymondsIndex.fiscal_year == year)
+            .where(Company.sector.isnot(None))
+            .group_by(Company.sector)
+            .order_by(desc(func.avg(RaymondsIndex.total_score)))
+        )
+
+        sector_result = await db.execute(sector_query)
+        sectors = []
+
+        for row in sector_result.all():
+            sectors.append({
+                "sector": row.sector,
+                "company_count": row.company_count,
+                "avg_score": round(float(row.avg_score), 2) if row.avg_score else 0,
+                "min_score": round(float(row.min_score), 2) if row.min_score else 0,
+                "max_score": round(float(row.max_score), 2) if row.max_score else 0,
+                "avg_investment_gap": round(float(row.avg_gap), 2) if row.avg_gap else 0,
+            })
+
+        # 업종별 등급 분포
+        grade_query = (
+            select(
+                Company.sector,
+                RaymondsIndex.grade,
+                func.count(RaymondsIndex.id).label('count')
+            )
+            .select_from(RaymondsIndex)
+            .join(Company, RaymondsIndex.company_id == Company.id)
+            .where(RaymondsIndex.fiscal_year == year)
+            .where(Company.sector.isnot(None))
+            .group_by(Company.sector, RaymondsIndex.grade)
+        )
+
+        grade_result = await db.execute(grade_query)
+        grade_by_sector = {}
+        for row in grade_result.all():
+            if row.sector not in grade_by_sector:
+                grade_by_sector[row.sector] = {}
+            grade_by_sector[row.sector][row.grade] = row.count
+
+        # 결과에 등급 분포 추가
+        for sector in sectors:
+            sector["grade_distribution"] = grade_by_sector.get(sector["sector"], {})
+
+        return {
+            "year": year,
+            "total_sectors": len(sectors),
+            "sectors": sectors
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching sector statistics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/{company_id}")
 async def get_raymonds_index(
     company_id: UUID,
