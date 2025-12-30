@@ -90,6 +90,7 @@ class RaymondsIndex(Base):
     # ═══════════════════════════════════════════════════════════════
     investment_gap_v2 = Column(Numeric(6, 2), nullable=True)       # 투자괴리율 v2 (레거시: 초기2년 - 최근2년 재투자율)
     investment_gap_v21 = Column(Numeric(6, 2), nullable=True)      # 투자괴리율 v2.1 ⭐핵심 (현금 CAGR - CAPEX 성장률)
+    investment_gap_v21_flag = Column(String(20), nullable=True, default='ok')  # 데이터 플래그: ok, no_capex, no_cash, insufficient_data
     rd_intensity = Column(Numeric(5, 2), nullable=True)            # R&D 강도 - 미사용 (데이터 없음)
     ebitda = Column(Numeric(20, 0), nullable=True)                 # EBITDA
     debt_to_ebitda = Column(Numeric(6, 2), nullable=True)          # 부채/EBITDA (CGI용)
@@ -173,6 +174,7 @@ class RaymondsIndex(Base):
             # v2.0/v2.1 지표
             "investment_gap_v2": float(self.investment_gap_v2) if self.investment_gap_v2 else None,
             "investment_gap_v21": float(self.investment_gap_v21) if self.investment_gap_v21 else None,
+            "investment_gap_v21_flag": self.investment_gap_v21_flag or 'ok',
             "cash_utilization": float(self.cash_utilization) if self.cash_utilization else None,
             "industry_sector": self.industry_sector,
             "weight_adjustment": self.weight_adjustment,

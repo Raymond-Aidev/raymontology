@@ -36,6 +36,7 @@ export interface RaymondsIndexResponse {
   // v2.0/v2.1 지표
   investment_gap_v2: number | null;      // 투자괴리율 v2 (레거시: 재투자율 기반)
   investment_gap_v21: number | null;     // 투자괴리율 v2.1 ⭐핵심 (현금 CAGR - CAPEX 성장률)
+  investment_gap_v21_flag: 'ok' | 'no_capex' | 'no_cash' | 'insufficient_data';  // 데이터 품질 플래그
   cash_utilization: number | null;
   industry_sector: string | null;
   weight_adjustment: Record<string, number> | null;

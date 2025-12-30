@@ -46,7 +46,9 @@ class Q3ReportParser:
 
     # 계정과목 매핑 (parse_local_financial_details.py와 동일)
     ACCOUNT_MAPPING = {
-        # 재무상태표
+        # ═══════════════════════════════════════════════════════════════
+        # 재무상태표 - 유동자산
+        # ═══════════════════════════════════════════════════════════════
         'current_assets': ['유동자산', '유동자산합계', 'Ⅰ.유동자산'],
         'cash_and_equivalents': [
             '현금및현금성자산', '현금및현금등가물', '현금 및 현금성자산',
@@ -57,9 +59,48 @@ class Q3ReportParser:
             '매출채권및기타채권', '매출채권 및 기타채권', '매출채권'
         ],
         'inventories': ['재고자산', '재고자산(순액)', '상품및제품'],
+        'other_financial_assets_current': [
+            '기타금융자산', '기타유동금융자산', '기타 금융자산',
+            '기타유동금융자산(유동)', '금융자산(유동)',
+            '기타포괄손익공정가치측정금융자산', '상각후원가측정금융자산',
+            '기타의금융자산', '기타금융자산(유동)', '유동기타금융자산',
+            '기타의 금융자산', '단기기타금융자산', '기타 유동금융자산',
+            '파생상품자산', '매매목적파생상품자산'
+        ],
+        'other_assets_current': [
+            '기타자산', '기타유동자산', '기타 유동자산',
+            '선급금', '선급비용', '기타자산(유동)',
+            '기타의자산', '기타 자산', '유동기타자산',
+            '선급금및선급비용', '선급금 및 선급비용', '선급금등',
+            '기타의 자산', '단기기타자산', '선납세금',
+            '계약자산', '기타의유동자산'
+        ],
+        # ═══════════════════════════════════════════════════════════════
+        # 재무상태표 - 비유동자산
+        # ═══════════════════════════════════════════════════════════════
         'non_current_assets': ['비유동자산', '비유동자산합계', 'Ⅱ.비유동자산'],
+        'fvpl_financial_assets': [
+            '당기손익공정가치측정금융자산', '당기손익-공정가치측정금융자산',
+            '당기손익인식금융자산', 'FVPL금융자산', '당기손익공정가치금융자산',
+            '장기금융상품'
+        ],
+        'investments_in_associates': [
+            '관계기업투자', '관계기업투자주식', '관계기업 및 공동기업투자',
+            '관계기업에 대한 투자', '지분법적용투자주식', '관계기업투자자산'
+        ],
         'tangible_assets': ['유형자산', '유형자산(순액)', 'Ⅱ.유형자산'],
         'intangible_assets': ['무형자산', '무형자산(순액)', 'Ⅲ.무형자산'],
+        'right_of_use_assets': [
+            '사용권자산', '사용권 자산', '리스사용권자산',
+            '사용권자산(리스)', '리스자산'
+        ],
+        'other_financial_assets_non_current': [
+            '기타비유동금융자산', '기타금융자산(비유동)', '장기금융자산',
+            '기타 비유동금융자산', '비유동기타금융자산'
+        ],
+        # ═══════════════════════════════════════════════════════════════
+        # 재무상태표 - 자산/부채/자본 합계
+        # ═══════════════════════════════════════════════════════════════
         'total_assets': ['자산총계', '자산 총계', '자산합계', '총자산'],
         'current_liabilities': ['유동부채', '유동부채합계', 'Ⅰ.유동부채'],
         'non_current_liabilities': ['비유동부채', '비유동부채합계', 'Ⅱ.비유동부채'],
@@ -168,35 +209,48 @@ class Q3ReportParser:
         return None
 
     def parse_financial_data(self, xml_content: str) -> Dict[str, Any]:
-        """XML에서 재무 데이터 추출"""
+        """XML에서 재무 데이터 추출 (섹션별 단위 감지)"""
         result = {}
 
-        # 단위 감지
-        unit_multiplier = self._detect_unit(xml_content)
-        logger.debug(f"Detected unit: {unit_multiplier}")
-
-        # 현금흐름표 섹션 추출 (핵심!)
-        cf_section = self._extract_cash_flow_section(xml_content)
-        if cf_section:
-            cf_values = self._extract_values(cf_section, unit_multiplier, is_cf=True)
-            result.update(cf_values)
-            logger.debug(f"Cash flow values: {list(cf_values.keys())}")
-
-        # 재무상태표 섹션 추출
+        # 재무상태표 섹션 추출 (먼저 - 현금 등 핵심 데이터)
         bs_section = self._extract_balance_sheet_section(xml_content)
         if bs_section:
-            bs_values = self._extract_values(bs_section, unit_multiplier)
-            for key, value in bs_values.items():
-                if key not in result:
-                    result[key] = value
+            bs_unit = self._detect_unit_from_section(bs_section, 'bs')
+            logger.debug(f"Balance sheet unit: {bs_unit}")
+            bs_values = self._extract_values(bs_section, bs_unit)
+            result.update(bs_values)
+            logger.debug(f"Balance sheet values: {list(bs_values.keys())}")
 
         # 손익계산서 섹션 추출
         is_section = self._extract_income_statement_section(xml_content)
         if is_section:
-            is_values = self._extract_values(is_section, unit_multiplier)
+            is_unit = self._detect_unit_from_section(is_section, 'is')
+            logger.debug(f"Income statement unit: {is_unit}")
+            is_values = self._extract_values(is_section, is_unit)
             for key, value in is_values.items():
                 if key not in result:
                     result[key] = value
+            logger.debug(f"Income statement values: {list(is_values.keys())}")
+
+        # 현금흐름표 섹션 추출 (핵심!)
+        cf_section = self._extract_cash_flow_section(xml_content)
+        if cf_section:
+            cf_unit = self._detect_unit_from_section(cf_section, 'cf')
+            logger.debug(f"Cash flow unit: {cf_unit}")
+            cf_values = self._extract_values(cf_section, cf_unit, is_cf=True)
+            for key, value in cf_values.items():
+                if key not in result:
+                    result[key] = value
+            logger.debug(f"Cash flow values: {list(cf_values.keys())}")
+
+        # 데이터 검증: 현금이 음수이면 경고
+        if result.get('cash_and_equivalents') and result['cash_and_equivalents'] < 0:
+            logger.warning(f"Negative cash detected: {result['cash_and_equivalents']:,}")
+            # 자산총계와 비교해서 비정상적으로 크면 단위 오류로 판단
+            total_assets = result.get('total_assets', 0)
+            if total_assets and abs(result['cash_and_equivalents']) > total_assets * 10:
+                logger.warning(f"Cash seems to have wrong unit (cash={result['cash_and_equivalents']}, assets={total_assets})")
+                # 단위 보정 시도하지 않음 (데이터 신뢰성 문제)
 
         return result
 
@@ -220,17 +274,24 @@ class Q3ReportParser:
         return None
 
     def _extract_balance_sheet_section(self, xml_content: str) -> Optional[str]:
-        """재무상태표 섹션 추출"""
+        """재무상태표 섹션 추출 (연결 우선)"""
+        # 연결 재무상태표 우선 검색 (단위 포함 헤더까지)
         patterns = [
-            r'<TITLE[^>]*>.*?재\s*무\s*상\s*태\s*표.*?</TITLE>(.+?)(?=<TITLE|$)',
-            r'<TITLE[^>]*>2-1\.\s*연결\s*재무상태표</TITLE>(.+?)(?=<TITLE|$)',
-            r'<TITLE[^>]*>4-1\.\s*재무상태표</TITLE>(.+?)(?=<TITLE|$)',
+            # 연결 재무상태표 (우선)
+            r'(<TITLE[^>]*>2-1\.\s*연결\s*재무상태표</TITLE>.+?)(?=<TITLE|$)',
+            r'(<TITLE[^>]*>.*?연결\s*재\s*무\s*상\s*태\s*표.*?</TITLE>.+?)(?=<TITLE|$)',
+            # 별도 재무상태표
+            r'(<TITLE[^>]*>4-1\.\s*재무상태표</TITLE>.+?)(?=<TITLE|$)',
+            r'(<TITLE[^>]*>.*?재\s*무\s*상\s*태\s*표.*?</TITLE>.+?)(?=<TITLE|$)',
         ]
 
         for pattern in patterns:
             match = re.search(pattern, xml_content, re.DOTALL | re.IGNORECASE)
             if match:
-                return match.group(1)
+                section = match.group(1)
+                # 자산총계가 있는지 확인 (재무상태표 맞는지 검증)
+                if '자산총계' in section or '자산 총계' in section:
+                    return section
 
         return None
 
@@ -249,15 +310,37 @@ class Q3ReportParser:
 
         return None
 
-    def _detect_unit(self, xml_content: str) -> int:
-        """단위 감지"""
-        if re.search(r'단위\s*[:\s:]\s*백만\s*원', xml_content):
+    def _detect_unit_from_section(self, section: str, section_type: str = 'bs') -> int:
+        """섹션별 단위 감지 (개선된 버전)
+
+        개선사항:
+        1. 섹션 시작 부근에서만 단위 감지 (첫 2000자)
+        2. 섹션별로 다른 단위 적용
+        3. 다양한 단위 패턴 지원 (단위:, 단위 :, 단위;)
+        """
+        # 섹션 시작 부분만 검색 (2000자)
+        search_area = section[:2000] if len(section) > 2000 else section
+
+        # 백만원 패턴 (우선순위 높음)
+        if re.search(r'단위\s*[:\s:;]\s*백만\s*원', search_area):
+            logger.debug(f"Unit detected: 백만원 for {section_type}")
             return 1_000_000
-        elif re.search(r'단위\s*[:\s:]\s*천\s*원', xml_content):
+        # 천원 패턴
+        elif re.search(r'단위\s*[:\s:;]\s*천\s*원', search_area):
+            logger.debug(f"Unit detected: 천원 for {section_type}")
             return 1_000
-        elif re.search(r'단위\s*[:\s:]\s*원[^천백]', xml_content):
+        # 원 패턴 (천원/백만원 아닌 경우)
+        elif re.search(r'단위\s*[:\s:;]\s*원[^천백]', search_area) or re.search(r'단위\s*[:\s:;]\s*원\)', search_area):
+            logger.debug(f"Unit detected: 원 for {section_type}")
             return 1
-        return 1_000  # 기본값: 천원
+
+        # 기본값: 천원 (가장 일반적)
+        logger.debug(f"Unit not detected, using default 천원 for {section_type}")
+        return 1_000
+
+    def _detect_unit(self, xml_content: str) -> int:
+        """단위 감지 (레거시 호환용)"""
+        return self._detect_unit_from_section(xml_content, 'default')
 
     def _extract_values(self, section: str, unit_multiplier: int, is_cf: bool = False) -> Dict[str, int]:
         """섹션에서 계정과목별 금액 추출"""
@@ -348,7 +431,10 @@ class Q3FinancialDetailsCollector:
                     id, company_id, fiscal_year, fiscal_quarter, report_type,
                     current_assets, cash_and_equivalents, short_term_investments,
                     trade_and_other_receivables, inventories,
-                    non_current_assets, tangible_assets, intangible_assets,
+                    other_financial_assets_current, other_assets_current,
+                    non_current_assets, fvpl_financial_assets, investments_in_associates,
+                    tangible_assets, intangible_assets, right_of_use_assets,
+                    other_financial_assets_non_current,
                     total_assets, current_liabilities, non_current_liabilities,
                     total_liabilities, total_equity,
                     revenue, cost_of_sales, selling_admin_expenses,
@@ -360,11 +446,12 @@ class Q3FinancialDetailsCollector:
                 )
                 VALUES (
                     gen_random_uuid(), $1, $2, $3, $4,
-                    $5, $6, $7, $8, $9,
-                    $10, $11, $12, $13, $14, $15, $16, $17,
-                    $18, $19, $20, $21, $22,
-                    $23, $24, $25, $26, $27, $28, $29, $30, $31,
-                    $32, $33, $34, NOW(), NOW()
+                    $5, $6, $7, $8, $9, $10, $11,
+                    $12, $13, $14, $15, $16, $17, $18,
+                    $19, $20, $21, $22, $23,
+                    $24, $25, $26, $27, $28,
+                    $29, $30, $31, $32, $33, $34, $35, $36, $37,
+                    $38, $39, $40, NOW(), NOW()
                 )
                 ON CONFLICT (company_id, fiscal_year, fiscal_quarter, fs_type)
                 DO UPDATE SET
@@ -373,9 +460,15 @@ class Q3FinancialDetailsCollector:
                     short_term_investments = COALESCE(EXCLUDED.short_term_investments, financial_details.short_term_investments),
                     trade_and_other_receivables = COALESCE(EXCLUDED.trade_and_other_receivables, financial_details.trade_and_other_receivables),
                     inventories = COALESCE(EXCLUDED.inventories, financial_details.inventories),
+                    other_financial_assets_current = COALESCE(EXCLUDED.other_financial_assets_current, financial_details.other_financial_assets_current),
+                    other_assets_current = COALESCE(EXCLUDED.other_assets_current, financial_details.other_assets_current),
                     non_current_assets = COALESCE(EXCLUDED.non_current_assets, financial_details.non_current_assets),
+                    fvpl_financial_assets = COALESCE(EXCLUDED.fvpl_financial_assets, financial_details.fvpl_financial_assets),
+                    investments_in_associates = COALESCE(EXCLUDED.investments_in_associates, financial_details.investments_in_associates),
                     tangible_assets = COALESCE(EXCLUDED.tangible_assets, financial_details.tangible_assets),
                     intangible_assets = COALESCE(EXCLUDED.intangible_assets, financial_details.intangible_assets),
+                    right_of_use_assets = COALESCE(EXCLUDED.right_of_use_assets, financial_details.right_of_use_assets),
+                    other_financial_assets_non_current = COALESCE(EXCLUDED.other_financial_assets_non_current, financial_details.other_financial_assets_non_current),
                     total_assets = COALESCE(EXCLUDED.total_assets, financial_details.total_assets),
                     current_liabilities = COALESCE(EXCLUDED.current_liabilities, financial_details.current_liabilities),
                     non_current_liabilities = COALESCE(EXCLUDED.non_current_liabilities, financial_details.non_current_liabilities),
@@ -401,15 +494,23 @@ class Q3FinancialDetailsCollector:
                 data.get('fiscal_year', 2025),
                 data.get('fiscal_quarter', 3),  # 3분기
                 data.get('report_type', 'q3'),
-                # 재무상태표
+                # 재무상태표 - 유동자산
                 data.get('current_assets'),
                 data.get('cash_and_equivalents'),
                 data.get('short_term_investments'),
                 data.get('trade_and_other_receivables'),
                 data.get('inventories'),
+                data.get('other_financial_assets_current'),  # NEW
+                data.get('other_assets_current'),  # NEW
+                # 재무상태표 - 비유동자산
                 data.get('non_current_assets'),
+                data.get('fvpl_financial_assets'),  # NEW
+                data.get('investments_in_associates'),  # NEW
                 data.get('tangible_assets'),
                 data.get('intangible_assets'),
+                data.get('right_of_use_assets'),  # NEW
+                data.get('other_financial_assets_non_current'),  # NEW
+                # 재무상태표 - 합계
                 data.get('total_assets'),
                 data.get('current_liabilities'),
                 data.get('non_current_liabilities'),

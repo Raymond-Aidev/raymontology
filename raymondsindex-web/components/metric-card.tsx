@@ -10,6 +10,13 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
+// 데이터 플래그 설명 메시지
+const DATA_FLAG_MESSAGES: Record<string, string> = {
+  'no_capex': 'CAPEX 데이터가 부족하여 정확한 투자괴리율 산출이 어렵습니다. 해당 기업의 설비투자 내역을 직접 확인하시기 바랍니다.',
+  'no_cash': '현금 데이터가 부족하여 정확한 투자괴리율 산출이 어렵습니다. 해당 기업의 현금흐름을 직접 확인하시기 바랍니다.',
+  'insufficient_data': '2개년 미만의 데이터로 인해 정확한 투자괴리율 산출이 어렵습니다.',
+};
+
 interface MetricCardProps {
   label: string;
   value: string | number | null | undefined;
@@ -19,6 +26,7 @@ interface MetricCardProps {
   tooltip?: string;  // 위험요소 관점 설명
   trend?: 'up' | 'down' | 'stable';
   className?: string;
+  dataFlag?: string;  // 데이터 품질 플래그 (no_capex, no_cash, insufficient_data)
 }
 
 const statusConfig = {
@@ -63,12 +71,14 @@ export function MetricCard({
   tooltip,
   trend,
   className,
+  dataFlag,
 }: MetricCardProps) {
   const config = statusConfig[status];
   const StatusIcon = config.icon;
   const TrendIcon = trend ? trendIcons[trend] : null;
 
   const displayValue = value === null || value === undefined ? '-' : value;
+  const hasDataIssue = dataFlag && dataFlag !== 'ok' && DATA_FLAG_MESSAGES[dataFlag];
 
   return (
     <Card className={cn('border', config.bg, className)}>
@@ -100,6 +110,24 @@ export function MetricCard({
                 {displayValue}
               </span>
               {unit && <span className="text-sm text-gray-500">{unit}</span>}
+              {/* 데이터 품질 이슈 표시 */}
+              {hasDataIssue && (
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        className="text-amber-500 hover:text-amber-600 focus:outline-none ml-1"
+                        aria-label="데이터 품질 안내"
+                      >
+                        <HelpCircle className="w-4 h-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs bg-amber-50 border-amber-200">
+                      <p className="text-sm text-amber-800">{DATA_FLAG_MESSAGES[dataFlag!]}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
               {TrendIcon && (
                 <TrendIcon className={cn(
                   'w-4 h-4 ml-1',

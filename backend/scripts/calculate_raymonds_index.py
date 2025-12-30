@@ -167,7 +167,7 @@ class RaymondsIndexBatchCalculator:
                     cash_tangible_ratio, fundraising_utilization, short_term_ratio,
                     capex_trend, roic, capex_cv, violation_count,
                     -- v2.0/v2.1 컬럼
-                    investment_gap_v2, investment_gap_v21,
+                    investment_gap_v2, investment_gap_v21, investment_gap_v21_flag,
                     cash_utilization, industry_sector, weight_adjustment,
                     -- v2.1 신규 컬럼
                     tangible_efficiency, cash_yield, debt_to_ebitda, growth_investment_ratio,
@@ -183,12 +183,12 @@ class RaymondsIndexBatchCalculator:
                     $14, $15, $16,
                     $17, $18, $19,
                     $20, $21, $22, $23,
-                    $24, $25,
-                    $26, $27, $28,
-                    $29, $30, $31, $32,
-                    $33, $34,
-                    $35, $36, $37, $38,
-                    $39, NOW()
+                    $24, $25, $26,
+                    $27, $28, $29,
+                    $30, $31, $32, $33,
+                    $34, $35,
+                    $36, $37, $38, $39,
+                    $40, NOW()
                 )
                 ON CONFLICT (company_id, fiscal_year)
                 DO UPDATE SET
@@ -215,6 +215,7 @@ class RaymondsIndexBatchCalculator:
                     violation_count = EXCLUDED.violation_count,
                     investment_gap_v2 = EXCLUDED.investment_gap_v2,
                     investment_gap_v21 = EXCLUDED.investment_gap_v21,
+                    investment_gap_v21_flag = EXCLUDED.investment_gap_v21_flag,
                     cash_utilization = EXCLUDED.cash_utilization,
                     industry_sector = EXCLUDED.industry_sector,
                     weight_adjustment = EXCLUDED.weight_adjustment,
@@ -256,7 +257,8 @@ class RaymondsIndexBatchCalculator:
                 result_dict.get('violation_count', 0),  # INTEGER
                 # v2.0/v2.1 지표
                 self._clamp(result_dict.get('investment_gap_v2', 0), -100, 100),  # DECIMAL(6,2)
-                self._clamp(result_dict.get('investment_gap_v21', 0), -100, 100),  # DECIMAL(6,2) ⭐v2.1 핵심
+                self._clamp(result_dict.get('investment_gap_v21', 0), -50, 50),  # DECIMAL(6,2) ⭐v2.1 핵심 (범위 완화)
+                result_dict.get('investment_gap_v21_flag', 'ok'),  # VARCHAR(20)
                 self._clamp(result_dict.get('cash_utilization', 0), 0, 999),  # DECIMAL(5,2)
                 result_dict.get('industry_sector', ''),  # VARCHAR(50)
                 json.dumps(result_dict.get('weight_adjustment', {}), ensure_ascii=False),  # JSONB

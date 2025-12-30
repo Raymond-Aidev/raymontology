@@ -156,12 +156,16 @@ export default function CompanyDetailPage() {
         <h2 className="text-lg font-semibold text-gray-900 mb-4">핵심 지표</h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <MetricCard
-            label="투자괴리율"
-            value={company.investment_gap?.toFixed(1)}
-            unit="%"
-            status={getStatus(company.investment_gap, { good: 0, warning: -20 })}
-            description="현금증가 대비 CAPEX 증가 차이"
+            label="투자괴리율 (v2.1)"
+            value={company.investment_gap_v21?.toFixed(1) ?? company.investment_gap?.toFixed(1)}
+            unit="%p"
+            status={getStatus(
+              company.investment_gap_v21 ?? company.investment_gap,
+              { good: 0, warning: 20 }
+            )}
+            description="현금 CAGR - CAPEX 성장률"
             tooltip={METRIC_DESCRIPTIONS.investment_gap.description}
+            dataFlag={company.investment_gap_v21_flag}
           />
           <MetricCard
             label="재투자율"

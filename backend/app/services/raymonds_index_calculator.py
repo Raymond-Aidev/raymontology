@@ -97,6 +97,9 @@ class CoreMetrics:
     # v2.1 신규 지표 (MAI)
     growth_investment_ratio: float = 0.0   # 성장 투자 비율 (성장CAPEX/총CAPEX)
 
+    # 데이터 플래그 (프론트엔드 표시용)
+    investment_gap_v21_flag: str = 'ok'    # 'ok', 'no_capex', 'no_cash', 'insufficient_data'
+
 
 @dataclass
 class RaymondsIndexResult:
@@ -245,8 +248,10 @@ class RaymondsIndexCalculator:
         # Red/Yellow Flags 생성
         red_flags, yellow_flags = self._generate_flags(core_metrics, sorted_data)
 
-        # 특별 규칙 적용 (등급 강제 조정)
-        grade, violation_count = self._apply_special_rules(grade, core_metrics)
+        # 특별 규칙 적용 (등급 및 점수 강제 조정)
+        grade, adjusted_score, violation_count = self._apply_special_rules(
+            grade, total_score, core_metrics
+        )
 
         # 해석 생성
         verdict, key_risk, recommendation, watch_trigger = self._generate_interpretation(
@@ -256,7 +261,7 @@ class RaymondsIndexCalculator:
         return RaymondsIndexResult(
             company_id=company_id,
             fiscal_year=target_year,
-            total_score=round(total_score, 2),
+            total_score=round(adjusted_score, 2),  # 조정된 점수 사용
             grade=grade,
             sub_indices=sub_indices,
             core_metrics=core_metrics,
@@ -298,7 +303,7 @@ class RaymondsIndexCalculator:
 
         현금성자산 증가비율 - CAPEX 증가비율을 계산합니다.
 
-        현금성자산 = 현금 + 단기금융상품 + 장기금융상품
+        현금성자산 = 현금 + 단기금융상품 + 기타금융자산(유동) + 기타자산(유동) + 비유동금융자산 (v2.2)
         CAPEX = 유형자산 + 무형자산 + 사용권자산 + 관계기업투자 (재무상태표 기준)
 
         Args:
@@ -311,13 +316,15 @@ class RaymondsIndexCalculator:
         if oldest is None:
             return 0.0
 
-        # 현금성자산 계산 (현금 + 단기금융상품 + 장기금융상품)
+        # 현금성자산 계산 (v2.2: 기타금융자산/기타자산 포함)
         def calc_cash_equivalent(d: Dict) -> float:
             return (
                 self._safe_get(d, 'cash_and_equivalents') +
                 self._safe_get(d, 'short_term_investments') +
-                self._safe_get(d, 'fvpl_financial_assets') +  # 당기손익공정가치측정금융자산
-                self._safe_get(d, 'other_financial_assets_non_current')  # 기타금융자산(비유동)
+                self._safe_get(d, 'other_financial_assets_current') +   # 기타금융자산(유동)
+                self._safe_get(d, 'other_assets_current') +             # 기타자산(유동)
+                self._safe_get(d, 'fvpl_financial_assets') +            # 당기손익공정가치측정금융자산
+                self._safe_get(d, 'other_financial_assets_non_current') # 기타금융자산(비유동)
             )
 
         # CAPEX 계산 (유형자산 + 무형자산 + 사용권자산 + 관계기업투자)
@@ -420,7 +427,7 @@ class RaymondsIndexCalculator:
         # 범위 제한 (-100 ~ 100)
         return round(max(-100.0, min(100.0, gap)), 2)
 
-    def _calculate_investment_gap_v21(self, all_data: List[Dict]) -> float:
+    def _calculate_investment_gap_v21(self, all_data: List[Dict]) -> Tuple[float, str]:
         """
         투자괴리율 v2.1 계산 ⭐핵심 (현금 CAGR - CAPEX 성장률)
 
@@ -429,35 +436,55 @@ class RaymondsIndexCalculator:
         양수(+): 현금 축적 > 투자 증가 (현금만 쌓는 중 - 위험 신호)
         음수(-): 투자 증가 > 현금 축적 (적극 투자 중 - 긍정 신호)
 
+        현금성자산 = 현금 + 단기금융상품 + 기타금융자산(유동) + 기타자산(유동) (v2.2)
+
         Args:
             all_data: 연도순 정렬된 재무 데이터 리스트
 
         Returns:
-            투자괴리율 (%p)
+            Tuple[투자괴리율 (%p), 데이터 플래그]
+            - 데이터 플래그: 'ok', 'no_capex', 'no_cash', 'insufficient_data'
         """
         if len(all_data) < 2:
-            return 0.0
+            logger.debug("investment_gap_v21: insufficient data (< 2 years)")
+            return 0.0, 'insufficient_data'
 
-        # 1. 현금 CAGR 계산
-        cash_start = (
-            self._safe_get(all_data[0], 'cash_and_equivalents') +
-            self._safe_get(all_data[0], 'short_term_investments')
-        )
-        cash_end = (
-            self._safe_get(all_data[-1], 'cash_and_equivalents') +
-            self._safe_get(all_data[-1], 'short_term_investments')
-        )
+        # 1. 현금 CAGR 계산 (v2.2: 기타금융자산/기타자산 포함)
+        cash_start = self._calculate_total_cash(all_data[0])
+        cash_end = self._calculate_total_cash(all_data[-1])
+
+        # 2. CAPEX 성장률 계산 (초기 2년 평균 vs 최근 2년 평균)
+        capex_values = [abs(self._safe_get(d, 'capex')) for d in all_data]
+
+        # ═══════════════════════════════════════════════════════════════
+        # 방안 A: 데이터 부족 시 0.0 반환 + 플래그 설정
+        # ═══════════════════════════════════════════════════════════════
+
+        # CAPEX 데이터가 모두 0이거나 없는 경우
+        if all(v == 0 for v in capex_values):
+            logger.debug(f"investment_gap_v21: no CAPEX data (all zeros)")
+            return 0.0, 'no_capex'
+
+        # 현금 데이터가 모두 0인 경우
+        if cash_start == 0 and cash_end == 0:
+            logger.debug(f"investment_gap_v21: no cash data (all zeros)")
+            return 0.0, 'no_cash'
+
+        # ═══════════════════════════════════════════════════════════════
+        # 정상 계산 로직
+        # ═══════════════════════════════════════════════════════════════
 
         years = len(all_data) - 1
         if cash_start > 0 and cash_end > 0 and years > 0:
             cash_cagr = (pow(cash_end / cash_start, 1 / years) - 1) * 100
         elif cash_end > 0 and cash_start == 0:
-            cash_cagr = 100.0  # 0에서 증가
+            # 0에서 증가한 경우 → 큰 성장으로 처리하되 극단값 방지
+            cash_cagr = min(50.0, (cash_end / 1e8) * 10)  # 1000억당 10%p, 최대 50%
+        elif cash_start > 0 and cash_end == 0:
+            # 전액 소진한 경우
+            cash_cagr = -50.0
         else:
             cash_cagr = 0.0
-
-        # 2. CAPEX 성장률 계산 (초기 2년 평균 vs 최근 2년 평균)
-        capex_values = [abs(self._safe_get(d, 'capex')) for d in all_data]
 
         if len(capex_values) >= 2:
             # 초기 2년 평균
@@ -468,7 +495,8 @@ class RaymondsIndexCalculator:
             if capex_early > 0:
                 capex_growth = ((capex_late - capex_early) / capex_early) * 100
             elif capex_late > 0:
-                capex_growth = 100.0  # 0에서 증가
+                # 0에서 증가한 경우 → 큰 성장으로 처리하되 극단값 방지
+                capex_growth = min(50.0, (capex_late / 1e8) * 10)  # 1000억당 10%p, 최대 50%
             else:
                 capex_growth = 0.0
         else:
@@ -479,8 +507,21 @@ class RaymondsIndexCalculator:
         # 음수: 투자가 현금보다 더 많이 증가 (긍정)
         investment_gap = cash_cagr - capex_growth
 
-        # 범위 제한 (-100 ~ 100)
-        return round(max(-100.0, min(100.0, investment_gap)), 2)
+        # ═══════════════════════════════════════════════════════════════
+        # 방안 B: 범위 완화 (-50 ~ +50) + 정규화 스케일링
+        # ═══════════════════════════════════════════════════════════════
+
+        # 범위 제한 (-50 ~ 50) - 극단값 완화
+        clamped_gap = max(-50.0, min(50.0, investment_gap))
+
+        # 로그 (디버깅용)
+        if abs(investment_gap) > 50:
+            logger.debug(
+                f"investment_gap_v21: clamped {investment_gap:.2f} -> {clamped_gap:.2f} "
+                f"(cash_cagr={cash_cagr:.2f}, capex_growth={capex_growth:.2f})"
+            )
+
+        return round(clamped_gap, 2), 'ok'
 
     def _analyze_trend(self, values: List[float]) -> str:
         """추세 분석 (선형 회귀 기반)"""
@@ -511,6 +552,27 @@ class RaymondsIndexCalculator:
             return 'decreasing'
         return 'stable'
 
+    def _calculate_total_cash(self, data: Optional[Dict]) -> float:
+        """
+        총 현금성자산 계산 (v2.2)
+
+        현금성자산 = 현금 + 단기금융상품 + 기타금융자산(유동) + 기타자산(유동)
+
+        Args:
+            data: 재무 데이터 딕셔너리
+
+        Returns:
+            총 현금성자산 금액
+        """
+        if data is None:
+            return 0.0
+        return (
+            self._safe_get(data, 'cash_and_equivalents') +
+            self._safe_get(data, 'short_term_investments') +
+            self._safe_get(data, 'other_financial_assets_current') +
+            self._safe_get(data, 'other_assets_current')
+        )
+
     def _calculate_core_metrics(
         self,
         current: Dict,
@@ -521,10 +583,12 @@ class RaymondsIndexCalculator:
         """핵심 지표 계산 (v4.0)"""
         metrics = CoreMetrics()
 
-        # 현재 값
+        # 현재 값 (v2.2: 기타금융자산/기타자산 포함)
         cash = self._safe_get(current, 'cash_and_equivalents')
         short_term = self._safe_get(current, 'short_term_investments')
-        total_cash = cash + short_term
+        other_fin_current = self._safe_get(current, 'other_financial_assets_current')
+        other_assets_current = self._safe_get(current, 'other_assets_current')
+        total_cash = cash + short_term + other_fin_current + other_assets_current
         total_assets = self._safe_get(current, 'total_assets')
         total_equity = self._safe_get(current, 'total_equity')
         total_liabilities = self._safe_get(current, 'total_liabilities')
@@ -537,15 +601,11 @@ class RaymondsIndexCalculator:
         dividend = abs(self._safe_get(current, 'dividend_paid'))
         treasury = abs(self._safe_get(current, 'treasury_stock_acquisition'))
 
-        # 과거 값
-        prev_cash = self._safe_get(previous, 'cash_and_equivalents')
-        prev_short_term = self._safe_get(previous, 'short_term_investments')
-        prev_total_cash = prev_cash + prev_short_term
+        # 과거 값 (v2.2: 기타금융자산/기타자산 포함)
+        prev_total_cash = self._calculate_total_cash(previous)
         prev_tangible = self._safe_get(previous, 'tangible_assets')
         prev_capex = abs(self._safe_get(previous, 'capex'))
-        oldest_cash = self._safe_get(oldest, 'cash_and_equivalents')
-        oldest_short_term = self._safe_get(oldest, 'short_term_investments')
-        oldest_total_cash = oldest_cash + oldest_short_term
+        oldest_total_cash = self._calculate_total_cash(oldest)
 
         # ═══════════════════════════════════════════════════════════════
         # 기존 지표
@@ -594,7 +654,9 @@ class RaymondsIndexCalculator:
         metrics.investment_gap_v2 = self._calculate_investment_gap_v2_new(all_data)
 
         # 9. 투자괴리율 v2.1 ⭐핵심 - 현금 CAGR - CAPEX 성장률
-        metrics.investment_gap_v21 = self._calculate_investment_gap_v21(all_data)
+        gap_v21, gap_v21_flag = self._calculate_investment_gap_v21(all_data)
+        metrics.investment_gap_v21 = gap_v21
+        metrics.investment_gap_v21_flag = gap_v21_flag
 
         # ═══════════════════════════════════════════════════════════════
         # v4.0 신규 지표
@@ -1053,8 +1115,17 @@ class RaymondsIndexCalculator:
                 return grade
         return 'C'
 
-    def _apply_special_rules(self, grade: str, core_metrics: CoreMetrics) -> Tuple[str, int]:
-        """특별 규칙 적용 - 등급 강제 하향"""
+    def _apply_special_rules(
+        self, grade: str, total_score: float, core_metrics: CoreMetrics
+    ) -> Tuple[str, float, int]:
+        """
+        특별 규칙 적용 - 등급 및 점수 강제 조정
+
+        특별규칙 위반 시 등급과 점수를 모두 조정하여 일관성 유지
+
+        Returns:
+            Tuple[조정된 등급, 조정된 점수, 위반 개수]
+        """
         violation_count = 0
 
         # 규칙 1: 현금-유형자산 비율 > 30:1
@@ -1069,7 +1140,14 @@ class RaymondsIndexCalculator:
         if core_metrics.short_term_ratio > 65 and core_metrics.capex_trend == 'decreasing':
             violation_count += 1
 
-        # 등급 강제 조정
+        # 등급 및 점수 강제 조정
+        # 등급별 점수 상한선 (해당 등급의 최대 점수)
+        GRADE_MAX_SCORES = {
+            'C+': 44.99,  # C+ 최대 점수
+            'B-': 54.99,  # B- 최대 점수
+            'B': 63.99,   # B 최대 점수
+        }
+
         if violation_count >= 2:
             max_grade = 'C+'
         elif violation_count == 1:
@@ -1077,13 +1155,19 @@ class RaymondsIndexCalculator:
         else:
             max_grade = None
 
+        adjusted_score = total_score
+
         if max_grade:
             current_idx = self.GRADE_ORDER.index(grade)
             max_idx = self.GRADE_ORDER.index(max_grade)
             if current_idx < max_idx:  # 현재 등급이 더 좋으면 하향
                 grade = max_grade
+                # 점수도 해당 등급의 상한선으로 조정
+                max_score = GRADE_MAX_SCORES.get(max_grade, total_score)
+                if total_score > max_score:
+                    adjusted_score = max_score
 
-        return grade, violation_count
+        return grade, adjusted_score, violation_count
 
     def _generate_flags(
         self,
@@ -1273,6 +1357,7 @@ class RaymondsIndexCalculator:
             # v2.0/v2.1 지표
             'investment_gap_v2': result.core_metrics.investment_gap_v2,
             'investment_gap_v21': result.core_metrics.investment_gap_v21,  # v2.1 핵심
+            'investment_gap_v21_flag': result.core_metrics.investment_gap_v21_flag,  # 데이터 플래그
             'cash_utilization': result.core_metrics.cash_utilization,
             'industry_sector': result.core_metrics.industry_sector,
             'weight_adjustment': result.core_metrics.weight_adjustment,
