@@ -228,6 +228,25 @@ export default function PaywallPage() {
           </>
         )}
 
+        {/* 에러 메시지 표시 */}
+        {authError && (
+          <div style={{
+            marginTop: '16px',
+            padding: '16px',
+            backgroundColor: colors.red500 + '10',
+            borderRadius: '12px',
+          }}>
+            <p style={{
+              fontSize: '14px',
+              color: colors.red500,
+              margin: 0,
+              textAlign: 'center',
+            }}>
+              {authError}
+            </p>
+          </div>
+        )}
+
         {/* 뒤로가기 */}
         <button
           onClick={() => navigate(-1)}

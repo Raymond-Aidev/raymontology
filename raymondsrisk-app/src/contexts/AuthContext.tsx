@@ -125,41 +125,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         debugLog(`window.__GRANITE_NATIVE_EMITTER 존재 = ${!!window.__GRANITE_NATIVE_EMITTER}`)
       }
 
-      // SDK 브릿지 초기화 상태 확인
-      const hasConstantMap = typeof window !== 'undefined' &&
-        window.__CONSTANT_HANDLER_MAP &&
-        typeof window.__CONSTANT_HANDLER_MAP === 'object' &&
-        Object.keys(window.__CONSTANT_HANDLER_MAP).length > 0
-      const hasWebView = typeof window !== 'undefined' &&
-        window.ReactNativeWebView &&
-        typeof window.ReactNativeWebView.postMessage === 'function'
+      // SDK 브릿지 초기화 상태 확인 (최대 3초 대기)
+      const checkBridge = () => {
+        const hasConstantMap = typeof window !== 'undefined' &&
+          window.__CONSTANT_HANDLER_MAP &&
+          typeof window.__CONSTANT_HANDLER_MAP === 'object' &&
+          Object.keys(window.__CONSTANT_HANDLER_MAP).length > 0
+        const hasWebView = typeof window !== 'undefined' &&
+          window.ReactNativeWebView &&
+          typeof window.ReactNativeWebView.postMessage === 'function'
+        return { hasConstantMap, hasWebView }
+      }
 
-      debugLog(`hasConstantMap = ${hasConstantMap}`)
-      debugLog(`hasWebView = ${hasWebView}`)
+      let bridgeCheck = checkBridge()
+      debugLog(`초기 브릿지 상태: hasConstantMap=${bridgeCheck.hasConstantMap}, hasWebView=${bridgeCheck.hasWebView}`)
 
-      // 브릿지가 초기화되지 않은 경우 샌드박스 모의 로그인 사용
-      if (!hasConstantMap || !hasWebView) {
-        debugLog('브릿지 미초기화 - 샌드박스 모의 로그인')
-        const sandboxUserKey = `sandbox_user_${Date.now()}`
-        const sandboxUser: TossUser = {
-          userKey: sandboxUserKey,
-          name: '샌드박스 테스트 사용자',
+      // 브릿지가 초기화되지 않은 경우 최대 3초간 대기 (100ms 간격)
+      if (!bridgeCheck.hasConstantMap || !bridgeCheck.hasWebView) {
+        debugLog('브릿지 미초기화 - 초기화 대기 시작 (최대 3초)')
+        for (let i = 0; i < 30; i++) {
+          await new Promise(resolve => setTimeout(resolve, 100))
+          bridgeCheck = checkBridge()
+          if (bridgeCheck.hasConstantMap && bridgeCheck.hasWebView) {
+            debugLog(`브릿지 초기화 완료 (${(i + 1) * 100}ms 후)`)
+            break
+          }
         }
-        const sandboxToken = `sandbox_token_${sandboxUserKey}`
-        localStorage.setItem('raymondsrisk_access_token', sandboxToken)
-        localStorage.setItem('raymondsrisk_refresh_token', sandboxToken)
-        localStorage.setItem('raymondsrisk_user_key', sandboxUserKey)
-        localStorage.setItem('raymondsrisk_user_info', JSON.stringify(sandboxUser))
+      }
 
-        setState({
-          isAuthenticated: true,
-          isLoading: false,
-          user: sandboxUser,
-          credits: 10,
-          error: null,
-        })
-        debugLog('브릿지 미초기화 모의 로그인 완료')
-        return
+      debugLog(`최종 브릿지 상태: hasConstantMap=${bridgeCheck.hasConstantMap}, hasWebView=${bridgeCheck.hasWebView}`)
+
+      // 대기 후에도 브릿지가 초기화되지 않은 경우 에러 반환
+      if (!bridgeCheck.hasConstantMap || !bridgeCheck.hasWebView) {
+        debugLog('브릿지 초기화 실패 - 토스앱/샌드박스앱 환경 필요')
+        throw new Error('토스 앱 또는 샌드박스 앱에서 실행해주세요. 앱을 다시 시작해보세요.')
       }
 
       // SDK 브릿지 초기화됨 - 환경 확인
