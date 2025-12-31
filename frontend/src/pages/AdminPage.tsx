@@ -45,7 +45,7 @@ interface Stats {
   superusers: number
 }
 
-type TabType = 'users' | 'content' | 'terms' | 'privacy'
+type TabType = 'users' | 'content' | 'terms' | 'privacy' | 'dataQuality'
 
 interface ContentField {
   field: string
@@ -67,6 +67,34 @@ interface ContentSection {
 interface PageContent {
   [section: string]: {
     [field: string]: string
+  }
+}
+
+// 데이터 품질 모니터링 타입
+interface DataQualityIssue {
+  issue_type: string
+  description: string
+  record_count: number
+  company_count: number
+  severity: 'critical' | 'warning' | 'info'
+  sample_data?: Array<Record<string, unknown>>
+}
+
+interface TableQualityStats {
+  table_name: string
+  total_records: number
+  issues: DataQualityIssue[]
+  quality_score: number
+  last_checked: string
+}
+
+interface DataQualityResponse {
+  overall_score: number
+  tables: TableQualityStats[]
+  summary: {
+    critical: number
+    warning: number
+    info: number
   }
 }
 
@@ -107,6 +135,11 @@ function AdminPage() {
   const [pageContent, setPageContent] = useState<PageContent>({})
   const [editingField, setEditingField] = useState<{section: string, field: string, value: string} | null>(null)
   const [uploadingImage, setUploadingImage] = useState<string | null>(null)
+
+  // 데이터 품질 모니터링 상태
+  const [dataQuality, setDataQuality] = useState<DataQualityResponse | null>(null)
+  const [dataQualityLoading, setDataQualityLoading] = useState(false)
+  const [cleanupLoading, setCleanupLoading] = useState<string | null>(null)
 
   // 로그인 여부 및 관리자 권한 체크
   useEffect(() => {
@@ -299,6 +332,58 @@ function AdminPage() {
       loadContentData()
     }
   }, [activeTab, user, loadContentData])
+
+  // 데이터 품질 로드
+  const loadDataQuality = useCallback(async () => {
+    setDataQualityLoading(true)
+    try {
+      const response = await apiClient.get('/api/admin/data-quality')
+      setDataQuality(response.data)
+    } catch (err) {
+      console.error('Failed to load data quality:', err)
+      setError('데이터 품질 정보를 불러오는데 실패했습니다.')
+    } finally {
+      setDataQualityLoading(false)
+    }
+  }, [])
+
+  // 데이터 품질 탭 전환 시 로드
+  useEffect(() => {
+    if (activeTab === 'dataQuality' && user?.is_superuser) {
+      loadDataQuality()
+    }
+  }, [activeTab, user, loadDataQuality])
+
+  // 데이터 정제 실행
+  const handleDataCleanup = async (tableName: string, issueType: string, dryRun: boolean) => {
+    const key = `${tableName}_${issueType}`
+    setCleanupLoading(key)
+    setError(null)
+
+    try {
+      const response = await apiClient.post('/api/admin/data-quality/cleanup', {
+        table_name: tableName,
+        issue_type: issueType,
+        dry_run: dryRun
+      })
+
+      if (dryRun) {
+        // 시뮬레이션 결과 표시
+        setSaveSuccess(`시뮬레이션: ${response.data.affected_records}개 레코드가 삭제될 예정입니다.`)
+      } else {
+        // 실제 정제 완료
+        setSaveSuccess(`${response.data.affected_records}개 레코드가 삭제되었습니다.`)
+        // 데이터 새로고침
+        await loadDataQuality()
+      }
+      setTimeout(() => setSaveSuccess(null), 5000)
+    } catch (err) {
+      console.error('Failed to cleanup data:', err)
+      setError('데이터 정제에 실패했습니다.')
+    } finally {
+      setCleanupLoading(null)
+    }
+  }
 
   // 이용권 관리 모달 열기
   const openSubscriptionModal = (u: User) => {
@@ -515,6 +600,7 @@ function AdminPage() {
         <div className="flex gap-2 mb-6 border-b border-theme-border overflow-x-auto">
           {[
             { id: 'users', label: '회원 관리' },
+            { id: 'dataQuality', label: '데이터 품질' },
             { id: 'content', label: '콘텐츠 관리' },
             { id: 'terms', label: '이용약관' },
             { id: 'privacy', label: '개인정보처리방침' }
@@ -650,6 +736,167 @@ function AdminPage() {
                 {users.length === 0 && (
                   <div className="p-8 text-center text-text-secondary">
                     등록된 회원이 없습니다.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 데이터 품질 탭 */}
+            {activeTab === 'dataQuality' && (
+              <div className="space-y-6">
+                {dataQualityLoading ? (
+                  <div className="flex items-center justify-center py-20">
+                    <div className="w-8 h-8 border-4 border-accent-primary border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : dataQuality ? (
+                  <>
+                    {/* 전체 품질 점수 */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div className="bg-theme-card border border-theme-border rounded-xl p-6">
+                        <p className="text-sm text-text-secondary mb-2">전체 품질 점수</p>
+                        <div className="flex items-center gap-3">
+                          <span className={`text-3xl font-bold ${
+                            dataQuality.overall_score >= 95 ? 'text-accent-success' :
+                            dataQuality.overall_score >= 80 ? 'text-accent-warning' :
+                            'text-accent-danger'
+                          }`}>
+                            {dataQuality.overall_score.toFixed(1)}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="bg-theme-card border border-accent-danger/30 rounded-xl p-6">
+                        <p className="text-sm text-text-secondary mb-2">심각 이슈</p>
+                        <span className="text-3xl font-bold text-accent-danger">
+                          {dataQuality.summary.critical}
+                        </span>
+                      </div>
+                      <div className="bg-theme-card border border-accent-warning/30 rounded-xl p-6">
+                        <p className="text-sm text-text-secondary mb-2">경고</p>
+                        <span className="text-3xl font-bold text-accent-warning">
+                          {dataQuality.summary.warning}
+                        </span>
+                      </div>
+                      <div className="bg-theme-card border border-accent-primary/30 rounded-xl p-6">
+                        <p className="text-sm text-text-secondary mb-2">정보</p>
+                        <span className="text-3xl font-bold text-accent-primary">
+                          {dataQuality.summary.info}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* 테이블별 품질 현황 */}
+                    {dataQuality.tables.map((table) => (
+                      <div key={table.table_name} className="bg-theme-card border border-theme-border rounded-xl p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <h3 className="text-lg font-semibold text-text-primary">{table.table_name}</h3>
+                            <p className="text-sm text-text-secondary">
+                              {table.total_records.toLocaleString()}개 레코드
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-2xl font-bold ${
+                              table.quality_score >= 95 ? 'text-accent-success' :
+                              table.quality_score >= 80 ? 'text-accent-warning' :
+                              'text-accent-danger'
+                            }`}>
+                              {table.quality_score.toFixed(1)}%
+                            </span>
+                            <button
+                              onClick={loadDataQuality}
+                              className="p-2 text-text-muted hover:text-text-secondary hover:bg-theme-hover rounded-lg transition-colors"
+                              title="새로고침"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+
+                        {table.issues.length === 0 ? (
+                          <div className="p-4 bg-accent-success/10 border border-accent-success/30 rounded-lg">
+                            <p className="text-sm text-accent-success">이슈 없음</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {table.issues.map((issue) => {
+                              const cleanupKey = `${table.table_name}_${issue.issue_type}`
+                              const isCleanupLoading = cleanupLoading === cleanupKey
+
+                              return (
+                                <div
+                                  key={issue.issue_type}
+                                  className={`p-4 rounded-lg border ${
+                                    issue.severity === 'critical'
+                                      ? 'bg-accent-danger/10 border-accent-danger/30'
+                                      : issue.severity === 'warning'
+                                      ? 'bg-accent-warning/10 border-accent-warning/30'
+                                      : 'bg-accent-primary/10 border-accent-primary/30'
+                                  }`}
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div>
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                                          issue.severity === 'critical'
+                                            ? 'bg-accent-danger/20 text-accent-danger'
+                                            : issue.severity === 'warning'
+                                            ? 'bg-accent-warning/20 text-accent-warning'
+                                            : 'bg-accent-primary/20 text-accent-primary'
+                                        }`}>
+                                          {issue.severity === 'critical' ? '심각' : issue.severity === 'warning' ? '경고' : '정보'}
+                                        </span>
+                                        <span className="text-sm font-medium text-text-primary">
+                                          {issue.description}
+                                        </span>
+                                      </div>
+                                      <p className="text-sm text-text-secondary">
+                                        {issue.record_count.toLocaleString()}개 레코드
+                                        {issue.company_count > 0 && ` (${issue.company_count.toLocaleString()}개 기업)`}
+                                      </p>
+                                      {issue.sample_data && issue.sample_data.length > 0 && (
+                                        <div className="mt-2 p-2 bg-theme-surface rounded text-xs text-text-muted font-mono">
+                                          샘플: {issue.sample_data.slice(0, 3).map(s =>
+                                            typeof s === 'object' ? JSON.stringify(s).slice(0, 50) : String(s)
+                                          ).join(', ')}
+                                        </div>
+                                      )}
+                                    </div>
+                                    {['numeric_shareholder_name', 'financial_item_name', 'abnormal_share_count'].includes(issue.issue_type) && (
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={() => handleDataCleanup(table.table_name, issue.issue_type, true)}
+                                          disabled={isCleanupLoading}
+                                          className="px-3 py-1.5 text-xs rounded bg-theme-surface border border-theme-border text-text-secondary hover:bg-theme-hover transition-colors disabled:opacity-50"
+                                        >
+                                          {isCleanupLoading ? '처리중...' : '시뮬레이션'}
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            if (confirm(`정말 ${issue.record_count.toLocaleString()}개 레코드를 삭제하시겠습니까?`)) {
+                                              handleDataCleanup(table.table_name, issue.issue_type, false)
+                                            }
+                                          }}
+                                          disabled={isCleanupLoading}
+                                          className="px-3 py-1.5 text-xs rounded bg-accent-danger/10 border border-accent-danger/30 text-accent-danger hover:bg-accent-danger/20 transition-colors disabled:opacity-50"
+                                        >
+                                          정제 실행
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </>
+                ) : (
+                  <div className="p-8 text-center text-text-secondary">
+                    데이터를 불러오는 중 오류가 발생했습니다.
                   </div>
                 )}
               </div>

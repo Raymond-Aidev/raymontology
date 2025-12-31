@@ -3,9 +3,9 @@ Admin Routes - 관리자 전용 API
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, text
 from pydantic import BaseModel
-from typing import Optional, List, Literal
+from typing import Optional, List, Literal, Dict, Any
 from datetime import datetime, timedelta
 import logging
 import uuid as uuid_module
@@ -373,4 +373,476 @@ async def update_user_subscription(
         "message": f"이용권이 {tier_names.get(data.tier, data.tier)} ({expires_msg})으로 설정되었습니다.",
         "subscription_tier": user.subscription_tier,
         "subscription_expires_at": user.subscription_expires_at
+    }
+
+
+# ============================================================================
+# Data Quality Monitoring Schemas
+# ============================================================================
+
+class DataQualityIssue(BaseModel):
+    """데이터 품질 이슈 항목"""
+    issue_type: str
+    description: str
+    record_count: int
+    company_count: int
+    severity: Literal['critical', 'warning', 'info']
+    sample_data: Optional[List[Dict[str, Any]]] = None
+
+
+class TableQualityStats(BaseModel):
+    """테이블별 데이터 품질 통계"""
+    table_name: str
+    total_records: int
+    issues: List[DataQualityIssue]
+    quality_score: float  # 0-100
+    last_checked: datetime
+
+
+class DataQualityResponse(BaseModel):
+    """데이터 품질 모니터링 전체 응답"""
+    overall_score: float
+    tables: List[TableQualityStats]
+    summary: Dict[str, int]  # critical, warning, info counts
+
+
+class DataCleanupRequest(BaseModel):
+    """데이터 정제 요청"""
+    table_name: str
+    issue_type: str
+    dry_run: bool = True  # 기본값: 시뮬레이션만
+
+
+class DataCleanupResponse(BaseModel):
+    """데이터 정제 응답"""
+    table_name: str
+    issue_type: str
+    affected_records: int
+    dry_run: bool
+    message: str
+
+
+# ============================================================================
+# Data Quality Monitoring Endpoints
+# ============================================================================
+
+@router.get("/data-quality", response_model=DataQualityResponse)
+async def get_data_quality_report(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin)
+):
+    """
+    데이터 품질 모니터링 보고서 조회 (관리자 전용)
+
+    주요 체크 항목:
+    1. major_shareholders: 숫자로 시작하는 주주명, 재무항목명, 비정상 주식수
+    2. officers: 이름 형식 오류, 직위 누락
+    3. convertible_bonds: 금액 이상치, 날짜 오류
+    """
+    tables_stats = []
+    summary = {"critical": 0, "warning": 0, "info": 0}
+
+    # ========== 1. major_shareholders 품질 검사 ==========
+    shareholder_issues = []
+
+    # 1.1 전체 레코드 수
+    total_result = await db.execute(text("SELECT COUNT(*) FROM major_shareholders"))
+    shareholder_total = total_result.scalar()
+
+    # 1.2 숫자로 시작하는 주주명
+    numeric_name_result = await db.execute(text("""
+        SELECT COUNT(*), COUNT(DISTINCT company_id)
+        FROM major_shareholders
+        WHERE shareholder_name ~ '^[0-9]'
+    """))
+    row = numeric_name_result.fetchone()
+    numeric_count, numeric_companies = row[0], row[1]
+
+    if numeric_count > 0:
+        # 샘플 데이터 조회
+        sample_result = await db.execute(text("""
+            SELECT id, shareholder_name, share_count, company_id
+            FROM major_shareholders
+            WHERE shareholder_name ~ '^[0-9]'
+            LIMIT 5
+        """))
+        samples = [dict(row._mapping) for row in sample_result.fetchall()]
+
+        shareholder_issues.append(DataQualityIssue(
+            issue_type="numeric_shareholder_name",
+            description="주주명이 숫자로 시작 (파싱 오류 추정)",
+            record_count=numeric_count,
+            company_count=numeric_companies,
+            severity="critical" if numeric_count > 100 else "warning",
+            sample_data=samples
+        ))
+        summary["critical" if numeric_count > 100 else "warning"] += 1
+
+    # 1.3 재무항목 이름이 주주명인 경우
+    financial_terms = [
+        '선급금', '장기대여금', '유동성사채', '단기차입금', '신탁 체결',
+        '채권형', '금융자산', '이자비용', '감가상각비', '매출원가',
+        '판관비', '자본금', '자본잉여금', '이익잉여금', '미수금',
+        '미지급금', '예수금', '가수금', '선수금', '퇴직급여'
+    ]
+    terms_str = "', '".join(financial_terms)
+    financial_name_result = await db.execute(text(f"""
+        SELECT COUNT(*), COUNT(DISTINCT company_id)
+        FROM major_shareholders
+        WHERE shareholder_name IN ('{terms_str}')
+    """))
+    row = financial_name_result.fetchone()
+    financial_count, financial_companies = row[0], row[1]
+
+    if financial_count > 0:
+        shareholder_issues.append(DataQualityIssue(
+            issue_type="financial_item_name",
+            description="주주명이 재무항목명 (파싱 오류)",
+            record_count=financial_count,
+            company_count=financial_companies,
+            severity="critical",
+            sample_data=None
+        ))
+        summary["critical"] += 1
+
+    # 1.4 비정상적으로 큰 주식수 (100억주 초과)
+    abnormal_share_result = await db.execute(text("""
+        SELECT COUNT(*), COUNT(DISTINCT company_id)
+        FROM major_shareholders
+        WHERE share_count > 10000000000
+    """))
+    row = abnormal_share_result.fetchone()
+    abnormal_count, abnormal_companies = row[0], row[1]
+
+    if abnormal_count > 0:
+        shareholder_issues.append(DataQualityIssue(
+            issue_type="abnormal_share_count",
+            description="주식수 100억주 초과 (이상치)",
+            record_count=abnormal_count,
+            company_count=abnormal_companies,
+            severity="warning",
+            sample_data=None
+        ))
+        summary["warning"] += 1
+
+    # 1.5 NULL share_ratio
+    null_ratio_result = await db.execute(text("""
+        SELECT COUNT(*) FROM major_shareholders WHERE share_ratio IS NULL
+    """))
+    null_ratio_count = null_ratio_result.scalar()
+
+    if null_ratio_count > 0:
+        shareholder_issues.append(DataQualityIssue(
+            issue_type="null_share_ratio",
+            description="지분율 NULL",
+            record_count=null_ratio_count,
+            company_count=0,  # 집계하지 않음
+            severity="info",
+            sample_data=None
+        ))
+        summary["info"] += 1
+
+    # 품질 점수 계산 (문제 레코드 비율 기반)
+    problem_count = numeric_count + financial_count + abnormal_count
+    quality_score = max(0, 100 - (problem_count / max(shareholder_total, 1)) * 100)
+
+    tables_stats.append(TableQualityStats(
+        table_name="major_shareholders",
+        total_records=shareholder_total,
+        issues=shareholder_issues,
+        quality_score=round(quality_score, 1),
+        last_checked=datetime.utcnow()
+    ))
+
+    # ========== 2. officers 품질 검사 ==========
+    officer_issues = []
+
+    total_result = await db.execute(text("SELECT COUNT(*) FROM officers"))
+    officer_total = total_result.scalar()
+
+    # 2.1 이름이 없는 임원
+    null_name_result = await db.execute(text("""
+        SELECT COUNT(*) FROM officers
+        WHERE name IS NULL OR TRIM(name) = ''
+    """))
+    null_name_count = null_name_result.scalar()
+
+    if null_name_count > 0:
+        officer_issues.append(DataQualityIssue(
+            issue_type="null_officer_name",
+            description="임원 이름 NULL 또는 빈 문자열",
+            record_count=null_name_count,
+            company_count=0,
+            severity="warning",
+            sample_data=None
+        ))
+        summary["warning"] += 1
+
+    # 2.2 직위가 없는 임원 (officer_positions 기준)
+    no_position_result = await db.execute(text("""
+        SELECT COUNT(*) FROM officers o
+        WHERE NOT EXISTS (
+            SELECT 1 FROM officer_positions op WHERE op.officer_id = o.id
+        )
+    """))
+    no_position_count = no_position_result.scalar()
+
+    if no_position_count > 0:
+        officer_issues.append(DataQualityIssue(
+            issue_type="no_position",
+            description="직위 정보 없는 임원",
+            record_count=no_position_count,
+            company_count=0,
+            severity="info",
+            sample_data=None
+        ))
+        summary["info"] += 1
+
+    officer_quality = max(0, 100 - (null_name_count / max(officer_total, 1)) * 100)
+
+    tables_stats.append(TableQualityStats(
+        table_name="officers",
+        total_records=officer_total,
+        issues=officer_issues,
+        quality_score=round(officer_quality, 1),
+        last_checked=datetime.utcnow()
+    ))
+
+    # ========== 3. convertible_bonds 품질 검사 ==========
+    cb_issues = []
+
+    total_result = await db.execute(text("SELECT COUNT(*) FROM convertible_bonds"))
+    cb_total = total_result.scalar()
+
+    # 3.1 발행금액 0 또는 NULL
+    zero_amount_result = await db.execute(text("""
+        SELECT COUNT(*) FROM convertible_bonds
+        WHERE issue_amount IS NULL OR issue_amount <= 0
+    """))
+    zero_amount_count = zero_amount_result.scalar()
+
+    if zero_amount_count > 0:
+        cb_issues.append(DataQualityIssue(
+            issue_type="zero_issue_amount",
+            description="발행금액 0 또는 NULL",
+            record_count=zero_amount_count,
+            company_count=0,
+            severity="warning",
+            sample_data=None
+        ))
+        summary["warning"] += 1
+
+    cb_quality = max(0, 100 - (zero_amount_count / max(cb_total, 1)) * 100)
+
+    tables_stats.append(TableQualityStats(
+        table_name="convertible_bonds",
+        total_records=cb_total,
+        issues=cb_issues,
+        quality_score=round(cb_quality, 1),
+        last_checked=datetime.utcnow()
+    ))
+
+    # 전체 품질 점수 (가중 평균)
+    total_records = sum(t.total_records for t in tables_stats)
+    if total_records > 0:
+        overall_score = sum(
+            t.quality_score * t.total_records for t in tables_stats
+        ) / total_records
+    else:
+        overall_score = 100.0
+
+    return DataQualityResponse(
+        overall_score=round(overall_score, 1),
+        tables=tables_stats,
+        summary=summary
+    )
+
+
+@router.post("/data-quality/cleanup", response_model=DataCleanupResponse)
+async def cleanup_data_quality_issue(
+    request: DataCleanupRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    데이터 품질 이슈 정제 (관리자 전용)
+
+    dry_run=True: 삭제될 레코드 수만 반환 (실제 삭제 안 함)
+    dry_run=False: 실제로 레코드 삭제
+    """
+    affected = 0
+
+    if request.table_name == "major_shareholders":
+        if request.issue_type == "numeric_shareholder_name":
+            if request.dry_run:
+                result = await db.execute(text("""
+                    SELECT COUNT(*) FROM major_shareholders
+                    WHERE shareholder_name ~ '^[0-9]'
+                """))
+                affected = result.scalar()
+            else:
+                result = await db.execute(text("""
+                    DELETE FROM major_shareholders
+                    WHERE shareholder_name ~ '^[0-9]'
+                """))
+                affected = result.rowcount
+                await db.commit()
+                logger.info(f"Cleaned up {affected} numeric shareholder names by {current_user.email}")
+
+        elif request.issue_type == "financial_item_name":
+            financial_terms = [
+                '선급금', '장기대여금', '유동성사채', '단기차입금', '신탁 체결',
+                '채권형', '금융자산', '이자비용', '감가상각비', '매출원가',
+                '판관비', '자본금', '자본잉여금', '이익잉여금', '미수금',
+                '미지급금', '예수금', '가수금', '선수금', '퇴직급여'
+            ]
+            terms_str = "', '".join(financial_terms)
+
+            if request.dry_run:
+                result = await db.execute(text(f"""
+                    SELECT COUNT(*) FROM major_shareholders
+                    WHERE shareholder_name IN ('{terms_str}')
+                """))
+                affected = result.scalar()
+            else:
+                result = await db.execute(text(f"""
+                    DELETE FROM major_shareholders
+                    WHERE shareholder_name IN ('{terms_str}')
+                """))
+                affected = result.rowcount
+                await db.commit()
+                logger.info(f"Cleaned up {affected} financial item names by {current_user.email}")
+
+        elif request.issue_type == "abnormal_share_count":
+            if request.dry_run:
+                result = await db.execute(text("""
+                    SELECT COUNT(*) FROM major_shareholders
+                    WHERE share_count > 10000000000
+                """))
+                affected = result.scalar()
+            else:
+                result = await db.execute(text("""
+                    DELETE FROM major_shareholders
+                    WHERE share_count > 10000000000
+                """))
+                affected = result.rowcount
+                await db.commit()
+                logger.info(f"Cleaned up {affected} abnormal share counts by {current_user.email}")
+
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unknown issue type: {request.issue_type}"
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cleanup not supported for table: {request.table_name}"
+        )
+
+    return DataCleanupResponse(
+        table_name=request.table_name,
+        issue_type=request.issue_type,
+        affected_records=affected,
+        dry_run=request.dry_run,
+        message=f"{'시뮬레이션: ' if request.dry_run else ''}{affected}개 레코드 {'삭제 예정' if request.dry_run else '삭제 완료'}"
+    )
+
+
+@router.get("/data-quality/shareholder-issues")
+async def get_shareholder_issues_detail(
+    issue_type: str,
+    limit: int = 50,
+    offset: int = 0,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin)
+):
+    """
+    대주주 데이터 이슈 상세 목록 조회 (관리자 전용)
+
+    issue_type:
+    - numeric_shareholder_name: 숫자로 시작하는 주주명
+    - financial_item_name: 재무항목명
+    - abnormal_share_count: 비정상 주식수
+    """
+    if issue_type == "numeric_shareholder_name":
+        query = text("""
+            SELECT
+                ms.id,
+                ms.shareholder_name,
+                ms.share_count,
+                ms.share_ratio,
+                c.name as company_name,
+                c.id as company_id
+            FROM major_shareholders ms
+            JOIN companies c ON ms.company_id = c.id
+            WHERE ms.shareholder_name ~ '^[0-9]'
+            ORDER BY ms.id
+            LIMIT :limit OFFSET :offset
+        """)
+        count_query = text("""
+            SELECT COUNT(*) FROM major_shareholders
+            WHERE shareholder_name ~ '^[0-9]'
+        """)
+    elif issue_type == "financial_item_name":
+        financial_terms = [
+            '선급금', '장기대여금', '유동성사채', '단기차입금', '신탁 체결',
+            '채권형', '금융자산', '이자비용', '감가상각비', '매출원가'
+        ]
+        terms_str = "', '".join(financial_terms)
+        query = text(f"""
+            SELECT
+                ms.id,
+                ms.shareholder_name,
+                ms.share_count,
+                ms.share_ratio,
+                c.name as company_name,
+                c.id as company_id
+            FROM major_shareholders ms
+            JOIN companies c ON ms.company_id = c.id
+            WHERE ms.shareholder_name IN ('{terms_str}')
+            ORDER BY ms.id
+            LIMIT :limit OFFSET :offset
+        """)
+        count_query = text(f"""
+            SELECT COUNT(*) FROM major_shareholders
+            WHERE shareholder_name IN ('{terms_str}')
+        """)
+    elif issue_type == "abnormal_share_count":
+        query = text("""
+            SELECT
+                ms.id,
+                ms.shareholder_name,
+                ms.share_count,
+                ms.share_ratio,
+                c.name as company_name,
+                c.id as company_id
+            FROM major_shareholders ms
+            JOIN companies c ON ms.company_id = c.id
+            WHERE ms.share_count > 10000000000
+            ORDER BY ms.share_count DESC
+            LIMIT :limit OFFSET :offset
+        """)
+        count_query = text("""
+            SELECT COUNT(*) FROM major_shareholders
+            WHERE share_count > 10000000000
+        """)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unknown issue type: {issue_type}"
+        )
+
+    result = await db.execute(query, {"limit": limit, "offset": offset})
+    items = [dict(row._mapping) for row in result.fetchall()]
+
+    count_result = await db.execute(count_query)
+    total = count_result.scalar()
+
+    return {
+        "issue_type": issue_type,
+        "items": items,
+        "total": total,
+        "limit": limit,
+        "offset": offset
     }
