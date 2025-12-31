@@ -98,3 +98,43 @@ export interface RankingParams {
   max_score?: number;
   sort?: 'score_desc' | 'score_asc' | 'name_asc' | 'name_desc';
 }
+
+// 주가 데이터 타입
+export interface StockPriceData {
+  month: string;
+  close: number;
+  open: number | null;
+  high: number | null;
+  low: number | null;
+  volume: number | null;
+  change: number | null;
+}
+
+export interface StockPriceChartResponse {
+  company: {
+    id: string;
+    name: string;
+    ticker: string;
+    market: string;
+  };
+  period: string;
+  labels: string[];
+  data: StockPriceData[];
+  performance: {
+    start_month: string;
+    end_month: string;
+    start_price: number;
+    end_price: number;
+    total_return_pct: number;
+    data_points: number;
+  };
+  message?: string;
+}
+
+export interface StockPriceStatusResponse {
+  total_listed_companies: number;
+  companies_with_prices: number;
+  coverage_rate: number;
+  total_price_records: number;
+  latest_data_month: string | null;
+}

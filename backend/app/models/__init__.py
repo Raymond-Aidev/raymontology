@@ -24,6 +24,7 @@ from app.models.users import User
 from app.models.major_shareholders import MajorShareholder
 from app.models.risk_scores import RiskScore
 from app.models.toss_users import TossUser, CreditTransaction, ReportView, CreditProduct
+from app.models.stock_prices import StockPrice
 
 __all__ = [
     "Base",
@@ -51,4 +52,5 @@ __all__ = [
     "CreditTransaction",
     "ReportView",
     "CreditProduct",
+    "StockPrice",
 ]

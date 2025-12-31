@@ -48,6 +48,9 @@ PyMuPDF==1.23.8
 beautifulsoup4==4.12.2
 lxml==4.9.3
 
+# Stock Price Data (KRX)
+pykrx==1.0.46
+
 # Progress Bar
 tqdm==4.66.1
 

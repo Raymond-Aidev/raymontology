@@ -1,7 +1,15 @@
 // API 클라이언트
 
 import { API_BASE_URL } from './constants';
-import type { RankingResponse, RaymondsIndexResponse, StatisticsResponse, SearchResult, RankingParams } from './types';
+import type {
+  RankingResponse,
+  RaymondsIndexResponse,
+  StatisticsResponse,
+  SearchResult,
+  RankingParams,
+  StockPriceChartResponse,
+  StockPriceStatusResponse
+} from './types';
 
 async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
@@ -125,6 +133,24 @@ export const api = {
         median_score: data.average_score, // API doesn't provide median
         updated_at: new Date().toISOString(),
       };
+    },
+  },
+
+  // 주가 데이터 API
+  stockPrices: {
+    // 차트용 데이터 조회
+    getChartData: async (
+      companyId: string,
+      period: '1y' | '2y' | '3y' | 'all' = '3y'
+    ): Promise<StockPriceChartResponse> => {
+      return fetchAPI<StockPriceChartResponse>(
+        `/stock-prices/company/${companyId}/chart?period=${period}`
+      );
+    },
+
+    // 수집 현황 조회
+    getStatus: async (): Promise<StockPriceStatusResponse> => {
+      return fetchAPI<StockPriceStatusResponse>('/stock-prices/status');
     },
   },
 };

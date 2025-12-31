@@ -9,6 +9,7 @@ import { MetricCard } from '@/components/metric-card';
 import { SubIndexRadar } from '@/components/sub-index-radar';
 import { RiskFlagsPanel } from '@/components/risk-flags-panel';
 import { AIAnalysisSection } from '@/components/ai-analysis-section';
+import { StockPriceChart } from '@/components/stock-price-chart';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -150,6 +151,17 @@ export default function CompanyDetailPage() {
           yellowFlags={company.yellow_flags || []}
         />
       </div>
+
+      {/* Stock Price Chart */}
+      {company.stock_code && (
+        <div className="mb-6">
+          <StockPriceChart
+            companyId={company.company_id}
+            companyName={company.company_name}
+            ticker={company.stock_code}
+          />
+        </div>
+      )}
 
       {/* Core Metrics Grid */}
       <div className="mb-6">
