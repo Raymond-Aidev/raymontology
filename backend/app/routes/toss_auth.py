@@ -222,7 +222,7 @@ async def exchange_code_for_token(
 
 @router.get("/me", response_model=UserInfoResponse)
 async def get_current_user(
-    authorization: str = None,
+    authorization: str = Header(None),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -343,7 +343,7 @@ async def refresh_access_token(
 
 @router.post("/logout")
 async def logout(
-    authorization: str = None,
+    authorization: str = Header(None),
     db: AsyncSession = Depends(get_db),
 ):
     """
