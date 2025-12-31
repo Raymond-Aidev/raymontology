@@ -83,9 +83,9 @@ function MainSearchPage() {
       setShowLoginModal(true)
       return
     }
-    // 유효한 이용권이 있으면 회사 상세 페이지로 이동
+    // 유효한 이용권이 있으면 관계도 페이지로 이동 (기본 화면)
     if (hasValidSubscription()) {
-      navigate(`/company/${company.id}/report`)
+      navigate(`/company/${company.id}/graph`)
       return
     }
     // 이용권이 없으면 유료 서비스 모달 표시

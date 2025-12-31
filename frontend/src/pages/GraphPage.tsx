@@ -77,6 +77,9 @@ function GraphPage() {
   const [isMobile, setIsMobile] = useState(false)
   const [showMobileFilters, setShowMobileFilters] = useState(false)
 
+  // 전체화면 모드 상태
+  const [isFullscreen, setIsFullscreen] = useState(false)
+
   // 날짜를 YYYY-MM-DD 형식으로 변환
   const formatDateParam = (date: Date | string | null | undefined): string | undefined => {
     if (!date) return undefined
@@ -277,6 +280,32 @@ function GraphPage() {
       navigate(`/company/${targetCompanyId}/graph`)
     }
   }, [navigationHistory, navigateToIndex, navigate])
+
+  // 전체화면 토글
+  const toggleFullscreen = useCallback(() => {
+    setIsFullscreen(prev => !prev)
+    selectNode(null) // 전체화면 전환 시 선택 해제
+  }, [selectNode])
+
+  // 전체화면에서 빈 영역 클릭 시 원래 화면으로 복귀
+  const handleFullscreenBackgroundClick = useCallback((e: React.MouseEvent) => {
+    // 이벤트가 SVG 배경에서 발생했는지 확인 (노드나 다른 요소가 아닌 경우)
+    const target = e.target as Element
+    if (target.tagName === 'svg' || target.classList.contains('fullscreen-overlay')) {
+      setIsFullscreen(false)
+    }
+  }, [])
+
+  // ESC 키로 전체화면 해제
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isFullscreen])
 
   // 키보드 단축키 (Alt+← / Alt+→)
   useEffect(() => {
@@ -583,6 +612,18 @@ function GraphPage() {
                 onToggleNodeType={handleToggleNodeType}
                 nodeCounts={nodeCounts}
               />
+              {/* 전체보기 버튼 - 우측 상단 */}
+              <button
+                onClick={toggleFullscreen}
+                className="absolute top-3 right-3 z-20 p-2.5 bg-dark-card/90 backdrop-blur-sm border border-dark-border rounded-lg
+                          hover:bg-accent-primary/20 hover:border-accent-primary/50 transition-all
+                          text-text-secondary hover:text-accent-primary shadow-lg"
+                title="전체화면으로 보기"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                </svg>
+              </button>
             </>
           )}
         </div>
@@ -733,6 +774,81 @@ function GraphPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
           </button>
+        </div>
+      )}
+
+      {/* 전체화면 오버레이 */}
+      {isFullscreen && filteredGraphData.nodes.length > 0 && (
+        <div
+          className="fullscreen-overlay fixed inset-0 z-50 bg-dark-bg"
+          onClick={handleFullscreenBackgroundClick}
+        >
+          {/* 상단 헤더 */}
+          <div className="absolute top-0 left-0 right-0 z-10 px-4 py-3 bg-gradient-to-b from-dark-bg via-dark-bg/80 to-transparent">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-text-primary">
+                {centerCompany?.name || '회사'} 관계도
+              </h2>
+              <button
+                onClick={() => setIsFullscreen(false)}
+                className="p-2.5 bg-dark-card/90 backdrop-blur-sm border border-dark-border rounded-lg
+                          hover:bg-accent-primary/20 hover:border-accent-primary/50 transition-all
+                          text-text-secondary hover:text-accent-primary"
+                title="전체화면 닫기 (ESC)"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* 전체화면 그래프 */}
+          <div className="w-full h-full" onClick={handleFullscreenBackgroundClick}>
+            <ForceGraph
+              ref={forceGraphRef}
+              data={filteredGraphData}
+              width={window.innerWidth}
+              height={window.innerHeight}
+              onNodeClick={handleNodeClick}
+              selectedNodeId={selectedNode?.id}
+            />
+          </div>
+
+          {/* 줌 컨트롤 - 우측 하단 */}
+          <div className="absolute bottom-6 right-6 flex flex-col gap-2 z-10">
+            <button
+              onClick={handleZoomIn}
+              className="w-12 h-12 bg-dark-card/90 backdrop-blur-sm border border-dark-border rounded-full shadow-lg flex items-center justify-center text-text-secondary hover:text-accent-primary hover:border-accent-primary/50 transition-all"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+              </svg>
+            </button>
+            <button
+              onClick={handleZoomOut}
+              className="w-12 h-12 bg-dark-card/90 backdrop-blur-sm border border-dark-border rounded-full shadow-lg flex items-center justify-center text-text-secondary hover:text-accent-primary hover:border-accent-primary/50 transition-all"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
+              </svg>
+            </button>
+            <button
+              onClick={handleReset}
+              className="w-12 h-12 bg-dark-card/90 backdrop-blur-sm border border-dark-border rounded-full shadow-lg flex items-center justify-center text-text-secondary hover:text-accent-primary hover:border-accent-primary/50 transition-all"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+          </div>
+
+          {/* 안내 텍스트 - 하단 중앙 */}
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10">
+            <p className="text-xs text-text-muted bg-dark-card/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-dark-border">
+              빈 영역을 클릭하거나 ESC 키를 눌러 닫기
+            </p>
+          </div>
         </div>
       )}
     </div>
