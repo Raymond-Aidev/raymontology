@@ -55,3 +55,9 @@ data/
 keystore/
 opcode/
 .env.production
+
+# mTLS Certificates (보안)
+certs/
+*.pem
+*.key
+*.crt

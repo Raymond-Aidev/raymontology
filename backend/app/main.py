@@ -27,6 +27,7 @@ from app.api.endpoints import (
     raymonds_index
 )
 from app.routes import auth, oauth, admin, subscription, content
+from app.routes import toss_auth, credits
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -73,6 +74,8 @@ app.include_router(oauth.router)
 app.include_router(admin.router)
 app.include_router(subscription.router)
 app.include_router(content.router)
+app.include_router(toss_auth.router)
+app.include_router(credits.router)
 
 # Static files (이미지 업로드)
 os.makedirs("uploads/content", exist_ok=True)

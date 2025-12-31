@@ -1,0 +1,342 @@
+"""
+Toss Apps-in-Toss API Client (mTLS)
+
+토스 앱인토스 서버와 mTLS 기반 통신을 위한 클라이언트.
+토스 로그인, 인앱결제 검증 등에 사용.
+
+참조: https://developers-apps-in-toss.toss.im/development/integration-process.md
+"""
+
+import os
+import logging
+from typing import Optional
+from dataclasses import dataclass
+from datetime import datetime
+
+import httpx
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class TossTokenResponse:
+    """토스 토큰 발급 응답"""
+    access_token: str
+    refresh_token: str
+    token_type: str = "Bearer"
+    expires_in: int = 3600  # 1시간
+
+
+@dataclass
+class TossUserInfo:
+    """토스 사용자 정보 (복호화 전)"""
+    user_key: str
+    scope: str
+    # 아래 필드들은 AES-256 GCM 암호화됨
+    encrypted_name: Optional[str] = None
+    encrypted_phone: Optional[str] = None
+    encrypted_email: Optional[str] = None
+    encrypted_birthday: Optional[str] = None
+    encrypted_gender: Optional[str] = None
+
+
+@dataclass
+class TossOrderStatus:
+    """인앱결제 주문 상태"""
+    order_id: str
+    status: str  # PURCHASED, PAYMENT_COMPLETED, FAILED, REFUNDED, etc.
+    sku: str
+    purchased_at: Optional[datetime] = None
+
+
+class TossAPIClient:
+    """
+    토스 앱인토스 API 클라이언트 (mTLS)
+
+    사용법:
+        client = TossAPIClient(
+            cert_path="/path/to/cert.crt",
+            key_path="/path/to/key.key"
+        )
+        token = await client.generate_token(auth_code, referrer)
+        user = await client.get_user_info(token.access_token)
+    """
+
+    BASE_URL = "https://apps-in-toss-api.toss.im"
+
+    def __init__(
+        self,
+        cert_path: Optional[str] = None,
+        key_path: Optional[str] = None,
+    ):
+        """
+        Args:
+            cert_path: mTLS 인증서 경로 (기본: 환경변수 TOSS_MTLS_CERT_PATH)
+            key_path: mTLS 키 경로 (기본: 환경변수 TOSS_MTLS_KEY_PATH)
+        """
+        self.cert_path = cert_path or os.getenv("TOSS_MTLS_CERT_PATH")
+        self.key_path = key_path or os.getenv("TOSS_MTLS_KEY_PATH")
+
+        if not self.cert_path or not self.key_path:
+            raise ValueError(
+                "mTLS 인증서 경로가 설정되지 않았습니다. "
+                "TOSS_MTLS_CERT_PATH, TOSS_MTLS_KEY_PATH 환경변수를 설정하세요."
+            )
+
+        if not os.path.exists(self.cert_path):
+            raise FileNotFoundError(f"인증서 파일을 찾을 수 없습니다: {self.cert_path}")
+        if not os.path.exists(self.key_path):
+            raise FileNotFoundError(f"키 파일을 찾을 수 없습니다: {self.key_path}")
+
+        logger.info(f"TossAPIClient 초기화: cert={self.cert_path}")
+
+    def _get_client(self) -> httpx.AsyncClient:
+        """mTLS가 설정된 HTTP 클라이언트 생성"""
+        return httpx.AsyncClient(
+            cert=(self.cert_path, self.key_path),
+            timeout=30.0,
+            headers={
+                "Content-Type": "application/json",
+            }
+        )
+
+    async def generate_token(
+        self,
+        authorization_code: str,
+        referrer: str,
+    ) -> TossTokenResponse:
+        """
+        인가 코드로 액세스 토큰 발급
+
+        Args:
+            authorization_code: appLogin()에서 받은 인가 코드 (유효기간 10분)
+            referrer: appLogin()에서 받은 referrer
+
+        Returns:
+            TossTokenResponse: access_token (1시간), refresh_token (14일)
+        """
+        url = f"{self.BASE_URL}/api-partner/v1/apps-in-toss/user/oauth2/generate-token"
+
+        async with self._get_client() as client:
+            response = await client.post(
+                url,
+                json={
+                    "authorizationCode": authorization_code,
+                    "referrer": referrer,
+                }
+            )
+
+            if response.status_code != 200:
+                logger.error(f"토큰 발급 실패: {response.status_code} - {response.text}")
+                response.raise_for_status()
+
+            data = response.json()
+            logger.info("토스 토큰 발급 성공")
+
+            return TossTokenResponse(
+                access_token=data["accessToken"],
+                refresh_token=data["refreshToken"],
+                token_type=data.get("tokenType", "Bearer"),
+                expires_in=data.get("expiresIn", 3600),
+            )
+
+    async def refresh_token(self, refresh_token: str) -> TossTokenResponse:
+        """
+        리프레시 토큰으로 새 액세스 토큰 발급
+
+        Args:
+            refresh_token: 기존 refresh_token (유효기간 14일)
+
+        Returns:
+            TossTokenResponse: 새로운 access_token
+        """
+        url = f"{self.BASE_URL}/api-partner/v1/apps-in-toss/user/oauth2/refresh-token"
+
+        async with self._get_client() as client:
+            response = await client.post(
+                url,
+                json={"refreshToken": refresh_token}
+            )
+
+            if response.status_code != 200:
+                logger.error(f"토큰 갱신 실패: {response.status_code} - {response.text}")
+                response.raise_for_status()
+
+            data = response.json()
+            logger.info("토스 토큰 갱신 성공")
+
+            return TossTokenResponse(
+                access_token=data["accessToken"],
+                refresh_token=data.get("refreshToken", refresh_token),
+                token_type=data.get("tokenType", "Bearer"),
+                expires_in=data.get("expiresIn", 3600),
+            )
+
+    async def get_user_info(self, access_token: str) -> TossUserInfo:
+        """
+        사용자 정보 조회
+
+        Args:
+            access_token: 액세스 토큰
+
+        Returns:
+            TossUserInfo: 사용자 정보 (개인정보는 암호화됨)
+
+        Note:
+            name, phone, email 등 개인정보는 AES-256 GCM 암호화되어 반환됨.
+            복호화 키는 토스에서 이메일로 별도 제공.
+        """
+        url = f"{self.BASE_URL}/api-partner/v1/apps-in-toss/user/oauth2/login-me"
+
+        async with self._get_client() as client:
+            response = await client.get(
+                url,
+                headers={"Authorization": f"Bearer {access_token}"}
+            )
+
+            if response.status_code != 200:
+                logger.error(f"사용자 정보 조회 실패: {response.status_code} - {response.text}")
+                response.raise_for_status()
+
+            data = response.json()
+            logger.info(f"토스 사용자 정보 조회 성공: userKey={data.get('userKey')}")
+
+            return TossUserInfo(
+                user_key=data["userKey"],
+                scope=data.get("scope", ""),
+                encrypted_name=data.get("name"),
+                encrypted_phone=data.get("phone"),
+                encrypted_email=data.get("email"),
+                encrypted_birthday=data.get("birthday"),
+                encrypted_gender=data.get("gender"),
+            )
+
+    async def disconnect(
+        self,
+        access_token: Optional[str] = None,
+        user_key: Optional[str] = None,
+    ) -> bool:
+        """
+        로그인 연결 해제 (로그아웃)
+
+        Args:
+            access_token: 액세스 토큰 (방법 1)
+            user_key: 사용자 키 (방법 2)
+
+        Returns:
+            bool: 성공 여부
+        """
+        if access_token:
+            url = f"{self.BASE_URL}/api-partner/v1/apps-in-toss/user/oauth2/disconnect"
+            async with self._get_client() as client:
+                response = await client.post(
+                    url,
+                    headers={"Authorization": f"Bearer {access_token}"}
+                )
+        elif user_key:
+            url = f"{self.BASE_URL}/api-partner/v1/apps-in-toss/user/oauth2/disconnect-by-user-key"
+            async with self._get_client() as client:
+                response = await client.post(
+                    url,
+                    json={"userKey": user_key}
+                )
+        else:
+            raise ValueError("access_token 또는 user_key 중 하나는 필수입니다.")
+
+        success = response.status_code == 200
+        if success:
+            logger.info("토스 로그인 연결 해제 성공")
+        else:
+            logger.error(f"토스 로그인 연결 해제 실패: {response.status_code}")
+
+        return success
+
+    # ===== 인앱결제 관련 =====
+
+    async def get_order_status(
+        self,
+        user_key: str,
+        order_id: str,
+    ) -> TossOrderStatus:
+        """
+        인앱결제 주문 상태 조회
+
+        Args:
+            user_key: 토스 사용자 키
+            order_id: 주문 ID
+
+        Returns:
+            TossOrderStatus: 주문 상태 정보
+        """
+        url = f"{self.BASE_URL}/api-partner/v1/apps-in-toss/order/get-order-status"
+
+        async with self._get_client() as client:
+            response = await client.get(
+                url,
+                params={"orderId": order_id},
+                headers={"x-toss-user-key": user_key}
+            )
+
+            if response.status_code != 200:
+                logger.error(f"주문 상태 조회 실패: {response.status_code} - {response.text}")
+                response.raise_for_status()
+
+            data = response.json()
+            logger.info(f"주문 상태 조회 성공: orderId={order_id}, status={data.get('status')}")
+
+            return TossOrderStatus(
+                order_id=data["orderId"],
+                status=data["status"],
+                sku=data.get("sku", ""),
+                purchased_at=datetime.fromisoformat(data["purchasedAt"]) if data.get("purchasedAt") else None,
+            )
+
+    async def verify_purchase(
+        self,
+        user_key: str,
+        order_id: str,
+        expected_sku: str,
+    ) -> tuple[bool, str]:
+        """
+        인앱결제 구매 검증
+
+        Args:
+            user_key: 토스 사용자 키
+            order_id: 주문 ID
+            expected_sku: 예상 상품 SKU
+
+        Returns:
+            tuple[bool, str]: (검증 성공 여부, 상태 메시지)
+        """
+        try:
+            order = await self.get_order_status(user_key, order_id)
+
+            if order.status not in ("PURCHASED", "PAYMENT_COMPLETED"):
+                return False, f"유효하지 않은 주문 상태: {order.status}"
+
+            if order.sku != expected_sku:
+                return False, f"SKU 불일치: expected={expected_sku}, actual={order.sku}"
+
+            return True, "결제 검증 성공"
+
+        except Exception as e:
+            logger.error(f"결제 검증 실패: {e}")
+            return False, f"결제 검증 실패: {str(e)}"
+
+
+# 싱글톤 인스턴스 (lazy initialization)
+_client_instance: Optional[TossAPIClient] = None
+
+
+def get_toss_client() -> TossAPIClient:
+    """
+    TossAPIClient 싱글톤 인스턴스 반환
+
+    환경변수 TOSS_MTLS_CERT_PATH, TOSS_MTLS_KEY_PATH가 설정되어 있어야 함.
+    """
+    global _client_instance
+
+    if _client_instance is None:
+        _client_instance = TossAPIClient()
+
+    return _client_instance

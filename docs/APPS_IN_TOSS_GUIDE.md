@@ -2,6 +2,38 @@
 
 > 공식 문서: https://developers-apps-in-toss.toss.im/intro/overview.md
 
+---
+
+## 서비스 범위
+
+**앱인토스는 RaymondsRisk 서비스 전용입니다.**
+
+| 서비스 | 앱인토스 포함 여부 |
+|--------|------------------|
+| **RaymondsRisk** | ✅ 포함 |
+| Raymontology (CB/임원 분석) | ❌ 미포함 |
+| RaymondsIndex (자본배분 효율성) | ❌ 미포함 |
+
+- 앱인토스 앱 이름: `raymondsrisk`
+- 스킴: `intoss://raymondsrisk`
+
+### 백엔드 API 서버 설정
+
+| 환경 | API 서버 | 용도 |
+|------|---------|------|
+| **로컬 개발** | `http://localhost:8000/api` | 개발/디버깅 |
+| **실기기 테스트** | `https://raymontology-production.up.railway.app/api` | 테스트 |
+| **프로덕션** | `https://raymontology-production.up.railway.app/api` | 실서비스 |
+
+**중요**: 실제 서비스 배포 시 반드시 Railway 프로덕션 서버를 사용해야 합니다.
+
+```typescript
+// 환경별 API URL 설정 예시
+const API_BASE_URL = process.env.NODE_ENV === 'production'
+  ? 'https://raymontology-production.up.railway.app/api'
+  : 'http://localhost:8000/api';
+```
+
 ## 문서 참조 URL
 
 | 유형 | 설명 | URL |
@@ -138,9 +170,9 @@ yarn ait init
 import { defineConfig } from '@apps-in-toss/web-framework/config';
 
 export default defineConfig({
-  appName: 'raymontology', // 앱인토스 콘솔에서 설정한 앱 이름
+  appName: 'raymondsrisk', // 앱인토스 콘솔에서 설정한 앱 이름
   brand: {
-    displayName: '레이몬톨로지', // 화면에 노출될 앱의 한글 이름
+    displayName: '레이몬즈리스크', // 화면에 노출될 앱의 한글 이름
     primaryColor: '#3182F6', // 앱의 기본 색상 (RGB HEX)
     icon: '', // 앱 아이콘 이미지 주소 (빈 문자열로 테스트 가능)
   },
@@ -198,7 +230,7 @@ yarn dev
 ```typescript
 // granite.config.ts
 export default defineConfig({
-  appName: 'raymontology',
+  appName: 'raymondsrisk',
   web: {
     host: '192.168.0.100', // 실기기에서 접근 가능한 IP
     port: 5173,
@@ -218,7 +250,7 @@ export default defineConfig({
 #### iOS 시뮬레이터/실기기
 
 1. 앱인토스 샌드박스 앱 실행
-2. 스킴 입력: `intoss://{appName}` (예: `intoss://raymontology`)
+2. 스킴 입력: `intoss://{appName}` (예: `intoss://raymondsrisk`)
 3. "스키마 열기" 버튼 클릭
 
 **실기기 추가 설정:**

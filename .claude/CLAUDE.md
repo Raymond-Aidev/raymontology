@@ -28,6 +28,18 @@
 
 ## 앱인토스(Apps in Toss) 개발 규칙
 
+### 서비스 범위 (중요!)
+**앱인토스는 RaymondsRisk 서비스 전용입니다.**
+
+| 서비스 | 앱인토스 포함 |
+|--------|-------------|
+| **RaymondsRisk** | ✅ 포함 |
+| Raymontology | ❌ 미포함 |
+| RaymondsIndex | ❌ 미포함 |
+
+- 앱 이름: `raymondsrisk`
+- 스킴: `intoss://raymondsrisk`
+
 ### 앱인토스 관련 작업 시 필수 확인
 ```
 앱인토스 관련 개발/수정 작업 전 반드시 docs/APPS_IN_TOSS_GUIDE.md 참조

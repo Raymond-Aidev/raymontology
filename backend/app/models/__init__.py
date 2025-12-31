@@ -23,6 +23,7 @@ from app.models.raymonds_index import RaymondsIndex
 from app.models.users import User
 from app.models.major_shareholders import MajorShareholder
 from app.models.risk_scores import RiskScore
+from app.models.toss_users import TossUser, CreditTransaction, ReportView, CreditProduct
 
 __all__ = [
     "Base",
@@ -46,4 +47,8 @@ __all__ = [
     "User",
     "MajorShareholder",
     "RiskScore",
+    "TossUser",
+    "CreditTransaction",
+    "ReportView",
+    "CreditProduct",
 ]
