@@ -19,9 +19,10 @@ from app.config import settings
 # mTLS 클라이언트 import (환경변수 없으면 None)
 _toss_client_available = False
 _toss_client_init_error = None
+TossAPIError = None  # 방어적 초기화
 
 try:
-    from app.services.toss_api_client import get_toss_client, TossAPIClient
+    from app.services.toss_api_client import get_toss_client, TossAPIClient, TossAPIError
     # 실제 클라이언트 인스턴스 생성 시도 (인증서 확인)
     _test_client = get_toss_client()
     _toss_client_available = True
@@ -200,6 +201,12 @@ async def exchange_code_for_token(
         raise
     except Exception as e:
         logger.error(f"토큰 발급 실패: {e}")
+        # TossAPIError인 경우 상세 에러 정보 반환
+        if TossAPIError and isinstance(e, TossAPIError):
+            raise HTTPException(
+                status_code=e.status_code or status.HTTP_400_BAD_REQUEST,
+                detail=f"토스 API 오류: [{e.error_code}] {e.reason}"
+            )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"토스 API 통신 오류: {str(e)}"
@@ -309,6 +316,12 @@ async def refresh_access_token(
         raise
     except Exception as e:
         logger.error(f"토큰 갱신 실패: {e}")
+        # TossAPIError인 경우 상세 에러 정보 반환
+        if TossAPIError and isinstance(e, TossAPIError):
+            raise HTTPException(
+                status_code=e.status_code or status.HTTP_400_BAD_REQUEST,
+                detail=f"토스 API 오류: [{e.error_code}] {e.reason}"
+            )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"토스 API 통신 오류: {str(e)}"

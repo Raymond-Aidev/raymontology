@@ -17,9 +17,10 @@ from app.config import settings
 
 # mTLS 클라이언트 import (인앱결제 검증용)
 _toss_client_available = False
+TossAPIError = None  # 방어적 초기화
 
 try:
-    from app.services.toss_api_client import get_toss_client, TossAPIClient
+    from app.services.toss_api_client import get_toss_client, TossAPIClient, TossAPIError
     _test_client = get_toss_client()
     _toss_client_available = True
 except Exception as e:
@@ -288,6 +289,12 @@ async def purchase_credits(
             raise
         except Exception as e:
             logger.error(f"IAP verification error: {e}")
+            # TossAPIError인 경우 상세 에러 정보 반환
+            if TossAPIError and isinstance(e, TossAPIError):
+                raise HTTPException(
+                    status_code=e.status_code or status.HTTP_400_BAD_REQUEST,
+                    detail=f"결제 검증 오류: [{e.error_code}] {e.reason}"
+                )
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail="결제 검증 중 오류가 발생했습니다"

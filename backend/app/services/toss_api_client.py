@@ -18,6 +18,42 @@ import httpx
 logger = logging.getLogger(__name__)
 
 
+class TossAPIError(Exception):
+    """토스 API 오류"""
+    def __init__(self, error_code: str, reason: str, status_code: int = 400):
+        self.error_code = error_code
+        self.reason = reason
+        self.status_code = status_code
+        super().__init__(f"[{error_code}] {reason}")
+
+
+def _parse_response(response: httpx.Response) -> dict:
+    """
+    토스 API 응답 파싱 (방어적 코딩)
+
+    API 공통 응답 형식:
+    - 성공: {"resultType": "SUCCESS", "success": {...}}
+    - 실패: {"resultType": "FAIL", "error": {"errorCode": "...", "reason": "..."}}
+    - 또는 직접 데이터 반환 (일부 API)
+    """
+    data = response.json()
+
+    # resultType 래핑 형식 처리
+    if isinstance(data, dict) and "resultType" in data:
+        if data["resultType"] == "FAIL":
+            error = data.get("error", {})
+            raise TossAPIError(
+                error_code=error.get("errorCode", "UNKNOWN_ERROR"),
+                reason=error.get("reason", "알 수 없는 오류가 발생했습니다."),
+                status_code=response.status_code,
+            )
+        # SUCCESS인 경우 success 하위 데이터 반환
+        return data.get("success", data)
+
+    # 직접 데이터 반환 형식
+    return data
+
+
 @dataclass
 class TossTokenResponse:
     """토스 토큰 발급 응답"""
@@ -130,7 +166,7 @@ class TossAPIClient:
                 logger.error(f"토큰 발급 실패: {response.status_code} - {response.text}")
                 response.raise_for_status()
 
-            data = response.json()
+            data = _parse_response(response)
             logger.info("토스 토큰 발급 성공")
 
             return TossTokenResponse(
@@ -162,7 +198,7 @@ class TossAPIClient:
                 logger.error(f"토큰 갱신 실패: {response.status_code} - {response.text}")
                 response.raise_for_status()
 
-            data = response.json()
+            data = _parse_response(response)
             logger.info("토스 토큰 갱신 성공")
 
             return TossTokenResponse(
@@ -198,7 +234,7 @@ class TossAPIClient:
                 logger.error(f"사용자 정보 조회 실패: {response.status_code} - {response.text}")
                 response.raise_for_status()
 
-            data = response.json()
+            data = _parse_response(response)
             logger.info(f"토스 사용자 정보 조회 성공: userKey={data.get('userKey')}")
 
             return TossUserInfo(
@@ -281,7 +317,7 @@ class TossAPIClient:
                 logger.error(f"주문 상태 조회 실패: {response.status_code} - {response.text}")
                 response.raise_for_status()
 
-            data = response.json()
+            data = _parse_response(response)
             logger.info(f"주문 상태 조회 성공: orderId={order_id}, status={data.get('status')}")
 
             return TossOrderStatus(
