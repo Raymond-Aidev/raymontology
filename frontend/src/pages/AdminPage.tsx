@@ -804,8 +804,8 @@ function AdminPage() {
                       t.record_count > 0 && !warningTables.includes(t)
                     )
 
-                    // 테이블별 예상 레코드 수 (기준치)
-                    const expectedCounts: Record<string, number> = {
+                    // 테이블별 예상 레코드 수 (기준치) - 동적 테이블은 null로 설정
+                    const expectedCounts: Record<string, number | null> = {
                       companies: 3900,
                       officers: 44000,
                       officer_positions: 64000,
@@ -820,10 +820,11 @@ function AdminPage() {
                       risk_signals: 1400,
                       risk_scores: 3900,
                       raymonds_index: 2600,
-                      users: 1,
-                      user_query_usage: 0,
-                      page_contents: 0,
-                      site_settings: 0
+                      // 동적 테이블 - 기준치 없음
+                      users: null,
+                      user_query_usage: null,
+                      page_contents: null,
+                      site_settings: null
                     }
 
                     return (
@@ -1003,8 +1004,8 @@ function AdminPage() {
                                   <tbody className="divide-y divide-theme-border">
                                     {categoryTables.map((table) => {
                                       const expected = expectedCounts[table.name]
-                                      const ratio = expected ? (table.record_count / expected) * 100 : null
-                                      const status = table.record_count === 0 ? 'danger' :
+                                      const ratio = (expected !== null && expected > 0) ? (table.record_count / expected) * 100 : null
+                                      const status = table.record_count === 0 && expected !== null ? 'danger' :
                                                     (ratio !== null && ratio < 50) ? 'warning' : 'success'
 
                                       return (
