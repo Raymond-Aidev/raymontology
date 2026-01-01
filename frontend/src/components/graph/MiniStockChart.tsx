@@ -98,7 +98,7 @@ export default function MiniStockChart({ companyId, companyName }: MiniStockChar
   if (loading) {
     return (
       <div className="flex items-center gap-2">
-        <span className="text-xs text-text-muted whitespace-nowrap">최근 1년 주가</span>
+        <span className="text-sm font-medium text-text-muted whitespace-nowrap">최근 1년 주가</span>
         <div className="w-20 h-6 bg-dark-hover rounded animate-pulse" />
       </div>
     )
@@ -108,8 +108,8 @@ export default function MiniStockChart({ companyId, companyName }: MiniStockChar
   if (error || !chartData) {
     return (
       <div className="flex items-center gap-2">
-        <span className="text-xs text-text-muted whitespace-nowrap">최근 1년 주가</span>
-        <span className="text-xs text-text-muted/50">-</span>
+        <span className="text-sm font-medium text-text-muted whitespace-nowrap">최근 1년 주가</span>
+        <span className="text-sm text-text-muted/50">-</span>
       </div>
     )
   }
@@ -119,7 +119,7 @@ export default function MiniStockChart({ companyId, companyName }: MiniStockChar
 
   return (
     <div className="flex items-center gap-2" title={companyName ? `${companyName} 최근 1년 주가 차트` : '최근 1년 주가 차트'}>
-      <span className="text-xs font-medium text-text-muted whitespace-nowrap">최근 1년 주가</span>
+      <span className="text-sm font-medium text-text-muted whitespace-nowrap">최근 1년 주가</span>
 
       {/* 스파크라인 차트 */}
       <div className="relative">

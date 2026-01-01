@@ -444,7 +444,7 @@ function GraphPage() {
           {/* 탐색 깊이 */}
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
-              <span className="text-xs font-medium text-text-muted uppercase tracking-wide">탐색 깊이</span>
+              <span className="text-sm font-medium text-text-muted uppercase tracking-wide">탐색 깊이</span>
               {/* 도움말 아이콘 */}
               <div className="relative group">
                 <svg className="w-4 h-4 text-text-muted cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -499,7 +499,7 @@ function GraphPage() {
 
           {/* 날짜 범위 */}
           <div className="flex items-center gap-3">
-            <span className="text-xs font-medium text-text-muted uppercase tracking-wide">기간 필터</span>
+            <span className="text-sm font-medium text-text-muted uppercase tracking-wide">기간 필터</span>
             <DateRangePicker
               onChange={handleDateRangeChange}
             />
@@ -533,7 +533,7 @@ function GraphPage() {
         {showMobileFilters && (
           <div className="mt-2 p-3 bg-dark-card border border-dark-border rounded-lg space-y-3">
             <div>
-              <span className="text-xs font-medium text-text-muted uppercase tracking-wide">탐색 깊이</span>
+              <span className="text-sm font-medium text-text-muted uppercase tracking-wide">탐색 깊이</span>
               <div className="flex gap-2 mt-2">
                 {[1, 2, 3].map(d => (
                   <button
@@ -551,7 +551,7 @@ function GraphPage() {
               </div>
             </div>
             <div>
-              <span className="text-xs font-medium text-text-muted uppercase tracking-wide">기간 필터</span>
+              <span className="text-sm font-medium text-text-muted uppercase tracking-wide">기간 필터</span>
               <div className="mt-2">
                 <DateRangePicker onChange={handleDateRangeChange} />
               </div>
