@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom'
 import * as d3 from 'd3'
-import { ForceGraph, NodeDetailPanel, GraphControls, NavigationButtons, Breadcrumb } from '../components/graph'
+import { ForceGraph, NodeDetailPanel, GraphControls, NavigationButtons, Breadcrumb, MiniStockChart } from '../components/graph'
 import type { ForceGraphRef } from '../components/graph'
 import type { GraphNode, GraphData, NodeType } from '../types/graph'
 import { NODE_LIMIT, DEFAULT_DEPTH, type DateRangeParams } from '../api/graph'
@@ -504,6 +504,14 @@ function GraphPage() {
               onChange={handleDateRangeChange}
             />
           </div>
+
+          {/* 주가 흐름 미니 차트 */}
+          {companyId && (
+            <>
+              <div className="w-px h-8 bg-dark-border" />
+              <MiniStockChart companyId={companyId} companyName={centerCompany?.name} />
+            </>
+          )}
         </div>
       </div>
 
