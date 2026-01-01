@@ -13,7 +13,7 @@ interface MiniStockChartProps {
 }
 
 /**
- * 미니 주가 흐름 차트 - 최근 12개월 월말 종가를 스파크라인으로 표시
+ * 미니 주가 차트 - 최근 12개월 월말 종가를 스파크라인으로 표시
  */
 export default function MiniStockChart({ companyId, companyName }: MiniStockChartProps) {
   const [data, setData] = useState<StockPriceData[]>([])
@@ -98,7 +98,7 @@ export default function MiniStockChart({ companyId, companyName }: MiniStockChar
   if (loading) {
     return (
       <div className="flex items-center gap-2">
-        <span className="text-xs text-text-muted">주가흐름</span>
+        <span className="text-xs text-text-muted whitespace-nowrap">최근 1년 주가</span>
         <div className="w-20 h-6 bg-dark-hover rounded animate-pulse" />
       </div>
     )
@@ -108,7 +108,7 @@ export default function MiniStockChart({ companyId, companyName }: MiniStockChar
   if (error || !chartData) {
     return (
       <div className="flex items-center gap-2">
-        <span className="text-xs text-text-muted">주가흐름</span>
+        <span className="text-xs text-text-muted whitespace-nowrap">최근 1년 주가</span>
         <span className="text-xs text-text-muted/50">-</span>
       </div>
     )
@@ -118,8 +118,8 @@ export default function MiniStockChart({ companyId, companyName }: MiniStockChar
   const fillColor = chartData.isPositive ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)'
 
   return (
-    <div className="flex items-center gap-2" title={companyName ? `${companyName} 최근 1년 주가 흐름` : '최근 1년 주가 흐름'}>
-      <span className="text-xs font-medium text-text-muted uppercase tracking-wide">주가흐름</span>
+    <div className="flex items-center gap-2" title={companyName ? `${companyName} 최근 1년 주가 차트` : '최근 1년 주가 차트'}>
+      <span className="text-xs font-medium text-text-muted whitespace-nowrap">최근 1년 주가</span>
 
       {/* 스파크라인 차트 */}
       <div className="relative">
@@ -142,13 +142,17 @@ export default function MiniStockChart({ companyId, companyName }: MiniStockChar
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          {/* 마지막 점 */}
-          <circle
-            cx={chartData.points[chartData.points.length - 1].x}
-            cy={chartData.points[chartData.points.length - 1].y}
-            r={2.5}
-            fill={strokeColor}
-          />
+          {/* 12개 점 모두 표시 */}
+          {chartData.points.map((point, idx) => (
+            <circle
+              key={idx}
+              cx={point.x}
+              cy={point.y}
+              r={2}
+              fill={strokeColor}
+              opacity={idx === chartData.points.length - 1 ? 1 : 0.6}
+            />
+          ))}
         </svg>
       </div>
 
