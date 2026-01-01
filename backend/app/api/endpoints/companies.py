@@ -33,6 +33,7 @@ class CompanyListItem(BaseModel):
     market_cap: Optional[float] = None
     cb_count: int = 0
     officer_count: int = 0
+    listing_status: Optional[str] = None  # LISTED, DELISTED, ETF 등
 
 
 class CompanyDetailResponse(BaseModel):
@@ -139,6 +140,7 @@ async def list_companies(
     order: str = Query("asc", description="정렬 순서 (asc, desc)"),
     sector: Optional[str] = Query(None, description="업종 필터"),
     has_cb: Optional[bool] = Query(None, description="CB 발행 여부"),
+    listed_only: Optional[bool] = Query(None, description="상장 기업만 조회 (상장폐지/ETF 제외)"),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -147,6 +149,7 @@ async def list_companies(
     - 페이지네이션 지원
     - 업종 필터링
     - CB 발행 여부 필터링
+    - 상장 기업만 필터링 (listed_only=true)
     - 다양한 정렬 옵션
     """
     try:
@@ -156,6 +159,10 @@ async def list_companies(
         # 필터링
         if sector:
             query = query.where(Company.sector == sector)
+
+        # 상장 기업만 필터링 (상장폐지, ETF 제외)
+        if listed_only:
+            query = query.where(Company.listing_status == 'LISTED')
 
         if has_cb is not None:
             if has_cb:
@@ -230,7 +237,8 @@ async def list_companies(
                 market=c.market,
                 market_cap=c.market_cap,
                 cb_count=cb_counts.get(str(c.id), 0),
-                officer_count=officer_counts.get(str(c.id), 0)
+                officer_count=officer_counts.get(str(c.id), 0),
+                listing_status=c.listing_status
             )
             for c in companies
         ]

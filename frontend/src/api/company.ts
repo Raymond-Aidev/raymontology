@@ -84,6 +84,7 @@ export async function searchCompanies(
 /**
  * 고위험 회사 목록 API
  * CB 발행 횟수가 5회 이상인 회사를 고위험으로 분류
+ * 상장폐지 기업은 제외
  * @param minCbCount 최소 CB 발행 횟수 (기본값: 5)
  * @param limit 결과 개수 (기본값: 50)
  * @returns 고위험 회사 목록
@@ -93,9 +94,9 @@ export async function getHighRiskCompanies(
   limit: number = 50
 ): Promise<CompanySearchResult[]> {
   try {
-    // /api/companies/ 사용하여 CB가 있는 회사만 조회
+    // /api/companies/ 사용하여 CB가 있는 상장 회사만 조회 (상장폐지/ETF 제외)
     const response = await apiClient.get<ApiCompanySearchResponse>('/api/companies/', {
-      params: { page_size: 100, has_cb: true }, // CB 있는 회사만 조회 (max 100)
+      params: { page_size: 100, has_cb: true, listed_only: true },
     })
 
     // CB 발행 횟수 기준으로 고위험 회사 필터링
