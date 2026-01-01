@@ -60,6 +60,19 @@ def is_valid_shareholder_name(name: str) -> bool:
     if re.match(r'^[\d,.\s]+$', name):
         return False
 
+    # 숫자로 시작하는 경우 (펀드명 제외)
+    # 예외: "2018큐씨피13호 사모투자합자회사" 등 연도+한글 조합
+    if re.match(r'^[0-9]', name):
+        # 연도(20XX) + 한글/영문 조합은 허용
+        if re.match(r'^20[0-9]{2}[가-힣A-Za-z]', name) and len(name) > 10:
+            pass  # 펀드명 허용
+        else:
+            return False
+
+    # 날짜/기간 패턴 (예: "03 ~ 12", "78. 03 ~ 81. 02")
+    if re.match(r'^[0-9]{2,4}\s*[\.~]', name):
+        return False
+
     # 무효 키워드 포함
     name_lower = name.lower()
     for keyword in INVALID_KEYWORDS:

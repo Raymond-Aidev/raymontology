@@ -43,6 +43,36 @@ def normalize_name(name: str) -> str:
     return name.strip()
 
 
+def is_valid_shareholder_name(name: str) -> bool:
+    """유효한 주주명인지 검증"""
+    if not name or len(name) < 2:
+        return False
+
+    # 숫자만 있는 경우 (주식수가 이름에 잘못 입력된 경우)
+    if re.match(r'^[\d,.\s]+$', name):
+        return False
+
+    # 숫자로 시작하는 경우 (펀드명 제외)
+    if re.match(r'^[0-9]', name):
+        # 연도(20XX) + 한글/영문 조합은 허용 (예: 2018큐씨피13호 사모투자합자회사)
+        if re.match(r'^20[0-9]{2}[가-힣A-Za-z]', name) and len(name) > 10:
+            return True
+        return False
+
+    # 날짜/기간 패턴 (예: "03 ~ 12", "78. 03 ~ 81. 02")
+    if re.match(r'^[0-9]{2,4}\s*[\.~]', name):
+        return False
+
+    # 무효 키워드 (테이블 헤더나 총계)
+    invalid_keywords = ['자산', '부채', '자본', '매출', '영업', '순이익', '총계', '합계', '소계', '계',
+                       '거래량', '주가', '평균', '최저', '최고', '월간', '일간', '연간']
+    for kw in invalid_keywords:
+        if kw in name:
+            return False
+
+    return True
+
+
 def extract_number(text: str) -> Optional[int]:
     """텍스트에서 숫자 추출 (주식수)"""
     if not text:
@@ -200,7 +230,8 @@ class ShareholderParser:
                 name_idx = header_indices.get('name', 0)
                 if name_idx < len(cell_texts):
                     name = cell_texts[name_idx]
-                    if name and len(name) > 1 and not name.startswith('-'):
+                    # 유효한 주주명인지 검증 (숫자만 있는 경우, 날짜 패턴 등 필터링)
+                    if is_valid_shareholder_name(name):
                         shareholder['name'] = name
 
                 rel_idx = header_indices.get('relationship')
