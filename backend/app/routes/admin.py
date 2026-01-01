@@ -749,6 +749,94 @@ async def cleanup_data_quality_issue(
     )
 
 
+# ============================================================================
+# Database Tables Overview (SCHEMA_REGISTRY 기반)
+# ============================================================================
+
+class TableStats(BaseModel):
+    """테이블 통계"""
+    name: str
+    display_name: str
+    record_count: int
+    description: str
+    category: str  # core, financial, risk, user, system
+
+
+class DatabaseOverviewResponse(BaseModel):
+    """데이터베이스 전체 현황"""
+    total_tables: int
+    total_records: int
+    tables: List[TableStats]
+    last_updated: datetime
+
+
+@router.get("/database-overview", response_model=DatabaseOverviewResponse)
+async def get_database_overview(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin)
+):
+    """
+    데이터베이스 전체 테이블 현황 조회 (관리자 전용)
+    SCHEMA_REGISTRY 기반으로 모든 데이터 테이블의 레코드 수 반환
+    """
+    # 테이블 정의 (SCHEMA_REGISTRY 기반)
+    table_definitions = [
+        # Core Tables
+        {"name": "companies", "display_name": "기업", "description": "KOSPI/KOSDAQ 상장 기업", "category": "core"},
+        {"name": "officers", "display_name": "임원", "description": "기업 임원 정보", "category": "core"},
+        {"name": "officer_positions", "display_name": "임원 직위", "description": "임원-기업 연결 테이블", "category": "core"},
+        {"name": "disclosures", "display_name": "공시", "description": "DART 공시 문서", "category": "core"},
+        {"name": "major_shareholders", "display_name": "대주주", "description": "최대주주 및 특수관계인", "category": "core"},
+        {"name": "affiliates", "display_name": "계열사", "description": "계열회사 관계", "category": "core"},
+
+        # Financial Tables
+        {"name": "financial_statements", "display_name": "재무제표", "description": "손익계산서/재무상태표 요약", "category": "financial"},
+        {"name": "financial_details", "display_name": "상세 재무", "description": "RaymondsIndex 계산용 상세 재무", "category": "financial"},
+        {"name": "convertible_bonds", "display_name": "전환사채", "description": "CB/BW 발행 정보", "category": "financial"},
+        {"name": "cb_subscribers", "display_name": "CB 인수자", "description": "전환사채 인수자 정보", "category": "financial"},
+        {"name": "stock_prices", "display_name": "주가", "description": "일별 주가 데이터", "category": "financial"},
+
+        # Risk & Index Tables
+        {"name": "risk_signals", "display_name": "위험신호", "description": "기업별 위험 신호", "category": "risk"},
+        {"name": "risk_scores", "display_name": "위험점수", "description": "기업별 종합 위험 점수", "category": "risk"},
+        {"name": "raymonds_index", "display_name": "RaymondsIndex", "description": "자본 배분 효율성 지수", "category": "risk"},
+
+        # User Tables
+        {"name": "users", "display_name": "사용자", "description": "회원 계정", "category": "user"},
+        {"name": "user_query_usage", "display_name": "조회 이력", "description": "사용자 조회 제한 추적", "category": "user"},
+
+        # System Tables
+        {"name": "page_contents", "display_name": "페이지 콘텐츠", "description": "CMS 페이지 내용", "category": "system"},
+        {"name": "site_settings", "display_name": "사이트 설정", "description": "전역 설정 값", "category": "system"},
+    ]
+
+    tables = []
+    total_records = 0
+
+    for tbl in table_definitions:
+        try:
+            result = await db.execute(text(f"SELECT COUNT(*) FROM {tbl['name']}"))
+            count = result.scalar() or 0
+        except Exception:
+            count = 0
+
+        total_records += count
+        tables.append(TableStats(
+            name=tbl["name"],
+            display_name=tbl["display_name"],
+            record_count=count,
+            description=tbl["description"],
+            category=tbl["category"]
+        ))
+
+    return DatabaseOverviewResponse(
+        total_tables=len(tables),
+        total_records=total_records,
+        tables=tables,
+        last_updated=datetime.utcnow()
+    )
+
+
 @router.get("/data-quality/shareholder-issues")
 async def get_shareholder_issues_detail(
     issue_type: str,
