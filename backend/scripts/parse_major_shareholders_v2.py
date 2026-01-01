@@ -36,6 +36,9 @@ INVALID_KEYWORDS = {
     '성명', '관계', '주식수', '지분율', '비고', '기초', '기말', '종류',
     '보통주', '우선주', '의결권', '단위', '기준일', '주주', '특수관계인',
     '변동', '취득', '처분', '이익', '손실', '증가', '감소',
+    # 재무항목명 (2026-01-01 추가)
+    '감가상각비', '금융비용', '금융수익', '이자비용', '배당금수익',
+    '현금시재액', '미수수익', '법인세비용', '임대료수익', '매출액',
 }
 
 # 법인 키워드 (정상적인 주주명에 포함될 수 있음)
@@ -73,11 +76,17 @@ def is_valid_shareholder_name(name: str) -> bool:
     if re.match(r'^[0-9]{2,4}\s*[\.~]', name):
         return False
 
-    # 무효 키워드 포함
-    name_lower = name.lower()
-    for keyword in INVALID_KEYWORDS:
-        if keyword in name_lower:
-            return False
+    # 무효 키워드 정확 일치 (자산운용 회사명 등 제외하기 위해)
+    if name in INVALID_KEYWORDS:
+        return False
+
+    # 로마숫자로 시작하는 재무항목 (예: "Ⅰ.영업이익", "Ⅳ.법인세비용차감전순이익")
+    if re.match(r'^[IVⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+\.', name):
+        return False
+
+    # "자본 총계" 등 재무상태표 합계 항목
+    if re.match(r'^(자산|부채|자본)\s*총계$', name):
+        return False
 
     # 특수문자만 있는 경우
     if re.match(r'^[\W\s]+$', name):
