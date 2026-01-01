@@ -12,6 +12,10 @@ const COMPANY_FILL_COLOR = '#FBBF24'     // amber-400
 const COMPANY_STROKE_COLOR = '#F59E0B'   // amber-500
 const COMPANY_TEXT_COLOR = '#000000'     // black
 
+// 적자기업 경력 경고 배지 색상
+const DEFICIT_BADGE_COLOR = '#F97316'    // orange-500
+const DEFICIT_BADGE_STROKE = '#EA580C'   // orange-600
+
 interface ForceGraphProps {
   data: GraphData
   width: number
@@ -329,6 +333,36 @@ const ForceGraph = forwardRef<ForceGraphRef, ForceGraphProps>(({
         if (d.type === 'affiliate') return '계열사'
         return d.type
       })
+
+    // 적자기업 경력 경고 배지 (임원 노드에만 표시)
+    // 노드 우측 상단에 작은 원형 배지로 "주의" 표시
+    const badgeGroup = node.filter(d => d.type === 'officer' && (d.deficitCareerCount ?? 0) >= 1)
+      .append('g')
+      .attr('class', 'deficit-badge')
+      .attr('transform', d => {
+        const radius = getNodeRadius(d)
+        // 노드 우측 상단에 배치 (45도 각도)
+        const badgeX = radius * 0.7
+        const badgeY = -radius * 0.7
+        return `translate(${badgeX}, ${badgeY})`
+      })
+
+    // 배지 배경 원
+    badgeGroup.append('circle')
+      .attr('r', 12)
+      .attr('fill', DEFICIT_BADGE_COLOR)
+      .attr('stroke', DEFICIT_BADGE_STROKE)
+      .attr('stroke-width', 2)
+
+    // 배지 텍스트 "주의"
+    badgeGroup.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dominant-baseline', 'central')
+      .attr('fill', 'white')
+      .attr('font-size', '8px')
+      .attr('font-weight', '700')
+      .attr('font-family', 'Inter, system-ui, sans-serif')
+      .text('주의')
 
     // 클릭 이벤트 - 노드 채우기 (단일 선택) + 상세 패널 열기
     node.on('click', (event, d) => {

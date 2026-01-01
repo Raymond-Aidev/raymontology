@@ -101,6 +101,7 @@ function transformApiResponse(response: ApiGraphResponse): GraphData {
       investment_grade: node.properties.investment_grade as string | undefined,
       position: node.properties.position as string | undefined,
       listedCareerCount: node.properties.listed_career_count as number | undefined,
+      deficitCareerCount: node.properties.deficit_career_count as number | undefined,
       amount: node.properties.amount as number | undefined,
       issue_date: node.properties.issue_date as string | undefined,
       // Subscriber 법인정보
@@ -174,7 +175,7 @@ export interface DateRangeParams {
 
 // 노드 수 제한 상수
 export const NODE_LIMIT = 200
-export const DEFAULT_DEPTH = 1
+export const DEFAULT_DEPTH = 2  // 관계도 기본 탐색 깊이 (2단계)
 
 /**
  * 노드 수 제한 적용 (중요도 기준 필터링)

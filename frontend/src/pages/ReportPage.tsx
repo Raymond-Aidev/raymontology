@@ -161,9 +161,9 @@ function ReportPage() {
         <p className="text-sm md:text-base text-text-secondary mt-1">RaymondsRisk 분석보고서</p>
       </div>
 
-      {/* 리스크 대시보드 - 모바일 최적화 */}
+      {/* 관계형 리스크 대시보드 - 모바일 최적화 */}
       <div className="bg-dark-card border border-dark-border rounded-xl shadow-card p-4 md:p-6 mb-4 md:mb-6">
-        <h2 className="text-base md:text-lg font-bold text-text-primary mb-4 md:mb-6">리스크 대시보드</h2>
+        <h2 className="text-base md:text-lg font-bold text-text-primary mb-4 md:mb-6">관계형 리스크 대시보드</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           {/* 종합 리스크 게이지 - 모바일에서 크기 축소 */}
@@ -176,7 +176,7 @@ function ReportPage() {
             </div>
           </div>
 
-          {/* 투자등급 */}
+          {/* 관계형 리스크 등급 */}
           <div className="flex justify-center">
             <GradeCard grade={reportData.investmentGrade} />
           </div>

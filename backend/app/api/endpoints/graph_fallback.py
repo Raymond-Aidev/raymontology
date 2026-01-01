@@ -98,7 +98,7 @@ async def get_company_network_fallback(
         ))
         seen_node_ids.add(center_id)
         
-        # 2. 현재 임원 조회
+        # 2. 현재 임원 조회 (적자기업 경력 수 포함)
         officers_query = text("""
             SELECT DISTINCT o.id::text, o.name, o.birth_date, op.position, op.is_current
             FROM officers o
@@ -108,16 +108,52 @@ async def get_company_network_fallback(
         """)
         result = await db.execute(officers_query, {"company_id": center_id})
         officers = result.fetchall()
-        
+
+        # 적자기업 ID 목록 조회 (최근 2년 적자 회사)
+        deficit_query = text("""
+            SELECT DISTINCT company_id::text
+            FROM financial_statements
+            WHERE net_income < 0
+            AND fiscal_year >= EXTRACT(YEAR FROM CURRENT_DATE) - 2
+        """)
+        deficit_result = await db.execute(deficit_query)
+        deficit_company_ids = {row[0] for row in deficit_result.fetchall()}
+
         for officer in officers:
             if officer.id not in seen_node_ids:
+                # 해당 임원의 적자기업 경력 수 계산
+                deficit_career_query = text("""
+                    SELECT COUNT(DISTINCT op2.company_id)
+                    FROM officer_positions op2
+                    JOIN officers o2 ON op2.officer_id = o2.id
+                    WHERE o2.name = :name
+                    AND op2.company_id::text = ANY(:deficit_ids)
+                """)
+                deficit_result = await db.execute(deficit_career_query, {
+                    "name": officer.name,
+                    "deficit_ids": list(deficit_company_ids)
+                })
+                deficit_career_count = deficit_result.scalar() or 0
+
+                # 상장사 경력 수 계산
+                career_query = text("""
+                    SELECT COUNT(DISTINCT op2.company_id)
+                    FROM officer_positions op2
+                    JOIN officers o2 ON op2.officer_id = o2.id
+                    WHERE o2.name = :name
+                """)
+                career_result = await db.execute(career_query, {"name": officer.name})
+                listed_career_count = career_result.scalar() or 0
+
                 nodes.append(GraphNode(
                     id=officer.id,
                     type="Officer",
                     properties={
                         "name": officer.name,
                         "birth_date": officer.birth_date,
-                        "position": officer.position
+                        "position": officer.position,
+                        "listed_career_count": listed_career_count,
+                        "deficit_career_count": deficit_career_count
                     }
                 ))
                 seen_node_ids.add(officer.id)

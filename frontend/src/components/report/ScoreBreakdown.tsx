@@ -15,7 +15,7 @@ export default function ScoreBreakdown({ scores }: ScoreBreakdownProps) {
 
   return (
     <div className="space-y-4">
-      <h3 className="font-semibold text-text-primary mb-4">리스크 구성 요소</h3>
+      <h3 className="font-semibold text-text-primary mb-4">관계형 리스크 구성 요소</h3>
       {categories.map(({ key, label, color, icon }) => {
         const value = scores[key]
         const percentage = (value / 100) * 100
