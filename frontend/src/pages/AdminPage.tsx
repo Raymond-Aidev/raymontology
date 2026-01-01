@@ -45,7 +45,7 @@ interface Stats {
   superusers: number
 }
 
-type TabType = 'users' | 'content' | 'terms' | 'privacy' | 'dataQuality'
+type TabType = 'users' | 'database' | 'content' | 'terms' | 'privacy' | 'dataQuality'
 
 interface ContentField {
   field: string
@@ -68,6 +68,22 @@ interface PageContent {
   [section: string]: {
     [field: string]: string
   }
+}
+
+// 데이터베이스 현황 타입
+interface TableStats {
+  name: string
+  display_name: string
+  record_count: number
+  description: string
+  category: string
+}
+
+interface DatabaseOverview {
+  total_tables: number
+  total_records: number
+  tables: TableStats[]
+  last_updated: string
 }
 
 // 데이터 품질 모니터링 타입
@@ -135,6 +151,10 @@ function AdminPage() {
   const [pageContent, setPageContent] = useState<PageContent>({})
   const [editingField, setEditingField] = useState<{section: string, field: string, value: string} | null>(null)
   const [uploadingImage, setUploadingImage] = useState<string | null>(null)
+
+  // 데이터베이스 현황 상태
+  const [databaseOverview, setDatabaseOverview] = useState<DatabaseOverview | null>(null)
+  const [databaseLoading, setDatabaseLoading] = useState(false)
 
   // 데이터 품질 모니터링 상태
   const [dataQuality, setDataQuality] = useState<DataQualityResponse | null>(null)
@@ -332,6 +352,27 @@ function AdminPage() {
       loadContentData()
     }
   }, [activeTab, user, loadContentData])
+
+  // 데이터베이스 현황 로드
+  const loadDatabaseOverview = useCallback(async () => {
+    setDatabaseLoading(true)
+    try {
+      const response = await apiClient.get('/api/admin/database-overview')
+      setDatabaseOverview(response.data)
+    } catch (err) {
+      console.error('Failed to load database overview:', err)
+      setError('데이터베이스 현황을 불러오는데 실패했습니다.')
+    } finally {
+      setDatabaseLoading(false)
+    }
+  }, [])
+
+  // 데이터베이스 탭 전환 시 로드
+  useEffect(() => {
+    if (activeTab === 'database' && user?.is_superuser) {
+      loadDatabaseOverview()
+    }
+  }, [activeTab, user, loadDatabaseOverview])
 
   // 데이터 품질 로드
   const loadDataQuality = useCallback(async () => {
@@ -600,6 +641,7 @@ function AdminPage() {
         <div className="flex gap-2 mb-6 border-b border-theme-border overflow-x-auto">
           {[
             { id: 'users', label: '회원 관리' },
+            { id: 'database', label: '데이터베이스 현황' },
             { id: 'dataQuality', label: '데이터 품질' },
             { id: 'content', label: '콘텐츠 관리' },
             { id: 'terms', label: '이용약관' },
@@ -736,6 +778,117 @@ function AdminPage() {
                 {users.length === 0 && (
                   <div className="p-8 text-center text-text-secondary">
                     등록된 회원이 없습니다.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 데이터베이스 현황 탭 */}
+            {activeTab === 'database' && (
+              <div className="space-y-6">
+                {databaseLoading ? (
+                  <div className="flex items-center justify-center py-20">
+                    <div className="w-8 h-8 border-4 border-accent-primary border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : databaseOverview ? (
+                  <>
+                    {/* 전체 통계 */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-theme-card border border-theme-border rounded-xl p-6">
+                        <p className="text-sm text-text-secondary mb-2">전체 테이블</p>
+                        <span className="text-3xl font-bold text-text-primary">
+                          {databaseOverview.total_tables}
+                        </span>
+                      </div>
+                      <div className="bg-theme-card border border-theme-border rounded-xl p-6">
+                        <p className="text-sm text-text-secondary mb-2">전체 레코드</p>
+                        <span className="text-3xl font-bold text-accent-primary">
+                          {databaseOverview.total_records.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="bg-theme-card border border-theme-border rounded-xl p-6">
+                        <p className="text-sm text-text-secondary mb-2">마지막 업데이트</p>
+                        <span className="text-lg font-medium text-text-primary">
+                          {new Date(databaseOverview.last_updated).toLocaleString('ko-KR')}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* 카테고리별 테이블 */}
+                    {['core', 'financial', 'risk', 'user', 'system'].map((category) => {
+                      const categoryTables = databaseOverview.tables.filter(t => t.category === category)
+                      if (categoryTables.length === 0) return null
+
+                      const categoryLabels: Record<string, { name: string; color: string }> = {
+                        core: { name: '핵심 데이터', color: 'border-blue-500/30 bg-blue-500/5' },
+                        financial: { name: '재무 데이터', color: 'border-green-500/30 bg-green-500/5' },
+                        risk: { name: '리스크/지수', color: 'border-orange-500/30 bg-orange-500/5' },
+                        user: { name: '사용자', color: 'border-purple-500/30 bg-purple-500/5' },
+                        system: { name: '시스템', color: 'border-gray-500/30 bg-gray-500/5' }
+                      }
+
+                      const categoryInfo = categoryLabels[category] || { name: category, color: '' }
+
+                      return (
+                        <div key={category} className={`bg-theme-card border rounded-xl p-6 ${categoryInfo.color}`}>
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-text-primary">{categoryInfo.name}</h3>
+                            <span className="text-sm text-text-secondary">
+                              {categoryTables.reduce((sum, t) => sum + t.record_count, 0).toLocaleString()}개 레코드
+                            </span>
+                          </div>
+
+                          <div className="overflow-x-auto">
+                            <table className="w-full">
+                              <thead>
+                                <tr className="border-b border-theme-border">
+                                  <th className="px-3 py-2 text-left text-xs font-medium text-text-secondary uppercase">테이블명</th>
+                                  <th className="px-3 py-2 text-left text-xs font-medium text-text-secondary uppercase">설명</th>
+                                  <th className="px-3 py-2 text-right text-xs font-medium text-text-secondary uppercase">레코드 수</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-theme-border">
+                                {categoryTables.map((table) => (
+                                  <tr key={table.name} className="hover:bg-theme-hover/50 transition-colors">
+                                    <td className="px-3 py-2">
+                                      <code className="text-sm font-mono text-accent-primary">{table.name}</code>
+                                    </td>
+                                    <td className="px-3 py-2 text-sm text-text-secondary">{table.description}</td>
+                                    <td className="px-3 py-2 text-right">
+                                      <span className={`text-sm font-medium ${
+                                        table.record_count === 0 ? 'text-accent-danger' : 'text-text-primary'
+                                      }`}>
+                                        {table.record_count.toLocaleString()}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )
+                    })}
+
+                    {/* 새로고침 버튼 */}
+                    <div className="flex justify-center">
+                      <button
+                        onClick={loadDatabaseOverview}
+                        disabled={databaseLoading}
+                        className="px-4 py-2 text-sm bg-theme-surface border border-theme-border rounded-lg text-text-secondary hover:text-text-primary hover:bg-theme-hover transition-colors disabled:opacity-50"
+                      >
+                        <span className="flex items-center gap-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          새로고침
+                        </span>
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-8 text-center text-text-secondary">
+                    데이터를 불러오는 중 오류가 발생했습니다.
                   </div>
                 )}
               </div>
