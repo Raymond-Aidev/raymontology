@@ -791,101 +791,269 @@ function AdminPage() {
                     <div className="w-8 h-8 border-4 border-accent-primary border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : databaseOverview ? (
-                  <>
-                    {/* 전체 통계 */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="bg-theme-card border border-theme-border rounded-xl p-6">
-                        <p className="text-sm text-text-secondary mb-2">전체 테이블</p>
-                        <span className="text-3xl font-bold text-text-primary">
-                          {databaseOverview.total_tables}
-                        </span>
-                      </div>
-                      <div className="bg-theme-card border border-theme-border rounded-xl p-6">
-                        <p className="text-sm text-text-secondary mb-2">전체 레코드</p>
-                        <span className="text-3xl font-bold text-accent-primary">
-                          {databaseOverview.total_records.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="bg-theme-card border border-theme-border rounded-xl p-6">
-                        <p className="text-sm text-text-secondary mb-2">마지막 업데이트</p>
-                        <span className="text-lg font-medium text-text-primary">
-                          {new Date(databaseOverview.last_updated).toLocaleString('ko-KR')}
-                        </span>
-                      </div>
-                    </div>
+                  (() => {
+                    // 테이블 상태 계산
+                    const emptyTables = databaseOverview.tables.filter(t => t.record_count === 0)
+                    const warningTables = databaseOverview.tables.filter(t => {
+                      // 경고 기준: 레코드 수가 너무 적은 핵심 테이블
+                      if (t.category === 'core' && t.record_count < 100 && t.record_count > 0) return true
+                      if (t.name === 'raymonds_index' && t.record_count === 0) return true
+                      return false
+                    })
+                    const healthyTables = databaseOverview.tables.filter(t =>
+                      t.record_count > 0 && !warningTables.includes(t)
+                    )
 
-                    {/* 카테고리별 테이블 */}
-                    {['core', 'financial', 'risk', 'user', 'system'].map((category) => {
-                      const categoryTables = databaseOverview.tables.filter(t => t.category === category)
-                      if (categoryTables.length === 0) return null
+                    // 테이블별 예상 레코드 수 (기준치)
+                    const expectedCounts: Record<string, number> = {
+                      companies: 3900,
+                      officers: 44000,
+                      officer_positions: 64000,
+                      disclosures: 210000,
+                      major_shareholders: 44000,
+                      affiliates: 900,
+                      financial_statements: 9000,
+                      financial_details: 7600,
+                      convertible_bonds: 1400,
+                      cb_subscribers: 7400,
+                      stock_prices: 120000,
+                      risk_signals: 1400,
+                      risk_scores: 3900,
+                      raymonds_index: 2600,
+                      users: 1,
+                      user_query_usage: 0,
+                      page_contents: 0,
+                      site_settings: 0
+                    }
 
-                      const categoryLabels: Record<string, { name: string; color: string }> = {
-                        core: { name: '핵심 데이터', color: 'border-blue-500/30 bg-blue-500/5' },
-                        financial: { name: '재무 데이터', color: 'border-green-500/30 bg-green-500/5' },
-                        risk: { name: '리스크/지수', color: 'border-orange-500/30 bg-orange-500/5' },
-                        user: { name: '사용자', color: 'border-purple-500/30 bg-purple-500/5' },
-                        system: { name: '시스템', color: 'border-gray-500/30 bg-gray-500/5' }
-                      }
-
-                      const categoryInfo = categoryLabels[category] || { name: category, color: '' }
-
-                      return (
-                        <div key={category} className={`bg-theme-card border rounded-xl p-6 ${categoryInfo.color}`}>
-                          <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold text-text-primary">{categoryInfo.name}</h3>
-                            <span className="text-sm text-text-secondary">
-                              {categoryTables.reduce((sum, t) => sum + t.record_count, 0).toLocaleString()}개 레코드
+                    return (
+                      <>
+                        {/* 상태 요약 카드 (데이터 품질 탭과 동일한 스타일) */}
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                          <div className="bg-theme-card border border-theme-border rounded-xl p-6">
+                            <p className="text-sm text-text-secondary mb-2">전체 테이블</p>
+                            <div className="flex items-center gap-3">
+                              <span className="text-3xl font-bold text-text-primary">
+                                {databaseOverview.total_tables}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="bg-theme-card border border-accent-success/30 rounded-xl p-6">
+                            <p className="text-sm text-text-secondary mb-2">정상</p>
+                            <span className="text-3xl font-bold text-accent-success">
+                              {healthyTables.length}
                             </span>
                           </div>
-
-                          <div className="overflow-x-auto">
-                            <table className="w-full">
-                              <thead>
-                                <tr className="border-b border-theme-border">
-                                  <th className="px-3 py-2 text-left text-xs font-medium text-text-secondary uppercase">테이블명</th>
-                                  <th className="px-3 py-2 text-left text-xs font-medium text-text-secondary uppercase">설명</th>
-                                  <th className="px-3 py-2 text-right text-xs font-medium text-text-secondary uppercase">레코드 수</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-theme-border">
-                                {categoryTables.map((table) => (
-                                  <tr key={table.name} className="hover:bg-theme-hover/50 transition-colors">
-                                    <td className="px-3 py-2">
-                                      <code className="text-sm font-mono text-accent-primary">{table.name}</code>
-                                    </td>
-                                    <td className="px-3 py-2 text-sm text-text-secondary">{table.description}</td>
-                                    <td className="px-3 py-2 text-right">
-                                      <span className={`text-sm font-medium ${
-                                        table.record_count === 0 ? 'text-accent-danger' : 'text-text-primary'
-                                      }`}>
-                                        {table.record_count.toLocaleString()}
-                                      </span>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                          <div className="bg-theme-card border border-accent-warning/30 rounded-xl p-6">
+                            <p className="text-sm text-text-secondary mb-2">주의 필요</p>
+                            <span className="text-3xl font-bold text-accent-warning">
+                              {warningTables.length}
+                            </span>
+                          </div>
+                          <div className="bg-theme-card border border-accent-danger/30 rounded-xl p-6">
+                            <p className="text-sm text-text-secondary mb-2">데이터 없음</p>
+                            <span className="text-3xl font-bold text-accent-danger">
+                              {emptyTables.length}
+                            </span>
                           </div>
                         </div>
-                      )
-                    })}
 
-                    {/* 새로고침 버튼 */}
-                    <div className="flex justify-center">
-                      <button
-                        onClick={loadDatabaseOverview}
-                        disabled={databaseLoading}
-                        className="px-4 py-2 text-sm bg-theme-surface border border-theme-border rounded-lg text-text-secondary hover:text-text-primary hover:bg-theme-hover transition-colors disabled:opacity-50"
-                      >
-                        <span className="flex items-center gap-2">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                          </svg>
-                          새로고침
-                        </span>
-                      </button>
-                    </div>
-                  </>
+                        {/* 전체 레코드 수 및 마지막 업데이트 */}
+                        <div className="bg-theme-card border border-theme-border rounded-xl p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-6">
+                              <div>
+                                <span className="text-sm text-text-secondary">전체 레코드: </span>
+                                <span className="text-lg font-bold text-accent-primary">
+                                  {databaseOverview.total_records.toLocaleString()}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-sm text-text-secondary">마지막 확인: </span>
+                                <span className="text-sm font-medium text-text-primary">
+                                  {new Date(databaseOverview.last_updated).toLocaleString('ko-KR')}
+                                </span>
+                              </div>
+                            </div>
+                            <button
+                              onClick={loadDatabaseOverview}
+                              disabled={databaseLoading}
+                              className="p-2 text-text-muted hover:text-text-secondary hover:bg-theme-hover rounded-lg transition-colors"
+                              title="새로고침"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* 이슈 있는 테이블 하이라이트 */}
+                        {(emptyTables.length > 0 || warningTables.length > 0) && (
+                          <div className="bg-theme-card border border-accent-warning/30 rounded-xl p-6">
+                            <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
+                              <svg className="w-5 h-5 text-accent-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                              주의가 필요한 테이블
+                            </h3>
+                            <div className="space-y-3">
+                              {emptyTables.map((table) => (
+                                <div
+                                  key={table.name}
+                                  className="p-4 rounded-lg border bg-accent-danger/10 border-accent-danger/30"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <span className="px-2 py-0.5 text-xs font-medium rounded bg-accent-danger/20 text-accent-danger">
+                                          데이터 없음
+                                        </span>
+                                        <code className="text-sm font-mono font-medium text-text-primary">{table.name}</code>
+                                      </div>
+                                      <p className="text-sm text-text-secondary">
+                                        {table.description} - 예상 레코드: {expectedCounts[table.name]?.toLocaleString() || '-'}
+                                      </p>
+                                    </div>
+                                    <span className="text-2xl font-bold text-accent-danger">0</span>
+                                  </div>
+                                </div>
+                              ))}
+                              {warningTables.map((table) => (
+                                <div
+                                  key={table.name}
+                                  className="p-4 rounded-lg border bg-accent-warning/10 border-accent-warning/30"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <span className="px-2 py-0.5 text-xs font-medium rounded bg-accent-warning/20 text-accent-warning">
+                                          주의
+                                        </span>
+                                        <code className="text-sm font-mono font-medium text-text-primary">{table.name}</code>
+                                      </div>
+                                      <p className="text-sm text-text-secondary">
+                                        {table.description} - 예상: {expectedCounts[table.name]?.toLocaleString() || '-'}, 현재: {table.record_count.toLocaleString()}
+                                      </p>
+                                    </div>
+                                    <div className="text-right">
+                                      <span className="text-2xl font-bold text-accent-warning">
+                                        {table.record_count.toLocaleString()}
+                                      </span>
+                                      {expectedCounts[table.name] && (
+                                        <p className="text-xs text-text-muted">
+                                          {((table.record_count / expectedCounts[table.name]) * 100).toFixed(1)}%
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 카테고리별 테이블 */}
+                        {['core', 'financial', 'risk', 'user', 'system'].map((category) => {
+                          const categoryTables = databaseOverview.tables.filter(t => t.category === category)
+                          if (categoryTables.length === 0) return null
+
+                          const categoryLabels: Record<string, { name: string; color: string; icon: string }> = {
+                            core: { name: '핵심 데이터', color: 'border-blue-500/30 bg-blue-500/5', icon: '📊' },
+                            financial: { name: '재무 데이터', color: 'border-green-500/30 bg-green-500/5', icon: '💰' },
+                            risk: { name: '리스크/지수', color: 'border-orange-500/30 bg-orange-500/5', icon: '⚠️' },
+                            user: { name: '사용자', color: 'border-purple-500/30 bg-purple-500/5', icon: '👤' },
+                            system: { name: '시스템', color: 'border-gray-500/30 bg-gray-500/5', icon: '⚙️' }
+                          }
+
+                          const categoryInfo = categoryLabels[category] || { name: category, color: '', icon: '📁' }
+                          const categoryTotal = categoryTables.reduce((sum, t) => sum + t.record_count, 0)
+                          const categoryHealthy = categoryTables.filter(t => t.record_count > 0).length
+
+                          return (
+                            <div key={category} className={`bg-theme-card border rounded-xl p-6 ${categoryInfo.color}`}>
+                              <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xl">{categoryInfo.icon}</span>
+                                  <h3 className="text-lg font-semibold text-text-primary">{categoryInfo.name}</h3>
+                                  <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                                    categoryHealthy === categoryTables.length
+                                      ? 'bg-accent-success/20 text-accent-success'
+                                      : 'bg-accent-warning/20 text-accent-warning'
+                                  }`}>
+                                    {categoryHealthy}/{categoryTables.length} 정상
+                                  </span>
+                                </div>
+                                <span className="text-sm font-medium text-text-secondary">
+                                  {categoryTotal.toLocaleString()}개 레코드
+                                </span>
+                              </div>
+
+                              <div className="overflow-x-auto">
+                                <table className="w-full">
+                                  <thead>
+                                    <tr className="border-b border-theme-border">
+                                      <th className="px-3 py-2 text-left text-xs font-medium text-text-secondary uppercase">상태</th>
+                                      <th className="px-3 py-2 text-left text-xs font-medium text-text-secondary uppercase">테이블명</th>
+                                      <th className="px-3 py-2 text-left text-xs font-medium text-text-secondary uppercase">설명</th>
+                                      <th className="px-3 py-2 text-right text-xs font-medium text-text-secondary uppercase">레코드 수</th>
+                                      <th className="px-3 py-2 text-right text-xs font-medium text-text-secondary uppercase">기준 대비</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-theme-border">
+                                    {categoryTables.map((table) => {
+                                      const expected = expectedCounts[table.name]
+                                      const ratio = expected ? (table.record_count / expected) * 100 : null
+                                      const status = table.record_count === 0 ? 'danger' :
+                                                    (ratio !== null && ratio < 50) ? 'warning' : 'success'
+
+                                      return (
+                                        <tr key={table.name} className="hover:bg-theme-hover/50 transition-colors">
+                                          <td className="px-3 py-2">
+                                            <span className={`inline-flex w-2 h-2 rounded-full ${
+                                              status === 'success' ? 'bg-accent-success' :
+                                              status === 'warning' ? 'bg-accent-warning' :
+                                              'bg-accent-danger'
+                                            }`} />
+                                          </td>
+                                          <td className="px-3 py-2">
+                                            <code className="text-sm font-mono text-accent-primary">{table.name}</code>
+                                          </td>
+                                          <td className="px-3 py-2 text-sm text-text-secondary">{table.description}</td>
+                                          <td className="px-3 py-2 text-right">
+                                            <span className={`text-sm font-medium ${
+                                              status === 'danger' ? 'text-accent-danger' :
+                                              status === 'warning' ? 'text-accent-warning' :
+                                              'text-text-primary'
+                                            }`}>
+                                              {table.record_count.toLocaleString()}
+                                            </span>
+                                          </td>
+                                          <td className="px-3 py-2 text-right">
+                                            {ratio !== null ? (
+                                              <span className={`text-xs font-medium ${
+                                                ratio >= 90 ? 'text-accent-success' :
+                                                ratio >= 50 ? 'text-accent-warning' :
+                                                'text-accent-danger'
+                                              }`}>
+                                                {ratio.toFixed(0)}%
+                                              </span>
+                                            ) : (
+                                              <span className="text-xs text-text-muted">-</span>
+                                            )}
+                                          </td>
+                                        </tr>
+                                      )
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </>
+                    )
+                  })()
                 ) : (
                   <div className="p-8 text-center text-text-secondary">
                     데이터를 불러오는 중 오류가 발생했습니다.
