@@ -2,12 +2,12 @@
 
 > **중요**: 모든 테이블 접근 시 이 문서 참조 필수. 테이블명 추측 금지.
 >
-> **마지막 업데이트**: 2025-12-30
+> **마지막 업데이트**: 2026-01-01
 >
-> **현재 데이터 상태** (2025-12-30):
+> **현재 데이터 상태** (2026-01-01):
 > - companies: 3,922건
 > - officers: 44,679건
-> - officer_positions: 64,265건
+> - officer_positions: 64,265건 (2026-01-01 중복 정리 완료)
 > - disclosures: 213,304건
 > - convertible_bonds: 1,463건
 > - cb_subscribers: 7,490건
@@ -16,8 +16,9 @@
 > - risk_scores: 3,912건
 > - major_shareholders: 47,453건
 > - affiliates: 973건
-> - **financial_details: 12,757건** (RaymondsIndex용 상세 재무)
-> - **raymonds_index: 7,648건** (자본 배분 효율성 지수 v2.1)
+> - financial_details: 7,689건 (2022-2024년 연간 데이터)
+> - **raymonds_index: 2,698건** (2026-01-01 재계산 완료)
+> - **stock_prices: 127,324건** (신규 추가)
 > - users: 4건
 > - user_query_usage: - (조회 제한 추적)
 > - page_contents: 2건 (페이지 콘텐츠 관리)
@@ -83,6 +84,25 @@
 
 **연관 스크립트**: `parse_officers_from_local.py`
 **주의사항**: 동일인 판단 = name + birth_date 조합
+
+#### career_history 컬럼 상세
+
+**데이터 출처**: 사업보고서 > "임원 및 직원 등의 현황" > "주요경력" 필드
+
+**JSON 형식**:
+```json
+[
+  {"text": "(주)OO회사 재무이사", "status": "former"},
+  {"text": "(주)OO회사 대표이사", "status": "current"}
+]
+```
+
+**status 값**:
+- `current`: 현재 경력
+- `former`: 과거 경력
+- `unknown`: 상태 미확인
+
+**현황**: 44,679명 중 8,429명 (18.9%) 경력 데이터 보유
 
 ---
 

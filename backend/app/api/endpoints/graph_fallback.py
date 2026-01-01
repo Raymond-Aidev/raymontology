@@ -368,7 +368,8 @@ async def get_officer_career_fallback(
                 "source": "db"
             })
 
-        # officers.career_history JSON에서 추가 경력 정보 추출
+        # officers.career_history JSON에서 사업보고서 주요경력 정보 추출
+        # 출처: 사업보고서 > "임원 및 직원 등의 현황" > "주요경력" 필드
         parsed_careers = []
         if officer.career_history:
             import json
@@ -376,13 +377,31 @@ async def get_officer_career_fallback(
                 raw_careers = officer.career_history if isinstance(officer.career_history, list) else json.loads(officer.career_history)
                 for item in raw_careers:
                     if isinstance(item, dict):
+                        text = item.get("text", "")
+                        status = item.get("status", "unknown")
+                        # 주요경력 텍스트에서 회사명과 직책 분리 시도
+                        # 예: "(주)이아이디 재무이사" -> company_name: "(주)이아이디", position: "재무이사"
+                        parts = text.rsplit(" ", 1) if text else ["", ""]
+                        company_name = parts[0] if len(parts) > 1 else text
+                        position = parts[1] if len(parts) > 1 else ""
+
                         parsed_careers.append({
-                            "text": item.get("text", ""),
-                            "status": item.get("status", "unknown"),
-                            "source": "parsed"
+                            "company_name": company_name,
+                            "company_id": None,  # 비상장사는 ID 없음
+                            "position": position,
+                            "start_date": None,
+                            "end_date": None,
+                            "is_current": status == "current",
+                            "is_listed": False,  # 비상장사 경력
+                            "source": "disclosure",  # 사업보고서 출처
+                            "raw_text": text  # 원본 텍스트 보존
                         })
             except (json.JSONDecodeError, TypeError, KeyError) as e:
                 logger.warning(f"Failed to parse career_history: {e}")
+
+        # 상장사 DB 경력 (상단) + 사업보고서 주요경력 (하단) 통합
+        # 규칙: 상장사 임원 DB를 먼저 표시하고, 사업보고서 주요경력은 아래에 표시
+        all_careers = career_history + parsed_careers
 
         return {
             "officer": {
@@ -391,12 +410,10 @@ async def get_officer_career_fallback(
                 "properties": {
                     "name": officer.name,
                     "birth_date": officer.birth_date,
-                    "position": officer.position,
-                    "career_history": parsed_careers
+                    "position": officer.position
                 }
             },
-            "career_history": career_history,
-            "parsed_careers": parsed_careers
+            "career_history": all_careers  # 통합된 경력 목록 (db + disclosure)
         }
         
     except HTTPException:

@@ -10,7 +10,8 @@ export interface OfficerCareer {
   end_date?: string | null
   is_current: boolean
   is_listed?: boolean  // 상장회사 여부
-  source: 'db' | 'disclosure'  // "db": 상장사 임원 DB, "disclosure": 공시 파일 확인
+  source: 'db' | 'disclosure'  // "db": 상장사 임원 DB, "disclosure": 사업보고서 주요경력
+  raw_text?: string  // 사업보고서 원본 텍스트 (source=disclosure인 경우)
 }
 
 // 인수인 투자 이력 타입
@@ -322,7 +323,8 @@ interface ApiOfficerCareerItem {
   end_date?: string | null
   is_current?: boolean
   is_listed?: boolean
-  source?: 'db' | 'disclosure'
+  source?: 'db' | 'disclosure'  // db: 상장사 임원 DB, disclosure: 사업보고서 주요경력
+  raw_text?: string  // 사업보고서 원본 텍스트 (source=disclosure인 경우)
 }
 
 interface ApiOfficerCareerResponse {
@@ -331,7 +333,7 @@ interface ApiOfficerCareerResponse {
     type: string
     properties: Record<string, unknown>
   }
-  career_history: ApiOfficerCareerItem[]
+  career_history: ApiOfficerCareerItem[]  // 상장사 DB (source=db) + 사업보고서 (source=disclosure) 통합
 }
 
 /**
@@ -343,6 +345,7 @@ export async function fetchOfficerCareer(officerId: string): Promise<OfficerCare
     const response = await apiClient.get<ApiOfficerCareerResponse>(`/api/graph/officer/${officerId}/career`)
 
     // API 응답의 career_history 배열을 프론트 타입으로 매핑
+    // 순서: 상장사 DB (source=db) → 사업보고서 주요경력 (source=disclosure)
     const careerHistory = response.data.career_history || []
     return careerHistory.map(career => ({
       company_name: career.company_name,
@@ -351,8 +354,9 @@ export async function fetchOfficerCareer(officerId: string): Promise<OfficerCare
       start_date: career.start_date || undefined,
       end_date: career.end_date || undefined,
       is_current: career.is_current ?? !career.end_date,
-      is_listed: career.is_listed ?? true,
+      is_listed: career.is_listed ?? (career.source === 'db'),
       source: career.source || 'db',
+      raw_text: career.raw_text,
     }))
   } catch (error) {
     console.warn('Officer Career API 호출 실패:', error)

@@ -314,32 +314,32 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
                     </div>
                   )}
 
-                  {/* 공시 파일 확인 (source="disclosure") */}
+                  {/* 사업보고서 주요경력 (source="disclosure") */}
                   {career.filter(c => c.source === 'disclosure').length > 0 && (
                     <div>
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xs font-medium text-text-muted">공시 파일 확인</span>
+                        <span className="text-xs font-medium text-amber-500">사업보고서 주요경력</span>
                         <span className="text-xs text-text-muted">({career.filter(c => c.source === 'disclosure').length}건)</span>
                       </div>
                       <div className="relative">
-                        <div className="absolute left-2 top-2 bottom-2 w-0.5 bg-dark-border" />
+                        <div className="absolute left-2 top-2 bottom-2 w-0.5 bg-amber-500/30" />
                         <div className="space-y-3">
                           {career.filter(c => c.source === 'disclosure').map((item, index) => (
                             <div key={`disc-${index}`} className="relative pl-6">
                               <div className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 ${
-                                item.is_current ? 'bg-text-muted border-text-muted' : 'bg-dark-card border-dark-border'
+                                item.is_current ? 'bg-amber-500 border-amber-500' : 'bg-dark-card border-amber-500/50'
                               }`} />
                               <div>
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-medium text-text-secondary text-sm">{item.company_name}</span>
+                                  <span className="font-medium text-text-primary text-sm">{item.company_name}</span>
                                   {item.is_current && (
-                                    <span className="text-xs bg-dark-hover text-text-muted px-1.5 py-0.5 rounded">現</span>
+                                    <span className="text-xs bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded">現</span>
                                   )}
                                   {!item.is_current && (
                                     <span className="text-xs bg-dark-surface text-text-muted px-1.5 py-0.5 rounded">前</span>
                                   )}
                                 </div>
-                                <p className="text-xs text-text-muted mt-0.5">{item.position}</p>
+                                <p className="text-xs text-text-secondary mt-0.5">{item.position}</p>
                               </div>
                             </div>
                           ))}
