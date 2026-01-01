@@ -27,6 +27,20 @@
 
 ---
 
+## 서비스 및 도메인 구분 (중요!)
+
+| 도메인 | 서비스 | 프로젝트 디렉토리 |
+|--------|--------|------------------|
+| **www.konnect-ai.net** | **RaymondsRisk** | `frontend/` |
+| **raymondsindex.konnect-ai.net** | **RaymondsIndex** | `raymondsindex-web/` |
+
+### 작업 시 주의사항
+- `www.konnect-ai.net` 관련 작업 → `frontend/` 디렉토리 수정
+- `raymondsindex.konnect-ai.net` 관련 작업 → `raymondsindex-web/` 디렉토리 수정
+- **두 서비스를 혼동하지 말 것!**
+
+---
+
 ## 앱인토스(Apps in Toss) 개발 규칙
 
 ### 서비스 범위 (중요!)
