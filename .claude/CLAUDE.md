@@ -4,11 +4,11 @@
 
 ---
 
-## 상태: 서비스 운영 중 (2025-12-31)
-전체 17개 테이블 데이터 적재 완료. RaymondsIndex 시스템 운영 중.
+## 상태: 데이터 보완 작업 완료 (2026-01-01)
+전체 17개 테이블 데이터 적재 완료. **RaymondsIndex 계산 완료 (2,698건)**.
 **RaymondsIndex 독립 사이트**: https://raymondsindex.konnect-ai.net 배포 완료.
 **RaymondsRisk 앱인토스**: 토스 로그인 연동 완료, 샌드박스 테스트 진행 중.
-**최근 업데이트**: 데이터 품질 모니터링 대시보드, 관계도 전체화면 모드 (2025-12-31)
+**최근 업데이트**: RaymondsIndex v2.1 재계산 완료 (2,698건) (2026-01-01)
 
 ---
 
@@ -101,24 +101,24 @@
 
 ---
 
-## 현재 DB 상태 (2025-12-31 기준)
+## 현재 DB 상태 (2026-01-01 기준)
 
 | 테이블 | 레코드 수 | 상태 |
 |--------|----------|------|
 | companies | 3,922 | ✅ |
 | officers | 44,679 | ✅ |
-| officer_positions | 64,265 | ✅ |
+| officer_positions | 64,265 | ✅ (중복 정리 완료) |
 | disclosures | 213,304 | ✅ |
 | convertible_bonds | 1,463 | ✅ |
 | cb_subscribers | 7,490 | ✅ |
 | financial_statements | 9,432 | ✅ |
 | risk_signals | 1,412 | ✅ |
 | risk_scores | 3,912 | ✅ |
-| major_shareholders | 44,774 | ✅ (2,679건 정제 완료) |
+| major_shareholders | 47,453 | ✅ |
 | affiliates | 973 | ✅ |
-| **financial_details** | **12,757** | ✅ |
-| **raymonds_index** | **7,648** (2,695개 기업) | ✅ |
-| **toss_users** | **2** | ✅ 앱인토스용 |
+| financial_details | 7,689 | ⚠️ 2025 Q3 파싱 필요 |
+| **raymonds_index** | **2,698** | ✅ 계산 완료 |
+| **stock_prices** | **127,324** | ✅ 신규 |
 | user_query_usage | - | ✅ |
 | page_contents | - | ✅ |
 
@@ -156,15 +156,16 @@ Neo4j 미설정 시 `graph.py`가 자동으로 PostgreSQL fallback 사용
 
 ## RaymondsIndex 시스템
 
-자본 배분 효율성 지수. 4,951개 기업 평가 완료.
+자본 배분 효율성 지수. 2,698개 기업 평가 완료 (v2.1).
 
 | 등급 | 점수 범위 | 기업 수 |
 |------|----------|--------|
-| A | 80+ | 0 |
-| B | 60-79 | 88 |
-| C | 40-59 | 1,187 |
-| D | 20-39 | 2,595 |
-| F | <20 | 1,081 |
+| A- | 80-84 | 11 |
+| B+ | 70-79 | 101 |
+| B | 60-69 | 311 |
+| B- | 50-59 | 917 |
+| C+ | 40-49 | 1,213 |
+| C | <40 | 145 |
 
 관련 파일:
 - `backend/app/models/financial_details.py`
@@ -256,6 +257,40 @@ https://raymontology-production.up.railway.app
 원시 파일 (DART) → PostgreSQL (마스터) → Neo4j (파생)
                         ↑
                    절대 삭제 금지
+```
+
+---
+
+## 데이터 수집 규칙 (중요!)
+
+### 핵심 원칙: 로컬 다운로드 → 파싱 (DART API 직접 호출 X)
+
+모든 DART 데이터는 **로컬에 먼저 다운로드 후 파싱**합니다.
+DART API를 직접 호출하는 스크립트 사용 금지.
+
+### 로컬 데이터 위치
+| 데이터 | 경로 | 용도 |
+|--------|------|------|
+| **사업보고서 (연간)** | `data/dart/batch_*` | 2022-2024년 연간 재무 데이터 |
+| **3분기보고서 (2025)** | `data/q3_reports_2025/` | 2025년 3분기 재무 데이터 |
+| **CB 공시 JSON** | `data/cb_disclosures_by_company_full.json` | 전환사채 정보 |
+
+### 파싱 스크립트 매핑
+| 데이터 | 올바른 스크립트 | 잘못된 스크립트 (사용 금지) |
+|--------|----------------|---------------------------|
+| **financial_details (2022-2024)** | `parse_local_financial_details.py` | ~~`collect_financial_details.py`~~ |
+| **financial_details (2025 Q3)** | `parse_q3_reports_2025.py` | - |
+| **raymonds_index** | `calculate_raymonds_index.py` | - |
+
+### 수집 순서
+1. `parse_local_financial_details.py` → 2022-2024년 연간 데이터
+2. `parse_q3_reports_2025.py` → 2025년 3분기 데이터
+3. `calculate_raymonds_index.py` → RaymondsIndex 계산
+
+### 사용 금지 스크립트
+```
+금지: collect_financial_details.py (DART API 직접 호출)
+금지: collect_financial_statements.py (DART API 직접 호출)
 ```
 
 ---
