@@ -505,6 +505,26 @@ function GraphPage() {
             />
           </div>
 
+          {/* 관계형리스크등급 */}
+          {centerCompany?.investment_grade && (
+            <>
+              <div className="w-px h-8 bg-dark-border" />
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-text-muted uppercase tracking-wide">관계형리스크등급</span>
+                <span className={`text-xl font-bold font-mono ${
+                  centerCompany.investment_grade === 'A' ? 'text-blue-400' :
+                  centerCompany.investment_grade === 'B' ? 'text-green-400' :
+                  centerCompany.investment_grade === 'C' ? 'text-yellow-400' :
+                  centerCompany.investment_grade === 'D' ? 'text-orange-400' :
+                  centerCompany.investment_grade === 'E' ? 'text-red-400' :
+                  'text-text-primary'
+                }`}>
+                  {centerCompany.investment_grade}
+                </span>
+              </div>
+            </>
+          )}
+
           {/* 주가 흐름 미니 차트 */}
           {companyId && (
             <>
