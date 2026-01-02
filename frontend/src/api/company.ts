@@ -82,31 +82,25 @@ export async function searchCompanies(
 }
 
 /**
- * 고위험 회사 목록 API
- * CB 발행 횟수가 5회 이상인 회사를 고위험으로 분류
- * 상장폐지 기업은 제외
- * @param minCbCount 최소 CB 발행 횟수 (기본값: 5)
- * @param limit 결과 개수 (기본값: 50)
- * @returns 고위험 회사 목록
+ * 주의 필요 기업 목록 API
+ * 관계형리스크등급 B 이하 기업을 랜덤으로 조회
+ * CB 발행 기업 우선, 상장폐지 기업 제외
+ * @param limit 결과 개수 (기본값: 6)
+ * @returns 주의 필요 기업 목록
  */
 export async function getHighRiskCompanies(
-  minCbCount: number = 5,
-  limit: number = 50
+  _minCbCount: number = 5, // 호환성 유지 (미사용)
+  limit: number = 6
 ): Promise<CompanySearchResult[]> {
   try {
-    // /api/companies/ 사용하여 CB가 있는 상장 회사만 조회 (상장폐지/ETF 제외)
-    const response = await apiClient.get<ApiCompanySearchResponse>('/api/companies/', {
-      params: { page_size: 100, has_cb: true, listed_only: true },
+    // 새 API: 관계형리스크등급 B 이하 기업 랜덤 조회
+    const response = await apiClient.get<ApiCompanySearchResponse>('/api/companies/high-risk', {
+      params: { limit, min_grade: 'B', has_cb: true },
     })
 
-    // CB 발행 횟수 기준으로 고위험 회사 필터링
-    return response.data.items
-      .filter(item => item.cb_count >= minCbCount)
-      .sort((a, b) => b.cb_count - a.cb_count)
-      .slice(0, limit)
-      .map(mapApiResponseToFrontend)
+    return response.data.items.map(mapApiResponseToFrontend)
   } catch (error) {
-    console.error('고위험 회사 목록 API 호출 실패:', error)
+    console.error('주의 필요 기업 목록 API 호출 실패:', error)
     return []
   }
 }
