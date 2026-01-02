@@ -8,7 +8,7 @@
 전체 17개 테이블 데이터 적재 완료. **RaymondsIndex 계산 완료 (2,698건)**.
 **RaymondsIndex 독립 사이트**: https://raymondsindex.konnect-ai.net 배포 완료.
 **RaymondsRisk 앱인토스**: 토스 로그인 연동 완료, 샌드박스 테스트 진행 중.
-**최근 업데이트**: CB 중복 데이터 정리 완료 (1,463→1,133건), 그래프 UI 개선 (2026-01-02)
+**최근 업데이트**: 주의 필요 기업 API 개선, 임원 주의 표시 로직 구현 (2026-01-02)
 
 ---
 
@@ -153,6 +153,43 @@ query = (
 ```
 
 Neo4j 미설정 시 `graph.py`가 자동으로 PostgreSQL fallback 사용
+
+---
+
+## 임원 주의 표시 기준 (그래프 UI)
+
+| 표시 | 조건 | 색상 | 파일 |
+|------|------|------|------|
+| **붉은색 노드** | 상장사 경력 ≥ 3개 | `#EF4444` (red-500) | `ForceGraph.tsx:48-55` |
+| **"주의" 배지** | 적자기업 경력 ≥ 1개 | `#F97316` (orange-500) | `ForceGraph.tsx:337-365` |
+
+### 계산 로직 (`graph_fallback.py`)
+- **상장사 경력**: `COUNT(DISTINCT company_id)` - 동일 회사 재임은 1회로 계산
+- **적자기업**: `financial_statements`에서 최근 2년 `net_income < 0`인 회사
+- **동명이인 방지**: `이름 + 출생년월` 조합으로 동일인 식별
+
+---
+
+## 주의 필요 기업 API
+
+### 엔드포인트
+```
+GET /api/companies/high-risk
+```
+
+### 파라미터
+| 파라미터 | 기본값 | 설명 |
+|----------|--------|------|
+| `limit` | 6 | 결과 개수 (1-50) |
+| `min_grade` | B | 최소 등급 (B, CCC, CC, C, D) |
+| `has_cb` | true | CB 발행 여부 필터 |
+
+### 동작 방식
+- `risk_scores.investment_grade` 기준 필터링
+- `ORDER BY RANDOM()` 으로 매번 다른 기업 표시
+- 상장폐지 기업 제외 (`listing_status = 'LISTED'`)
+
+관련 파일: `backend/app/api/endpoints/companies.py:363-451`
 
 ---
 
@@ -318,3 +355,15 @@ DART API를 직접 호출하는 스크립트 사용 금지.
 | `db_migrate.py --action=reset` | drop_all |
 
 **위 스크립트들은 `scripts/_deprecated/`로 이동됨**
+
+---
+
+## Railway 배포 트러블슈팅
+
+### 캐시 문제로 새 코드가 반영되지 않을 때
+1. Railway Variables 탭에서 `NO_CACHE=1` 환경 변수 추가
+2. 배포 완료 후 해당 변수 **제거** (빌드 속도 복원)
+
+### FastAPI 라우트 순서 주의
+- 동적 라우트 (`/{company_id}`) **앞에** 정적 라우트 (`/high-risk`) 배치
+- 순서 잘못되면 404 오류 발생 (동적 라우트가 먼저 매칭됨)
