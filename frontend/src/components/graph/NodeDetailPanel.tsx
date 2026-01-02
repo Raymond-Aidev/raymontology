@@ -536,9 +536,16 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
                           {(inv.amount / 100000000).toFixed(1)}억원
                         </span>
                       </div>
-                      <p className="text-xs text-text-muted font-mono mt-0.5">
-                        {inv.cb_issue_date}
-                      </p>
+                      <div className="flex items-center justify-between mt-0.5">
+                        {inv.bond_name && (
+                          <span className="text-xs text-data-cb">
+                            {inv.bond_name.match(/제(\d+)회/) ? `${inv.bond_name.match(/제(\d+)회/)?.[1]}회차` : inv.bond_name.slice(0, 15)}
+                          </span>
+                        )}
+                        <span className="text-xs text-text-muted font-mono">
+                          {inv.cb_issue_date}
+                        </span>
+                      </div>
                     </div>
                   ))}
 
@@ -694,11 +701,6 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
             </p>
           </>
         )}
-
-        {/* 노드 ID */}
-        <div className="pt-4 border-t border-dark-border">
-          <p className="text-xs text-text-muted font-mono">ID: {node.id}</p>
-        </div>
       </div>
 
       {/* 액션 버튼 */}

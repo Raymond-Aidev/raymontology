@@ -20,6 +20,7 @@ export interface SubscriberInvestment {
   company_id?: string
   cb_issue_date: string
   amount: number
+  bond_name?: string  // CB 회차 (예: "제33회 무기명식...")
 }
 
 // 백엔드 API 응답 타입
@@ -413,6 +414,7 @@ export async function fetchSubscriberInvestments(subscriberId: string): Promise<
           company_id: inv.company_id,
           cb_issue_date: cb.issue_date || inv.latest_investment || '',
           amount: cb.total_amount || 0,
+          bond_name: cb.bond_name,  // CB 회차 정보 추가
         })
       })
     })
