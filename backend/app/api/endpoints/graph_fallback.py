@@ -210,8 +210,9 @@ async def get_company_network_fallback(
         # 4. depth >= 2: CB 인수자 조회
         if depth >= 2:
             subscribers_query = text("""
-                SELECT DISTINCT s.id::text, s.subscriber_name, s.subscriber_type, 
-                       s.is_related_party, s.subscription_amount, s.cb_id::text
+                SELECT DISTINCT s.id::text, s.subscriber_name, s.subscriber_type,
+                       s.is_related_party, s.subscription_amount, s.cb_id::text,
+                       cb.bond_name, cb.issue_date::text as issue_date
                 FROM cb_subscribers s
                 JOIN convertible_bonds cb ON s.cb_id = cb.id
                 WHERE cb.company_id::text = :company_id
@@ -219,7 +220,7 @@ async def get_company_network_fallback(
             """)
             result = await db.execute(subscribers_query, {"company_id": center_id})
             subscribers = result.fetchall()
-            
+
             for sub in subscribers:
                 if sub.id not in seen_node_ids:
                     nodes.append(GraphNode(
@@ -228,7 +229,13 @@ async def get_company_network_fallback(
                         properties={
                             "name": sub.subscriber_name,
                             "type": sub.subscriber_type,
-                            "is_related_party": sub.is_related_party
+                            "is_related_party": sub.is_related_party,
+                            "current_investment": {
+                                "cb_id": sub.cb_id,
+                                "bond_name": sub.bond_name,
+                                "issue_date": sub.issue_date,
+                                "amount": sub.subscription_amount
+                            }
                         }
                     ))
                     seen_node_ids.add(sub.id)

@@ -452,7 +452,41 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
         {/* 인수인 노드 상세 */}
         {node.type === 'subscriber' && (
           <>
-            {node.amount !== undefined && (
+            {/* 현재 회차 투자 정보 (그래프에서 연결된 CB) */}
+            {node.current_investment && (
+              <div className="bg-accent-purple/10 border border-accent-purple/30 rounded-lg p-3">
+                <h3 className="text-xs font-semibold text-accent-purple uppercase tracking-wide mb-2">현재 조회 중인 투자</h3>
+                <div className="space-y-1.5">
+                  {node.current_investment.bond_name && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-text-muted">회차</span>
+                      <span className="text-sm font-medium text-data-cb">
+                        {node.current_investment.bond_name.match(/제(\d+)회/)
+                          ? `${node.current_investment.bond_name.match(/제(\d+)회/)?.[1]}회`
+                          : node.current_investment.bond_name.slice(0, 20)}
+                      </span>
+                    </div>
+                  )}
+                  {node.current_investment.amount !== undefined && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-text-muted">투자금액</span>
+                      <span className="font-bold text-data-subscriber font-mono">
+                        {(node.current_investment.amount / 100000000).toFixed(1)}억원
+                      </span>
+                    </div>
+                  )}
+                  {node.current_investment.issue_date && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-text-muted">투자일</span>
+                      <span className="text-sm font-medium text-text-primary font-mono">{node.current_investment.issue_date}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 기존 amount/issue_date fallback (current_investment가 없는 경우) */}
+            {!node.current_investment && node.amount !== undefined && (
               <div className="flex items-center justify-between">
                 <span className="text-xs text-text-muted uppercase tracking-wide">투자금액</span>
                 <span className="font-bold text-data-subscriber font-mono">
@@ -460,7 +494,7 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
                 </span>
               </div>
             )}
-            {node.issue_date && (
+            {!node.current_investment && node.issue_date && (
               <div className="flex items-center justify-between">
                 <span className="text-xs text-text-muted uppercase tracking-wide">투자일</span>
                 <span className="font-medium text-text-primary font-mono text-sm">{node.issue_date}</span>
@@ -515,49 +549,71 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
                 <p className="text-xs text-accent-danger">{investmentsError}</p>
               )}
 
-              {/* 데이터 없음 */}
-              {!investmentsLoading && !investmentsError && investments.length === 0 && (
-                <p className="text-xs text-text-muted">투자 이력 없음</p>
-              )}
+              {/* 데이터 없음 - 현재 회차를 제외하고 필터링 */}
+              {(() => {
+                // 현재 회차(cb_id)를 제외한 타사 투자 이력만 필터링
+                const otherInvestments = investments.filter(inv => {
+                  // current_investment가 있으면 해당 cb_id와 bond_name이 일치하는 것 제외
+                  if (node.current_investment) {
+                    // bond_name으로 비교 (같은 회차 제외)
+                    if (inv.bond_name && node.current_investment.bond_name) {
+                      return inv.bond_name !== node.current_investment.bond_name
+                    }
+                    // issue_date + amount로 비교 (fallback)
+                    if (inv.cb_issue_date === node.current_investment.issue_date &&
+                        inv.amount === node.current_investment.amount) {
+                      return false
+                    }
+                  }
+                  return true
+                })
 
-              {/* 투자 이력 테이블 */}
-              {!investmentsLoading && !investmentsError && investments.length > 0 && (
-                <div className="space-y-2">
-                  {investments.map((inv, index) => (
-                    <div
-                      key={index}
-                      className="bg-dark-surface rounded-lg p-2"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-text-primary text-sm">
-                          {inv.company_name}
-                        </span>
-                        <span className="text-sm font-bold text-data-subscriber font-mono">
-                          {(inv.amount / 100000000).toFixed(1)}억원
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between mt-0.5">
-                        {inv.bond_name && (
-                          <span className="text-xs text-data-cb">
-                            {inv.bond_name.match(/제(\d+)회/) ? `${inv.bond_name.match(/제(\d+)회/)?.[1]}회차` : inv.bond_name.slice(0, 15)}
-                          </span>
-                        )}
-                        <span className="text-xs text-text-muted font-mono">
-                          {inv.cb_issue_date}
+                if (!investmentsLoading && !investmentsError && otherInvestments.length === 0) {
+                  return <p className="text-xs text-text-muted">타사 투자 이력 없음</p>
+                }
+
+                if (!investmentsLoading && !investmentsError && otherInvestments.length > 0) {
+                  return (
+                    <div className="space-y-2">
+                      {otherInvestments.map((inv, index) => (
+                        <div
+                          key={index}
+                          className="bg-dark-surface rounded-lg p-2"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-text-primary text-sm">
+                              {inv.company_name}
+                            </span>
+                            <span className="text-sm font-bold text-data-subscriber font-mono">
+                              {(inv.amount / 100000000).toFixed(1)}억원
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between mt-0.5">
+                            {inv.bond_name && (
+                              <span className="text-xs text-data-cb">
+                                {inv.bond_name.match(/제(\d+)회/) ? `${inv.bond_name.match(/제(\d+)회/)?.[1]}회차` : inv.bond_name.slice(0, 15)}
+                              </span>
+                            )}
+                            <span className="text-xs text-text-muted font-mono">
+                              {inv.cb_issue_date}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* 총 타사 투자금액 */}
+                      <div className="pt-2 mt-2 border-t border-dark-border flex justify-between items-center">
+                        <span className="text-xs text-text-muted uppercase tracking-wide">총 타사 투자금액</span>
+                        <span className="text-sm font-bold text-text-primary font-mono">
+                          {(otherInvestments.reduce((sum, inv) => sum + inv.amount, 0) / 100000000).toFixed(1)}억원
                         </span>
                       </div>
                     </div>
-                  ))}
+                  )
+                }
 
-                  {/* 총 투자금액 */}
-                  <div className="pt-2 mt-2 border-t border-dark-border flex justify-between items-center">
-                    <span className="text-xs text-text-muted uppercase tracking-wide">총 투자금액</span>
-                    <span className="text-sm font-bold text-text-primary font-mono">
-                      {(investments.reduce((sum, inv) => sum + inv.amount, 0) / 100000000).toFixed(1)}억원
-                    </span>
-                  </div>
-                </div>
-              )}
+                return null
+              })()}
             </div>
           </>
         )}

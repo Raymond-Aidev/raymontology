@@ -94,6 +94,14 @@ function transformApiResponse(response: ApiGraphResponse): GraphData {
       name = extractCbRound(node.properties.bond_name as string)
     }
 
+    // Subscriber 현재 투자 정보 추출
+    const currentInvestment = node.properties.current_investment as {
+      cb_id?: string
+      bond_name?: string
+      issue_date?: string
+      amount?: number
+    } | undefined
+
     return {
       id: node.id,
       name,
@@ -106,10 +114,18 @@ function transformApiResponse(response: ApiGraphResponse): GraphData {
       deficitCareerCount: node.properties.deficit_career_count as number | undefined,
       amount: node.properties.amount as number | undefined,
       issue_date: node.properties.issue_date as string | undefined,
+      bond_name: node.properties.bond_name as string | undefined,
       // Subscriber 법인정보
       representative_name: node.properties.representative_name as string | undefined,
       gp_name: node.properties.gp_name as string | undefined,
       largest_shareholder_name: node.properties.largest_shareholder_name as string | undefined,
+      // Subscriber 현재 투자 정보 (그래프에서 연결된 CB)
+      current_investment: currentInvestment ? {
+        cb_id: currentInvestment.cb_id || '',
+        bond_name: currentInvestment.bond_name,
+        issue_date: currentInvestment.issue_date,
+        amount: currentInvestment.amount,
+      } : undefined,
     }
   })
 

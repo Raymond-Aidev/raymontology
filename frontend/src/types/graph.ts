@@ -17,10 +17,18 @@ export interface GraphNode {
   // CB 노드 추가 정보
   amount?: number
   issue_date?: string
+  bond_name?: string
   // Subscriber 노드 법인정보
   representative_name?: string  // 대표이사(대표조합원)
   gp_name?: string              // 업무집행자(업무집행조합원)
   largest_shareholder_name?: string  // 최대주주(최대출자자)
+  // Subscriber 노드 현재 투자 정보 (그래프에서 연결된 CB에 대한 투자)
+  current_investment?: {
+    cb_id: string
+    bond_name?: string
+    issue_date?: string
+    amount?: number
+  }
   // 대주주 노드 추가 정보
   shareholder_type?: 'individual' | 'corporation' | 'institution'
   shares?: number
