@@ -121,28 +121,34 @@ async def get_company_network_fallback(
 
         for officer in officers:
             if officer.id not in seen_node_ids:
-                # 해당 임원의 적자기업 경력 수 계산
+                # 해당 임원의 적자기업 경력 수 계산 (동명이인 방지: 이름 + 출생년월 비교)
                 deficit_career_query = text("""
                     SELECT COUNT(DISTINCT op2.company_id)
                     FROM officer_positions op2
                     JOIN officers o2 ON op2.officer_id = o2.id
                     WHERE o2.name = :name
+                    AND (o2.birth_date = :birth_date OR (o2.birth_date IS NULL AND :birth_date IS NULL))
                     AND op2.company_id::text = ANY(:deficit_ids)
                 """)
                 deficit_result = await db.execute(deficit_career_query, {
                     "name": officer.name,
+                    "birth_date": officer.birth_date,
                     "deficit_ids": list(deficit_company_ids)
                 })
                 deficit_career_count = deficit_result.scalar() or 0
 
-                # 상장사 경력 수 계산
+                # 상장사 경력 수 계산 (동명이인 방지: 이름 + 출생년월 비교)
                 career_query = text("""
                     SELECT COUNT(DISTINCT op2.company_id)
                     FROM officer_positions op2
                     JOIN officers o2 ON op2.officer_id = o2.id
                     WHERE o2.name = :name
+                    AND (o2.birth_date = :birth_date OR (o2.birth_date IS NULL AND :birth_date IS NULL))
                 """)
-                career_result = await db.execute(career_query, {"name": officer.name})
+                career_result = await db.execute(career_query, {
+                    "name": officer.name,
+                    "birth_date": officer.birth_date
+                })
                 listed_career_count = career_result.scalar() or 0
 
                 nodes.append(GraphNode(
@@ -236,28 +242,34 @@ async def get_company_network_fallback(
                     properties={"amount": sub.subscription_amount}
                 ))
         
-        # 5. depth >= 3: 임원 타사 경력
+        # 5. depth >= 3: 임원 타사 경력 (동명이인 방지: 이름 + 출생년월 비교)
         if depth >= 3:
-            # 현재 임원들의 이름으로 타 회사 경력 조회
+            # 현재 임원들의 (이름, 출생년월) 쌍으로 동일인 식별
+            officer_identities = {(o.name, o.birth_date) for o in officers}
             officer_names = [o.name for o in officers]
             if officer_names:
                 careers_query = text("""
-                    SELECT DISTINCT c.id::text as company_id, c.name as company_name, 
-                           o.id::text as officer_id, o.name as officer_name, op.position
+                    SELECT DISTINCT c.id::text as company_id, c.name as company_name,
+                           o.id::text as officer_id, o.name as officer_name,
+                           o.birth_date, op.position
                     FROM officer_positions op
                     JOIN officers o ON op.officer_id = o.id
                     JOIN companies c ON op.company_id = c.id
-                    WHERE o.name = ANY(:names) 
+                    WHERE o.name = ANY(:names)
                       AND c.id::text != :center_id
-                    LIMIT 30
+                    LIMIT 50
                 """)
                 result = await db.execute(careers_query, {
                     "names": officer_names,
                     "center_id": center_id
                 })
                 careers = result.fetchall()
-                
+
                 for career in careers:
+                    # 동명이인 필터링: (이름, 출생년월) 쌍이 일치하는 경우만 포함
+                    if (career.officer_name, career.birth_date) not in officer_identities:
+                        continue  # 동명이인이면 스킵
+
                     if career.company_id not in seen_node_ids:
                         nodes.append(GraphNode(
                             id=career.company_id,
@@ -268,7 +280,7 @@ async def get_company_network_fallback(
                             }
                         ))
                         seen_node_ids.add(career.company_id)
-                    
+
                     rel_counter += 1
                     relationships.append(GraphRelationship(
                         id=f"rel_{rel_counter}",
@@ -343,21 +355,25 @@ async def get_officer_career_fallback(
         if not officer:
             raise HTTPException(status_code=404, detail="Officer not found")
 
-        # 경력 조회 (officer_positions 테이블)
+        # 경력 조회 (officer_positions 테이블) - 중복 제거: 동일 회사+직책은 최신 레코드만
         career_query = text("""
-            SELECT c.id::text as company_id, c.name as company_name,
+            SELECT DISTINCT ON (c.id, op.position)
+                   c.id::text as company_id, c.name as company_name,
                    op.position, op.term_start_date::text, op.term_end_date::text, op.is_current
             FROM officer_positions op
             JOIN companies c ON op.company_id = c.id
             WHERE op.officer_id::text = :officer_id
-            ORDER BY op.is_current DESC, op.term_start_date DESC
+            ORDER BY c.id, op.position, op.source_report_date DESC NULLS LAST, op.is_current DESC
         """)
         result = await db.execute(career_query, {"officer_id": officer_id})
         careers = result.fetchall()
 
+        # 현재 재직 중인 경력을 상단에 배치
         career_history = []
+        current_careers = []
+        past_careers = []
         for c in careers:
-            career_history.append({
+            career_item = {
                 "company_id": c.company_id,
                 "company_name": c.company_name,
                 "position": c.position,
@@ -366,7 +382,12 @@ async def get_officer_career_fallback(
                 "is_current": c.is_current,
                 "is_listed": True,
                 "source": "db"
-            })
+            }
+            if c.is_current:
+                current_careers.append(career_item)
+            else:
+                past_careers.append(career_item)
+        career_history = current_careers + past_careers
 
         # officers.career_history JSON에서 사업보고서 주요경력 정보 추출
         # 출처: 사업보고서 > "임원 및 직원 등의 현황" > "주요경력" 필드
