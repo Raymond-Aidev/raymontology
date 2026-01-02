@@ -1,0 +1,47 @@
+{
+  "stats": {
+    "total_companies": 5,
+    "total_years": 7,
+    "downloaded": 0,
+    "already_exists": 7,
+    "not_found": 0,
+    "errors": 0
+  },
+  "results": [
+    {
+      "corp_code": "00579999",
+      "name": "고영",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00186452",
+      "name": "광무",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00106641",
+      "name": "기아",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01494118",
+      "name": "노을",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01810477",
+      "name": "노타",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    }
+  ]
+}

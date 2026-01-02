@@ -4,11 +4,11 @@
 
 ---
 
-## 상태: 데이터 보완 작업 완료 (2026-01-01)
+## 상태: 데이터 보완 작업 완료 (2026-01-02)
 전체 17개 테이블 데이터 적재 완료. **RaymondsIndex 계산 완료 (2,698건)**.
 **RaymondsIndex 독립 사이트**: https://raymondsindex.konnect-ai.net 배포 완료.
 **RaymondsRisk 앱인토스**: 토스 로그인 연동 완료, 샌드박스 테스트 진행 중.
-**최근 업데이트**: RaymondsIndex v2.1 재계산 완료 (2,698건) (2026-01-01)
+**최근 업데이트**: CB 중복 데이터 정리 완료 (1,463→1,133건), 그래프 UI 개선 (2026-01-02)
 
 ---
 
@@ -115,7 +115,7 @@
 
 ---
 
-## 현재 DB 상태 (2026-01-01 기준)
+## 현재 DB 상태 (2026-01-02 기준)
 
 | 테이블 | 레코드 수 | 상태 |
 |--------|----------|------|
@@ -123,8 +123,8 @@
 | officers | 44,679 | ✅ |
 | officer_positions | 64,265 | ✅ (중복 정리 완료) |
 | disclosures | 213,304 | ✅ |
-| convertible_bonds | 1,463 | ✅ |
-| cb_subscribers | 7,490 | ✅ |
+| convertible_bonds | 1,133 | ✅ (중복 정리 완료, 330건 제거) |
+| cb_subscribers | 7,026 | ✅ (CB 정리에 따른 연쇄 정리) |
 | financial_statements | 9,432 | ✅ |
 | risk_signals | 1,412 | ✅ |
 | risk_scores | 3,912 | ✅ |

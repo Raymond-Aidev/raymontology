@@ -241,6 +241,82 @@ WHERE id NOT IN (SELECT id FROM officer_positions);
 
 ---
 
+## CB 중복 데이터 정리 시 주의사항 (2026-01-02 추가)
+
+### 발생 배경
+- CB 데이터에 동일 회사의 동일 CB가 여러 번 등록된 중복 문제 발생
+- 중복 기준: `company_id` + `bond_name` 조합
+- 정리 결과: 1,463건 → 1,133건 (330건 중복 제거)
+
+### 시행착오 및 해결책
+
+#### 1. UniqueViolationError (`uq_cb_subscriber` 제약조건)
+
+**문제 상황**:
+```sql
+-- cb_subscribers 테이블에 (cb_id, subscriber_name) 복합 unique 제약조건 존재
+-- CB 중복 병합 시 UPDATE로 cb_id 변경하면 기존 레코드와 충돌
+UPDATE cb_subscribers SET cb_id = 'keep_cb_id' WHERE cb_id = 'remove_cb_id';
+-- ERROR: duplicate key value violates unique constraint "uq_cb_subscriber"
+```
+
+**해결책**:
+```sql
+-- 1) 임시 테이블에 고유 조합만 저장
+CREATE TEMP TABLE unique_subscribers AS
+SELECT DISTINCT ON (cb_id_after_merge, subscriber_name) *
+FROM merged_subscribers;
+
+-- 2) 기존 레코드 전부 삭제 후 재삽입
+DELETE FROM cb_subscribers WHERE cb_id IN (remove_cb_ids);
+INSERT INTO cb_subscribers SELECT * FROM unique_subscribers;
+```
+
+#### 2. 컬럼명 오류 (`relationship` vs `relationship_to_company`)
+
+**문제 상황**:
+```sql
+SELECT s.relationship FROM cb_subscribers s;
+-- ERROR: column s.relationship does not exist
+```
+
+**해결책**:
+```sql
+-- SCHEMA_REGISTRY.md 확인 후 정확한 컬럼명 사용
+SELECT s.relationship_to_company FROM cb_subscribers s;
+```
+
+#### 3. NotNullViolationError (cb_subscribers.id)
+
+**문제 상황**:
+```sql
+INSERT INTO cb_subscribers (cb_id, subscriber_name, ...)
+VALUES ('...', '...', ...);
+-- ERROR: null value in column "id" violates not-null constraint
+```
+
+**해결책**:
+```sql
+-- id 컬럼에 gen_random_uuid() 명시
+INSERT INTO cb_subscribers (id, cb_id, subscriber_name, ...)
+VALUES (gen_random_uuid(), '...', '...', ...);
+```
+
+### CB 중복 정리 체크리스트
+
+- [ ] 중복 기준 명확히 정의 (`company_id` + `bond_name`)
+- [ ] 백업 테이블 생성 (`convertible_bonds_backup_YYYYMMDD_HHMMSS`)
+- [ ] `cb_subscribers` 테이블 연관 관계 확인
+- [ ] `uq_cb_subscriber` 제약조건 인지
+- [ ] DISTINCT ON 사용하여 고유 조합만 유지
+- [ ] `gen_random_uuid()` 사용하여 id 생성
+- [ ] 컬럼명은 SCHEMA_REGISTRY.md 참조
+
+### 관련 스크립트
+- `scripts/cleanup_duplicate_cbs.py` - CB 중복 정리 스크립트 (백업/롤백 기능 포함)
+
+---
+
 ## 완료 보고 형식 (필수)
 
 ```

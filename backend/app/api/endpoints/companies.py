@@ -360,6 +360,97 @@ async def search_companies(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/high-risk", response_model=CompanySearchResponse)
+async def get_high_risk_companies(
+    limit: int = Query(6, ge=1, le=50, description="결과 개수"),
+    min_grade: str = Query("B", description="최소 등급 (B, CCC, CC, C, D)"),
+    has_cb: bool = Query(True, description="CB 발행 여부"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    주의 필요 기업 조회 (관계형리스크등급 기준)
+
+    - risk_scores 테이블의 investment_grade 기준
+    - B, CCC, CC, C, D 등급 기업 랜덤 조회
+    - CB 발행 기업 우선 (has_cb=true)
+    - 상장폐지/ETF 제외
+    """
+    try:
+        # 등급 필터링 조건 설정
+        grade_filter = ['B', 'CCC', 'CC', 'C', 'D']
+        if min_grade == 'CCC':
+            grade_filter = ['CCC', 'CC', 'C', 'D']
+        elif min_grade == 'CC':
+            grade_filter = ['CC', 'C', 'D']
+        elif min_grade == 'C':
+            grade_filter = ['C', 'D']
+        elif min_grade == 'D':
+            grade_filter = ['D']
+
+        # Raw SQL로 랜덤 조회 (성능 최적화)
+        query = text("""
+            SELECT
+                c.id::text,
+                c.name,
+                c.ticker,
+                c.corp_code,
+                c.sector,
+                c.market,
+                c.market_cap,
+                c.listing_status,
+                rs.investment_grade,
+                rs.total_score,
+                COUNT(cb.id) as cb_count,
+                COUNT(DISTINCT op.officer_id) as officer_count
+            FROM companies c
+            JOIN risk_scores rs ON c.id = rs.company_id
+            LEFT JOIN convertible_bonds cb ON c.id = cb.company_id
+            LEFT JOIN officer_positions op ON c.id = op.company_id AND op.is_current = true
+            WHERE rs.investment_grade = ANY(:grades)
+            AND c.listing_status = 'LISTED'
+            GROUP BY c.id, c.name, c.ticker, c.corp_code, c.sector, c.market,
+                     c.market_cap, c.listing_status, rs.investment_grade, rs.total_score
+            HAVING (:has_cb = false OR COUNT(cb.id) > 0)
+            ORDER BY RANDOM()
+            LIMIT :limit
+        """)
+
+        result = await db.execute(query, {
+            "grades": grade_filter,
+            "has_cb": has_cb,
+            "limit": limit
+        })
+        rows = result.fetchall()
+
+        # 응답 생성
+        company_items = [
+            CompanyListItem(
+                id=row.id,
+                name=row.name,
+                ticker=row.ticker,
+                corp_code=row.corp_code,
+                sector=row.sector,
+                market=row.market,
+                market_cap=row.market_cap,
+                cb_count=row.cb_count,
+                officer_count=row.officer_count,
+                listing_status=row.listing_status
+            )
+            for row in rows
+        ]
+
+        return CompanySearchResponse(
+            total=len(company_items),
+            page=1,
+            page_size=limit,
+            items=company_items
+        )
+
+    except Exception as e:
+        logger.error(f"Error getting high risk companies: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/{company_id}", response_model=CompanyDetailResponse)
 async def get_company_detail(
     company_id: str,
@@ -575,95 +666,4 @@ async def list_sectors(
 
     except Exception as e:
         logger.error(f"Error listing sectors: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/high-risk", response_model=CompanySearchResponse)
-async def get_high_risk_companies(
-    limit: int = Query(6, ge=1, le=50, description="결과 개수"),
-    min_grade: str = Query("B", description="최소 등급 (B, CCC, CC, C, D)"),
-    has_cb: bool = Query(True, description="CB 발행 여부"),
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    주의 필요 기업 조회 (관계형리스크등급 기준)
-
-    - risk_scores 테이블의 investment_grade 기준
-    - B, CCC, CC, C, D 등급 기업 랜덤 조회
-    - CB 발행 기업 우선 (has_cb=true)
-    - 상장폐지/ETF 제외
-    """
-    try:
-        # 등급 필터링 조건 설정
-        grade_filter = ['B', 'CCC', 'CC', 'C', 'D']
-        if min_grade == 'CCC':
-            grade_filter = ['CCC', 'CC', 'C', 'D']
-        elif min_grade == 'CC':
-            grade_filter = ['CC', 'C', 'D']
-        elif min_grade == 'C':
-            grade_filter = ['C', 'D']
-        elif min_grade == 'D':
-            grade_filter = ['D']
-
-        # Raw SQL로 랜덤 조회 (성능 최적화)
-        query = text("""
-            SELECT
-                c.id::text,
-                c.name,
-                c.ticker,
-                c.corp_code,
-                c.sector,
-                c.market,
-                c.market_cap,
-                c.listing_status,
-                rs.investment_grade,
-                rs.total_score,
-                COUNT(cb.id) as cb_count,
-                COUNT(DISTINCT op.officer_id) as officer_count
-            FROM companies c
-            JOIN risk_scores rs ON c.id = rs.company_id
-            LEFT JOIN convertible_bonds cb ON c.id = cb.company_id
-            LEFT JOIN officer_positions op ON c.id = op.company_id AND op.is_current = true
-            WHERE rs.investment_grade = ANY(:grades)
-            AND c.listing_status = 'LISTED'
-            GROUP BY c.id, c.name, c.ticker, c.corp_code, c.sector, c.market,
-                     c.market_cap, c.listing_status, rs.investment_grade, rs.total_score
-            HAVING (:has_cb = false OR COUNT(cb.id) > 0)
-            ORDER BY RANDOM()
-            LIMIT :limit
-        """)
-
-        result = await db.execute(query, {
-            "grades": grade_filter,
-            "has_cb": has_cb,
-            "limit": limit
-        })
-        rows = result.fetchall()
-
-        # 응답 생성
-        company_items = [
-            CompanyListItem(
-                id=row.id,
-                name=row.name,
-                ticker=row.ticker,
-                corp_code=row.corp_code,
-                sector=row.sector,
-                market=row.market,
-                market_cap=row.market_cap,
-                cb_count=row.cb_count,
-                officer_count=row.officer_count,
-                listing_status=row.listing_status
-            )
-            for row in rows
-        ]
-
-        return CompanySearchResponse(
-            total=len(company_items),
-            page=1,
-            page_size=limit,
-            items=company_items
-        )
-
-    except Exception as e:
-        logger.error(f"Error getting high risk companies: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

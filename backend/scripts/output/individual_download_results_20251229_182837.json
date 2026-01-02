@@ -1,0 +1,798 @@
+{
+  "stats": {
+    "total_companies": 112,
+    "total_years": 266,
+    "downloaded": 0,
+    "already_exists": 265,
+    "not_found": 1,
+    "errors": 0
+  },
+  "results": [
+    {
+      "corp_code": "00579999",
+      "name": "고영",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00186452",
+      "name": "광무",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00106641",
+      "name": "기아",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01494118",
+      "name": "노을",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01810477",
+      "name": "노타",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01428948",
+      "name": "오아",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00161693",
+      "name": "한샘",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00595191",
+      "name": "후성",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01565054",
+      "name": "그래피",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00609634",
+      "name": "아이엠",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01207761",
+      "name": "퀀텀온",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00113359",
+      "name": "교보증권",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01467503",
+      "name": "뉴키즈온",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00182696",
+      "name": "대한조선",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00179489",
+      "name": "명인제약",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00141583",
+      "name": "삼양컴텍",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00127875",
+      "name": "삼익제약",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00136721",
+      "name": "신영증권",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00914341",
+      "name": "아이티켐",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01745173",
+      "name": "이노테크",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01432598",
+      "name": "지씨지놈",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00105271",
+      "name": "케이씨씨",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00296290",
+      "name": "키움증권",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00161860",
+      "name": "한성기업",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00159209",
+      "name": "한전기술",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01669226",
+      "name": "한화리츠",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00111704",
+      "name": "한화오션",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00166500",
+      "name": "화천기계",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01316236",
+      "name": "효성화학",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00167208",
+      "name": "흥아해운",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01657197",
+      "name": "바이오비쥬",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01068658",
+      "name": "선샤인푸드",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01551042",
+      "name": "애드포러스",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01294110",
+      "name": "에스엔시스",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01085442",
+      "name": "오건에코텍",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01203659",
+      "name": "이뮨온시아",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01638387",
+      "name": "케이지에이",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00683061",
+      "name": "한라캐스트",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00161383",
+      "name": "한미반도체",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00357360",
+      "name": "한세엠케이",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00161125",
+      "name": "한온시스템",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00162461",
+      "name": "한화솔루션",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00339391",
+      "name": "한화시스템",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00428251",
+      "name": "현대백화점",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00403632",
+      "name": "현대퓨처넷",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00412597",
+      "name": "현대홈쇼핑",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01316245",
+      "name": "효성중공업",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00112998",
+      "name": "서울보증보험",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01276594",
+      "name": "신한알파리츠",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00874168",
+      "name": "싸이닉솔루션",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01649620",
+      "name": "아우토크립트",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01669794",
+      "name": "아이엘커누스",
+      "downloaded": [],
+      "not_found": [
+        2024
+      ],
+      "errors": []
+    },
+    {
+      "corp_code": "01803635",
+      "name": "에스투더블유",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01860010",
+      "name": "오션스바이오",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00488244",
+      "name": "원일티엔아이",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00309503",
+      "name": "한국항공우주",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01721809",
+      "name": "현대그린푸드",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00360595",
+      "name": "현대글로비스",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01010615",
+      "name": "세나테크놀로지",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01307593",
+      "name": "에이아이코리아",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01180118",
+      "name": "코람코더원리츠",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01475609",
+      "name": "디앤디플랫폼리츠",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01437292",
+      "name": "미래에셋맵스리츠",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00877059",
+      "name": "삼성바이오로직스",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00105280",
+      "name": "현대지에프홀딩스",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01436558",
+      "name": "신한서부티엔디리츠",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01626391",
+      "name": "오가노이드사이언스",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01436628",
+      "name": "이지스레지던스리츠",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00185301",
+      "name": "제이피아이헬스케어",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00126566",
+      "name": "한화에어로스페이스",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00111421",
+      "name": "휴니드테크놀러지스",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00937324",
+      "name": "한국타이어앤테크놀로지",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01906552",
+      "name": "엘에스스팩1호",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01910759",
+      "name": "삼성스팩10호",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01884065",
+      "name": "디비금융제14호스팩",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01875146",
+      "name": "신한제16호스팩",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01910324",
+      "name": "교보18호스팩",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01906598",
+      "name": "하나35호스팩",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01639508",
+      "name": "뉴엔AI",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00136776",
+      "name": "차AI헬스케어",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00858364",
+      "name": "BNK금융지주",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00113410",
+      "name": "CJ대한통운",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00303873",
+      "name": "CJ CGV",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00115694",
+      "name": "DB증권",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00160843",
+      "name": "DB하이텍",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00118266",
+      "name": "DRB동일",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01437186",
+      "name": "ESR켄달스퀘어리츠",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01568413",
+      "name": "F&F",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00126487",
+      "name": "F&F 홀딩스",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01688896",
+      "name": "삼성FN리츠",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00138190",
+      "name": "GS글로벌",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01205709",
+      "name": "HD현대",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01205842",
+      "name": "HD현대건설기계",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01199550",
+      "name": "HD현대에너지솔루션",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00299002",
+      "name": "HL홀딩스",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01854763",
+      "name": "HS효성",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00219486",
+      "name": "신세계I&C",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00105101",
+      "name": "INVENI",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00112378",
+      "name": "KR모터스",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00231363",
+      "name": "LG유플러스",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00503668",
+      "name": "LIG넥스원",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00266961",
+      "name": "NAVER",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00767460",
+      "name": "PI첨단소재",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00155319",
+      "name": "POSCO홀딩스",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00119007",
+      "name": "무림P&P",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00132725",
+      "name": "SB성보",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00130772",
+      "name": "SBS",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00126362",
+      "name": "삼성SDI",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00131850",
+      "name": "SK증권",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "01267170",
+      "name": "SK케미칼",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00131780",
+      "name": "SK네트웍스",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    },
+    {
+      "corp_code": "00132211",
+      "name": "SUN&L",
+      "downloaded": [],
+      "not_found": [],
+      "errors": []
+    }
+  ]
+}
