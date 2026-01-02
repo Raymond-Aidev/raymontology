@@ -442,3 +442,133 @@ async def get_officer_career_fallback(
     except Exception as e:
         logger.error(f"Error in officer career fallback: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# Response Models for Subscriber Investments
+class CBInfo(BaseModel):
+    id: str
+    bond_name: Optional[str] = None
+    issue_date: Optional[str] = None
+    total_amount: Optional[int] = None
+
+
+class InvestmentHistoryItem(BaseModel):
+    company_id: str
+    company_name: str
+    total_amount: Optional[int] = None
+    investment_count: int = 0
+    first_investment: Optional[str] = None
+    latest_investment: Optional[str] = None
+    cbs: List[CBInfo] = []
+
+
+class SubscriberInvestmentFallbackResponse(BaseModel):
+    subscriber: GraphNode
+    investment_history: List[InvestmentHistoryItem]
+
+
+@router.get("/subscriber/{subscriber_id}/investments", response_model=SubscriberInvestmentFallbackResponse)
+async def get_subscriber_investments_fallback(
+    subscriber_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    CB 인수자 투자 이력 조회 (PostgreSQL 폴백)
+
+    - 투자한 회사 목록
+    - 각 회사별 CB 목록
+    """
+    try:
+        # 1. 인수자 정보 조회
+        subscriber_query = text("""
+            SELECT id::text, subscriber_name, subscriber_type, is_related_party
+            FROM cb_subscribers
+            WHERE id::text = :subscriber_id
+            LIMIT 1
+        """)
+        result = await db.execute(subscriber_query, {"subscriber_id": subscriber_id})
+        subscriber = result.fetchone()
+
+        if not subscriber:
+            raise HTTPException(status_code=404, detail="Subscriber not found")
+
+        # 2. 인수자의 투자 이력 조회 (같은 이름의 인수자 모두 포함)
+        investments_query = text("""
+            SELECT
+                c.id::text as company_id,
+                c.name as company_name,
+                cb.id::text as cb_id,
+                cb.bond_name,
+                cb.issue_date::text,
+                s.subscription_amount as amount
+            FROM cb_subscribers s
+            JOIN convertible_bonds cb ON s.cb_id = cb.id
+            JOIN companies c ON cb.company_id = c.id
+            WHERE s.subscriber_name = (
+                SELECT subscriber_name FROM cb_subscribers WHERE id::text = :subscriber_id
+            )
+            ORDER BY cb.issue_date DESC
+        """)
+        result = await db.execute(investments_query, {"subscriber_id": subscriber_id})
+        investments = result.fetchall()
+
+        # 3. 회사별로 그룹화
+        company_investments: Dict[str, Dict[str, Any]] = {}
+        for inv in investments:
+            company_id = inv.company_id
+            if company_id not in company_investments:
+                company_investments[company_id] = {
+                    "company_id": company_id,
+                    "company_name": inv.company_name,
+                    "total_amount": 0,
+                    "investment_count": 0,
+                    "first_investment": None,
+                    "latest_investment": None,
+                    "cbs": []
+                }
+
+            comp = company_investments[company_id]
+            comp["investment_count"] += 1
+            if inv.amount:
+                comp["total_amount"] += inv.amount
+
+            # 날짜 추적
+            if inv.issue_date:
+                if comp["first_investment"] is None or inv.issue_date < comp["first_investment"]:
+                    comp["first_investment"] = inv.issue_date
+                if comp["latest_investment"] is None or inv.issue_date > comp["latest_investment"]:
+                    comp["latest_investment"] = inv.issue_date
+
+            # CB 정보 추가
+            comp["cbs"].append(CBInfo(
+                id=inv.cb_id,
+                bond_name=inv.bond_name,
+                issue_date=inv.issue_date,
+                total_amount=inv.amount
+            ))
+
+        # 4. 최신 투자순 정렬
+        investment_history = sorted(
+            [InvestmentHistoryItem(**comp) for comp in company_investments.values()],
+            key=lambda x: x.latest_investment or "",
+            reverse=True
+        )
+
+        return SubscriberInvestmentFallbackResponse(
+            subscriber=GraphNode(
+                id=subscriber.id,
+                type="Subscriber",
+                properties={
+                    "name": subscriber.subscriber_name,
+                    "type": subscriber.subscriber_type,
+                    "is_related_party": subscriber.is_related_party
+                }
+            ),
+            investment_history=investment_history
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in subscriber investments fallback: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))

@@ -338,29 +338,41 @@ interface ApiOfficerCareerResponse {
 }
 
 /**
+ * API 응답을 OfficerCareer[] 형태로 변환
+ */
+function transformOfficerCareerResponse(careerHistory: ApiOfficerCareerItem[]): OfficerCareer[] {
+  return careerHistory.map(career => ({
+    company_name: career.company_name,
+    company_id: career.company_id,
+    position: career.position,
+    start_date: career.start_date || undefined,
+    end_date: career.end_date || undefined,
+    is_current: career.is_current ?? !career.end_date,
+    is_listed: career.is_listed ?? (career.source === 'db'),
+    source: career.source || 'db',
+    raw_text: career.raw_text,
+  }))
+}
+
+/**
  * 임원 경력 조회 API
  * @param officerId 임원 ID
  */
 export async function fetchOfficerCareer(officerId: string): Promise<OfficerCareer[]> {
+  // 1차: Neo4j 기반 Graph API 시도
   try {
     const response = await apiClient.get<ApiOfficerCareerResponse>(`/api/graph/officer/${officerId}/career`)
-
-    // API 응답의 career_history 배열을 프론트 타입으로 매핑
-    // 순서: 상장사 DB (source=db) → 사업보고서 주요경력 (source=disclosure)
-    const careerHistory = response.data.career_history || []
-    return careerHistory.map(career => ({
-      company_name: career.company_name,
-      company_id: career.company_id,
-      position: career.position,
-      start_date: career.start_date || undefined,
-      end_date: career.end_date || undefined,
-      is_current: career.is_current ?? !career.end_date,
-      is_listed: career.is_listed ?? (career.source === 'db'),
-      source: career.source || 'db',
-      raw_text: career.raw_text,
-    }))
+    return transformOfficerCareerResponse(response.data.career_history || [])
   } catch (error) {
-    console.warn('Officer Career API 호출 실패:', error)
+    console.warn('Neo4j Officer Career API 실패, PostgreSQL 폴백 시도:', error)
+  }
+
+  // 2차: PostgreSQL 기반 폴백 API 시도
+  try {
+    const response = await apiClient.get<ApiOfficerCareerResponse>(`/api/graph-fallback/officer/${officerId}/career`)
+    return transformOfficerCareerResponse(response.data.career_history || [])
+  } catch (fallbackError) {
+    console.warn('PostgreSQL 폴백 API도 실패:', fallbackError)
     return []
   }
 }
@@ -395,38 +407,52 @@ interface ApiSubscriberInvestmentResponse {
 }
 
 /**
+ * API 응답을 SubscriberInvestment[] 형태로 변환
+ */
+function transformSubscriberInvestmentResponse(data: ApiSubscriberInvestmentResponse): SubscriberInvestment[] {
+  const investments: SubscriberInvestment[] = []
+  const investmentHistory = data.investment_history || []
+
+  investmentHistory.forEach(inv => {
+    // 각 회사의 CB들을 개별 투자 이력으로 변환
+    inv.cbs.forEach(cb => {
+      investments.push({
+        company_name: inv.company_name,
+        company_id: inv.company_id,
+        cb_issue_date: cb.issue_date || inv.latest_investment || '',
+        amount: cb.total_amount || 0,
+        bond_name: cb.bond_name,  // CB 회차 정보 추가
+      })
+    })
+  })
+
+  // 최근 순으로 정렬
+  return investments.sort((a, b) => {
+    if (!a.cb_issue_date) return 1
+    if (!b.cb_issue_date) return -1
+    return new Date(b.cb_issue_date).getTime() - new Date(a.cb_issue_date).getTime()
+  })
+}
+
+/**
  * 인수인 투자 이력 조회 API
  * @param subscriberId 인수인 ID
  */
 export async function fetchSubscriberInvestments(subscriberId: string): Promise<SubscriberInvestment[]> {
+  // 1차: Neo4j 기반 Graph API 시도
   try {
     const response = await apiClient.get<ApiSubscriberInvestmentResponse>(`/api/graph/subscriber/${subscriberId}/investments`)
-
-    // investment_history 배열을 프론트 타입으로 변환
-    const investments: SubscriberInvestment[] = []
-    const investmentHistory = response.data.investment_history || []
-
-    investmentHistory.forEach(inv => {
-      // 각 회사의 CB들을 개별 투자 이력으로 변환
-      inv.cbs.forEach(cb => {
-        investments.push({
-          company_name: inv.company_name,
-          company_id: inv.company_id,
-          cb_issue_date: cb.issue_date || inv.latest_investment || '',
-          amount: cb.total_amount || 0,
-          bond_name: cb.bond_name,  // CB 회차 정보 추가
-        })
-      })
-    })
-
-    // 최근 순으로 정렬
-    return investments.sort((a, b) => {
-      if (!a.cb_issue_date) return 1
-      if (!b.cb_issue_date) return -1
-      return new Date(b.cb_issue_date).getTime() - new Date(a.cb_issue_date).getTime()
-    })
+    return transformSubscriberInvestmentResponse(response.data)
   } catch (error) {
-    console.warn('Subscriber Investments API 호출 실패:', error)
+    console.warn('Neo4j Subscriber Investments API 실패, PostgreSQL 폴백 시도:', error)
+  }
+
+  // 2차: PostgreSQL 기반 폴백 API 시도
+  try {
+    const response = await apiClient.get<ApiSubscriberInvestmentResponse>(`/api/graph-fallback/subscriber/${subscriberId}/investments`)
+    return transformSubscriberInvestmentResponse(response.data)
+  } catch (fallbackError) {
+    console.warn('PostgreSQL 폴백 API도 실패:', fallbackError)
     return []
   }
 }
