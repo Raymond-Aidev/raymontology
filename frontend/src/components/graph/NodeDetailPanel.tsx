@@ -211,7 +211,7 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
             )}
             {gradeColor && node.investment_grade && (
               <div className="flex items-center justify-between">
-                <span className="text-xs text-text-muted uppercase tracking-wide">투자등급</span>
+                <span className="text-xs text-text-muted uppercase tracking-wide">관계형리스크등급</span>
                 <span className={`font-bold font-mono ${gradeColor}`}>
                   {node.investment_grade}
                 </span>
