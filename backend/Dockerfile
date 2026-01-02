@@ -14,6 +14,7 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Cache bust: 2026-01-02-v2
 # Copy application code
 COPY . .
 
