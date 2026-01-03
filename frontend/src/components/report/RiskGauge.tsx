@@ -82,17 +82,17 @@ export default function RiskGauge({ score, size = 200, label = '종합 리스크
     // 중앙 점수 - 반원 차트 아래로 위치 조정
     svg.append('text')
       .attr('x', cx)
-      .attr('y', cy + 25)
+      .attr('y', cy + 30)
       .attr('text-anchor', 'middle')
       .attr('fill', config.color)
       .attr('font-size', '36px')
       .attr('font-weight', 'bold')
       .text(score)
 
-    // 라벨
+    // 라벨 - 점수 바로 아래
     svg.append('text')
       .attr('x', cx)
-      .attr('y', cy + 50)
+      .attr('y', cy + 55)
       .attr('text-anchor', 'middle')
       .attr('fill', '#a1a1aa')  // text-secondary 색상
       .attr('font-size', '12px')
@@ -102,7 +102,7 @@ export default function RiskGauge({ score, size = 200, label = '종합 리스크
 
   return (
     <div className="flex flex-col items-center">
-      <svg ref={svgRef} width={size} height={size * 0.9} />
+      <svg ref={svgRef} width={size} height={size * 1.0} />
       <div
         className="mt-2 px-3 py-1 rounded-full text-sm font-medium"
         style={{ backgroundColor: `${config.color}20`, color: config.color }}
