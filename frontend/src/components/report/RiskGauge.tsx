@@ -20,10 +20,9 @@ export default function RiskGauge({ score, size = 200, label = '종합 리스크
     svg.selectAll('*').remove()
 
     const width = size
-    const height = size * 0.7
-    const radius = Math.min(width, height * 2) / 2 - 20
+    const radius = Math.min(width, size * 0.7 * 2) / 2 - 20
     const cx = width / 2
-    const cy = height - 10
+    const cy = size * 0.7 - 10  // 반원 위치 (아래 점수/라벨 공간 확보)
 
     // 배경 호 (다크 테마용 색상)
     const arcBackground = d3.arc()
@@ -80,10 +79,10 @@ export default function RiskGauge({ score, size = 200, label = '종합 리스크
         .text(tick)
     })
 
-    // 중앙 점수
+    // 중앙 점수 - 반원 차트 아래로 위치 조정
     svg.append('text')
       .attr('x', cx)
-      .attr('y', cy - 30)
+      .attr('y', cy + 25)
       .attr('text-anchor', 'middle')
       .attr('fill', config.color)
       .attr('font-size', '36px')
@@ -93,7 +92,7 @@ export default function RiskGauge({ score, size = 200, label = '종합 리스크
     // 라벨
     svg.append('text')
       .attr('x', cx)
-      .attr('y', cy - 5)
+      .attr('y', cy + 50)
       .attr('text-anchor', 'middle')
       .attr('fill', '#a1a1aa')  // text-secondary 색상
       .attr('font-size', '12px')
@@ -103,7 +102,7 @@ export default function RiskGauge({ score, size = 200, label = '종합 리스크
 
   return (
     <div className="flex flex-col items-center">
-      <svg ref={svgRef} width={size} height={size * 0.7} />
+      <svg ref={svgRef} width={size} height={size * 0.9} />
       <div
         className="mt-2 px-3 py-1 rounded-full text-sm font-medium"
         style={{ backgroundColor: `${config.color}20`, color: config.color }}

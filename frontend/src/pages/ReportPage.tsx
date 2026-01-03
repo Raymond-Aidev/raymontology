@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { RiskGauge, ScoreBreakdown, GradeCard, DataTabs, RiskSignalList, StockPriceCard } from '../components/report'
+import { RiskGauge, ScoreBreakdown, GradeCard, DataTabs, RiskSignalList, StockPriceCard, RaymondsIndexMiniCard } from '../components/report'
 import { getCompanyReport, type CompanyReportData } from '../api/report'
 import { getRaymondsIndexByName } from '../api/raymondsIndex'
 import type { RaymondsIndexData } from '../types/raymondsIndex'
@@ -165,31 +165,49 @@ function ReportPage() {
       <div className="bg-dark-card border border-dark-border rounded-xl shadow-card p-4 md:p-6 mb-4 md:mb-6">
         <h2 className="text-base md:text-lg font-bold text-text-primary mb-4 md:mb-6">관계형 리스크 대시보드</h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          {/* 종합 리스크 게이지 - 모바일에서 크기 축소 */}
-          <div className="flex justify-center">
+        {/* 5개 박스 그리드: 종합리스크, 관계형리스크등급, RaymondsIndex, 주가차트, 구성요소 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-4">
+          {/* 1. 종합 리스크 게이지 */}
+          <div className="flex justify-center items-center">
             <div className="md:hidden">
-              <RiskGauge score={reportData.riskScore.total} size={160} />
+              <RiskGauge score={reportData.riskScore.total} size={140} />
             </div>
             <div className="hidden md:block">
-              <RiskGauge score={reportData.riskScore.total} size={180} />
+              <RiskGauge score={reportData.riskScore.total} size={160} />
             </div>
           </div>
 
-          {/* 관계형 리스크 등급 */}
-          <div className="flex justify-center">
+          {/* 2. 관계형 리스크 등급 */}
+          <div className="flex justify-center items-center">
             <GradeCard grade={reportData.investmentGrade} />
           </div>
 
-          {/* 최근 1년 주가 차트 */}
-          {companyId && (
-            <div className="bg-dark-surface/50 rounded-xl border border-dark-border/50">
-              <StockPriceCard companyId={companyId} companyName={reportData.companyName} />
-            </div>
-          )}
+          {/* 3. RaymondsIndex (데이터 있을 때만 표시) */}
+          <div className="flex justify-center items-center">
+            {raymondsIndex ? (
+              <RaymondsIndexMiniCard
+                score={raymondsIndex.totalScore}
+                grade={raymondsIndex.grade}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center p-6 bg-dark-surface rounded-xl border border-dark-border text-center h-full min-h-[160px]">
+                <span className="text-sm text-text-secondary mb-2">RaymondsIndex</span>
+                <span className="text-text-muted text-sm">데이터 없음</span>
+              </div>
+            )}
+          </div>
 
-          {/* 점수 구성 */}
-          <div>
+          {/* 4. 최근 1년 주가 차트 */}
+          <div className="flex justify-center items-center">
+            {companyId && (
+              <div className="bg-dark-surface/50 rounded-xl border border-dark-border/50 w-full h-full">
+                <StockPriceCard companyId={companyId} companyName={reportData.companyName} />
+              </div>
+            )}
+          </div>
+
+          {/* 5. 관계형 리스크 구성 요소 */}
+          <div className="flex justify-center items-center">
             <ScoreBreakdown scores={reportData.riskScore} />
           </div>
         </div>
