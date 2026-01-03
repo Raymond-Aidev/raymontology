@@ -8,6 +8,9 @@ import { NODE_LIMIT, DEFAULT_DEPTH, type DateRangeParams } from '../api/graph'
 import { DateRangePicker, type DateRange, BottomSheet } from '../components/common'
 import { useGraphQuery } from '../hooks/useGraphQuery'
 import { useGraphStore, selectCanGoBack, selectCanGoForward } from '../store'
+import { getRaymondsIndexById } from '../api/raymondsIndex'
+import type { RaymondsIndexData } from '../types/raymondsIndex'
+import { getGradeColor } from '../types/raymondsIndex'
 
 // URL 파라미터에서 날짜 파싱
 function parseDateFromUrl(dateStr: string | null): Date | null {
@@ -79,6 +82,9 @@ function GraphPage() {
 
   // 전체화면 모드 상태
   const [isFullscreen, setIsFullscreen] = useState(false)
+
+  // RaymondsIndex 데이터
+  const [raymondsIndex, setRaymondsIndex] = useState<RaymondsIndexData | null>(null)
 
   // 날짜를 YYYY-MM-DD 형식으로 변환
   const formatDateParam = (date: Date | string | null | undefined): string | undefined => {
@@ -180,6 +186,21 @@ function GraphPage() {
       pushNavigation(companyId, centerCompany.name)
     }
   }, [companyId, centerCompany?.name, pushNavigation])
+
+  // RaymondsIndex 데이터 로드
+  useEffect(() => {
+    const loadRaymondsIndex = async () => {
+      if (!companyId) return
+      try {
+        const data = await getRaymondsIndexById(companyId)
+        setRaymondsIndex(data)
+      } catch {
+        // RaymondsIndex 로드 실패는 무시 (Optional 데이터)
+        setRaymondsIndex(null)
+      }
+    }
+    loadRaymondsIndex()
+  }, [companyId])
 
   // API 연결 상태
   const isApiConnected = !error && actualGraphData.nodes.length > 0
@@ -441,6 +462,57 @@ function GraphPage() {
       {/* 필터 영역 - 데스크톱 */}
       <div className="hidden md:block mx-4 sm:mx-6 lg:mx-8 mt-4 bg-dark-card rounded-xl border border-dark-border p-4">
         <div className="flex flex-wrap items-center gap-6">
+          {/* 관계형리스크등급 */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-text-muted uppercase tracking-wide">관계형리스크</span>
+            <span className={`text-2xl font-bold font-mono ${
+              centerCompany?.investment_grade === 'A' ? 'text-blue-400' :
+              centerCompany?.investment_grade === 'AA' ? 'text-blue-400' :
+              centerCompany?.investment_grade === 'AAA' ? 'text-blue-400' :
+              centerCompany?.investment_grade === 'B' ? 'text-green-400' :
+              centerCompany?.investment_grade === 'BB' ? 'text-green-400' :
+              centerCompany?.investment_grade === 'BBB' ? 'text-green-400' :
+              centerCompany?.investment_grade === 'C' ? 'text-yellow-400' :
+              centerCompany?.investment_grade === 'CC' ? 'text-yellow-400' :
+              centerCompany?.investment_grade === 'CCC' ? 'text-yellow-400' :
+              centerCompany?.investment_grade === 'D' ? 'text-orange-400' :
+              centerCompany?.investment_grade === 'E' ? 'text-red-400' :
+              'text-text-muted'
+            }`}>
+              {centerCompany?.investment_grade || '-'}
+            </span>
+          </div>
+
+          <div className="w-px h-8 bg-dark-border" />
+
+          {/* RaymondsIndex */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-text-muted uppercase tracking-wide">RaymondsIndex</span>
+            {raymondsIndex ? (
+              <div className="flex items-center gap-1.5">
+                <span
+                  className="text-2xl font-bold font-mono"
+                  style={{ color: getGradeColor(raymondsIndex.grade) }}
+                >
+                  {raymondsIndex.totalScore.toFixed(0)}
+                </span>
+                <span
+                  className="text-sm font-medium px-1.5 py-0.5 rounded"
+                  style={{
+                    color: getGradeColor(raymondsIndex.grade),
+                    backgroundColor: `${getGradeColor(raymondsIndex.grade)}20`
+                  }}
+                >
+                  {raymondsIndex.grade}
+                </span>
+              </div>
+            ) : (
+              <span className="text-text-muted text-sm">-</span>
+            )}
+          </div>
+
+          <div className="w-px h-8 bg-dark-border" />
+
           {/* 탐색 깊이 */}
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
@@ -504,26 +576,6 @@ function GraphPage() {
               onChange={handleDateRangeChange}
             />
           </div>
-
-          {/* 관계형리스크등급 */}
-          {centerCompany?.investment_grade && (
-            <>
-              <div className="w-px h-8 bg-dark-border" />
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-text-muted uppercase tracking-wide">관계형리스크등급</span>
-                <span className={`text-xl font-bold font-mono ${
-                  centerCompany.investment_grade === 'A' ? 'text-blue-400' :
-                  centerCompany.investment_grade === 'B' ? 'text-green-400' :
-                  centerCompany.investment_grade === 'C' ? 'text-yellow-400' :
-                  centerCompany.investment_grade === 'D' ? 'text-orange-400' :
-                  centerCompany.investment_grade === 'E' ? 'text-red-400' :
-                  'text-text-primary'
-                }`}>
-                  {centerCompany.investment_grade}
-                </span>
-              </div>
-            </>
-          )}
 
           {/* 주가 흐름 미니 차트 */}
           {companyId && (
