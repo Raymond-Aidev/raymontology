@@ -322,87 +322,301 @@ class LocalDARTFinancialParser:
         return reports
 
     def extract_xml_content(self, zip_path: Path) -> Optional[str]:
-        """ZIP에서 XML 추출 (다중 인코딩 지원)"""
+        """ZIP에서 사업보고서 XML 추출 (v2.0)
+
+        ZIP에 여러 XML이 있을 수 있음:
+        - 사업보고서 (ACODE=11011) - 우선
+        - 감사보고서 (ACODE=00760)
+        - 연결감사보고서 (ACODE=00761)
+
+        사업보고서(11011)를 찾아서 반환, 없으면 가장 큰 XML 반환
+        """
         try:
             with zipfile.ZipFile(zip_path, 'r') as zf:
-                for name in zf.namelist():
-                    if name.endswith('.xml'):
-                        raw_bytes = zf.read(name)
-                        # 다중 인코딩 시도 (순서 중요)
-                        for encoding in ['utf-8', 'euc-kr', 'cp949']:
-                            try:
-                                content = raw_bytes.decode(encoding)
-                                # 한글이 제대로 디코딩되었는지 확인
-                                if '재무' in content or '자산' in content or '부채' in content:
-                                    return content
-                            except UnicodeDecodeError:
-                                continue
-                        # 모두 실패시 utf-8 with replace
-                        return raw_bytes.decode('utf-8', errors='replace')
+                xml_files = [n for n in zf.namelist() if n.endswith('.xml')]
+
+                # 1. 사업보고서(11011) 찾기
+                for name in xml_files:
+                    raw_bytes = zf.read(name)
+                    content = self._decode_xml(raw_bytes)
+                    if content and 'ACODE="11011"' in content:
+                        logger.debug(f"Found business report (11011): {name}")
+                        return content
+
+                # 2. 사업보고서가 없으면 가장 큰 XML 반환 (일반적으로 사업보고서가 가장 큼)
+                largest = None
+                largest_size = 0
+                for name in xml_files:
+                    info = zf.getinfo(name)
+                    if info.file_size > largest_size:
+                        largest = name
+                        largest_size = info.file_size
+
+                if largest:
+                    raw_bytes = zf.read(largest)
+                    content = self._decode_xml(raw_bytes)
+                    if content:
+                        logger.debug(f"Using largest XML: {largest} ({largest_size:,} bytes)")
+                        return content
+
         except Exception as e:
             logger.error(f"ZIP extraction error: {zip_path}: {e}")
         return None
 
+    def _decode_xml(self, raw_bytes: bytes) -> Optional[str]:
+        """XML 바이트를 문자열로 디코딩 (다중 인코딩 지원)"""
+        for encoding in ['utf-8', 'euc-kr', 'cp949']:
+            try:
+                content = raw_bytes.decode(encoding)
+                if '재무' in content or '자산' in content or '부채' in content:
+                    return content
+            except UnicodeDecodeError:
+                continue
+        # 모두 실패시 utf-8 with replace
+        return raw_bytes.decode('utf-8', errors='replace')
+
     def parse_financial_tables(self, xml_content: str) -> Dict[str, Dict[str, int]]:
         """XML에서 재무제표 테이블 파싱
+
+        v2.0: 각 재무제표(재무상태표, 손익계산서, 현금흐름표)를 독립적으로 파싱
+        - 각 섹션에서 해당 섹션의 단위를 개별 감지하여 적용
+        - 요약재무정보(백만원)가 아닌 본문 재무제표(원/천원)에서 파싱
 
         요청사항: 재무상태표와 연결재무상태표 둘 다 있으면 재무상태표(별도) 사용
         """
         result = {}
 
-        # 별도재무제표 우선 (재무상태표), 없으면 연결재무제표
-        for fs_type, patterns in [
-            ('OFS', ['재 무 상 태 표', '재무상태표', '현 금 흐 름 표', '현금흐름표', '손 익 계 산 서', '손익계산서']),
-            ('CFS', ['연결 재무상태표', '연결재무상태표', '연결 현금흐름표', '연결현금흐름표', '연결 손익계산서', '연결손익계산서'])
-        ]:
+        # 별도재무제표 우선 (OFS), 없으면 연결재무제표 (CFS)
+        for fs_type in ['OFS', 'CFS']:
             if fs_type == 'CFS' and result:
                 continue  # 별도 데이터가 있으면 연결은 스킵
 
-            parsed = self._extract_values_from_xml(xml_content, patterns, fs_type)
+            parsed = self._extract_values_from_all_statements(xml_content, fs_type)
             if parsed:
                 result[fs_type] = parsed
 
         return result
 
-    def _extract_values_from_xml(self, xml_content: str, table_patterns: List[str], fs_type: str = 'OFS') -> Dict[str, int]:
-        """XML에서 계정과목별 금액 추출
+    def _extract_values_from_all_statements(self, xml_content: str, fs_type: str = 'OFS') -> Dict[str, int]:
+        """v2.0: 각 재무제표 섹션에서 독립적으로 값 추출
 
-        개선사항:
-        1. 재무상태표 섹션에서만 값 추출 (요약재무정보 제외)
-        2. 해당 섹션에서 단위 감지 후 적용
-        3. 각 테이블별 단위를 개별 적용
+        핵심 개선:
+        1. 재무상태표, 손익계산서, 현금흐름표를 각각 독립적으로 파싱
+        2. 각 섹션의 단위를 개별 감지하여 적용 (요약재무정보 혼동 방지)
+        3. 계정과목을 해당 섹션에서만 검색
         """
         values = {}
 
-        # 재무상태표 섹션 추출 (TITLE 태그 기반)
-        section_content = self._extract_section_content(xml_content, fs_type)
-        if not section_content:
-            logger.debug(f"No section found for {fs_type}")
-            return values
+        # 재무제표 섹션 정의
+        # (섹션 이름, TITLE 패턴들, 해당 섹션에서 추출할 필드들)
+        statement_configs = [
+            {
+                'name': 'balance_sheet',  # 재무상태표
+                'title_patterns': self._get_bs_title_patterns(fs_type),
+                'fields': [
+                    'current_assets', 'cash_and_equivalents', 'short_term_investments',
+                    'trade_and_other_receivables', 'inventories', 'current_tax_assets',
+                    'other_financial_assets_current', 'other_assets_current',
+                    'non_current_assets', 'fvpl_financial_assets', 'investments_in_associates',
+                    'tangible_assets', 'intangible_assets', 'right_of_use_assets',
+                    'net_defined_benefit_assets', 'deferred_tax_assets',
+                    'other_financial_assets_non_current', 'other_assets_non_current',
+                    'total_assets', 'current_liabilities', 'trade_payables',
+                    'short_term_borrowings', 'current_portion_long_term_debt',
+                    'other_current_liabilities', 'current_tax_liabilities', 'provisions_current',
+                    'non_current_liabilities', 'long_term_borrowings', 'bonds_payable',
+                    'convertible_bonds', 'lease_liabilities', 'deferred_tax_liabilities',
+                    'provisions_non_current', 'other_non_current_liabilities',
+                    'total_liabilities', 'total_equity', 'capital_stock',
+                    'capital_surplus', 'retained_earnings', 'treasury_stock'
+                ]
+            },
+            {
+                'name': 'income_statement',  # 손익계산서
+                'title_patterns': self._get_is_title_patterns(fs_type),
+                'fields': [
+                    'revenue', 'cost_of_sales', 'selling_admin_expenses',
+                    'operating_income', 'net_income',
+                    'r_and_d_expense', 'depreciation_expense', 'interest_expense', 'tax_expense'
+                ]
+            },
+            {
+                'name': 'cash_flow',  # 현금흐름표
+                'title_patterns': self._get_cf_title_patterns(fs_type),
+                'fields': [
+                    'operating_cash_flow', 'investing_cash_flow', 'financing_cash_flow',
+                    'capex', 'intangible_acquisition', 'dividend_paid',
+                    'treasury_stock_acquisition', 'stock_issuance', 'bond_issuance'
+                ]
+            }
+        ]
 
-        # 해당 섹션에서 단위 감지
-        unit_multiplier = self._detect_unit_from_section(xml_content, fs_type)
-        logger.debug(f"Detected unit multiplier: {unit_multiplier} for {fs_type}")
+        for config in statement_configs:
+            section_content = self._extract_statement_section(xml_content, config['title_patterns'])
 
-        # 섹션 내 텍스트 추출 (태그 제거)
-        clean_text = self._clean_xml_text(section_content)
+            if not section_content:
+                logger.debug(f"No section found for {config['name']} ({fs_type})")
+                continue
 
-        # 계정과목별 금액 추출
-        for field, aliases in self.ACCOUNT_MAPPING.items():
-            for alias in aliases:
-                # 공백 무시하고 검색
-                alias_pattern = r'\s*'.join(re.escape(c) for c in alias)
-                pattern = rf'{alias_pattern}[^\d\-]*?([\-\(]?\d[\d,\.]*[\)]?)'
+            # 해당 섹션에서 단위 감지 (섹션 내용 기반)
+            unit_multiplier = self._detect_unit_from_content(section_content)
+            logger.debug(f"{config['name']}: unit={unit_multiplier}")
 
-                matches = re.findall(pattern, clean_text, re.IGNORECASE)
-                if matches:
-                    # 첫 번째 매칭 값 사용 (당기)
-                    amount = self._parse_amount(matches[0], unit_multiplier)
-                    if amount is not None:
-                        values[field] = amount
-                        break
+            # 섹션 내 텍스트 추출 (태그 제거)
+            clean_text = self._clean_xml_text(section_content)
+
+            # 해당 섹션의 필드만 파싱
+            for field in config['fields']:
+                if field in values:
+                    continue  # 이미 추출된 경우 스킵
+
+                aliases = self.ACCOUNT_MAPPING.get(field, [])
+                for alias in aliases:
+                    # 공백 무시하고 검색
+                    alias_pattern = r'\s*'.join(re.escape(c) for c in alias)
+                    # v2.2: 주석번호 "(주숫자)" 형태 건너뛰기 - 큰 금액(최소 7자리 이상) 캡처
+                    pattern = rf'{alias_pattern}(?:\s*\(주\d+\))?[^\d\-]*?([\-\(]?\d{{1,3}}(?:,\d{{3}})+(?:\.\d+)?[\)]?|[\-\(]?\d{{7,}}(?:\.\d+)?[\)]?)'
+
+                    matches = re.findall(pattern, clean_text, re.IGNORECASE)
+                    if matches:
+                        # 첫 번째 매칭 값 사용 (당기)
+                        amount = self._parse_amount(matches[0], unit_multiplier)
+                        if amount is not None:
+                            values[field] = amount
+                            break
 
         return values
+
+    def _get_bs_title_patterns(self, fs_type: str) -> List[str]:
+        """재무상태표 TITLE 패턴 (공백 유연 처리)
+
+        실제 TITLE 예시:
+        - '2-1. 연결 재무상태표' (공백 있음)
+        - '4-1. 재무상태표'
+        """
+        if fs_type == 'OFS':
+            return [
+                r'<TITLE[^>]*>4-1\.\s*재\s*무\s*상\s*태\s*표</TITLE>',
+                r'<TITLE[^>]*>재\s*무\s*상\s*태\s*표</TITLE>',
+            ]
+        else:
+            return [
+                r'<TITLE[^>]*>2-1\.\s*연결\s*재\s*무\s*상\s*태\s*표</TITLE>',
+                r'<TITLE[^>]*>연결\s*재\s*무\s*상\s*태\s*표</TITLE>',
+                r'<TITLE[^>]*>2\.\s*연결\s*재무제표</TITLE>',  # 상위 섹션 전체 (v2.1)
+            ]
+
+    def _get_is_title_patterns(self, fs_type: str) -> List[str]:
+        """손익계산서 TITLE 패턴 (공백 유연 처리)
+
+        실제 TITLE 예시:
+        - '2-2. 연결 손익계산서' (공백 있음)
+        - '4-2. 손익계산서'
+        """
+        if fs_type == 'OFS':
+            return [
+                r'<TITLE[^>]*>4-2\.\s*손\s*익\s*계\s*산\s*서</TITLE>',
+                r'<TITLE[^>]*>4-2\.\s*포\s*괄\s*손\s*익\s*계\s*산\s*서</TITLE>',
+                r'<TITLE[^>]*>손\s*익\s*계\s*산\s*서</TITLE>',
+                r'<TITLE[^>]*>포\s*괄\s*손\s*익\s*계\s*산\s*서</TITLE>',
+            ]
+        else:
+            return [
+                r'<TITLE[^>]*>2-2\.\s*연결\s*손\s*익\s*계\s*산\s*서</TITLE>',
+                r'<TITLE[^>]*>2-2\.\s*연결\s*포\s*괄\s*손\s*익\s*계\s*산\s*서</TITLE>',  # 2-2번도 포괄손익 가능
+                r'<TITLE[^>]*>2-3\.\s*연결\s*포\s*괄\s*손\s*익\s*계\s*산\s*서</TITLE>',
+                r'<TITLE[^>]*>연결\s*손\s*익\s*계\s*산\s*서</TITLE>',
+                r'<TITLE[^>]*>연결\s*포\s*괄\s*손\s*익\s*계\s*산\s*서</TITLE>',
+                r'<TITLE[^>]*>2\.\s*연결\s*재무제표</TITLE>',  # 상위 섹션 전체 (v2.1)
+            ]
+
+    def _get_cf_title_patterns(self, fs_type: str) -> List[str]:
+        """현금흐름표 TITLE 패턴 (공백 유연 처리)
+
+        실제 TITLE 예시:
+        - '2-5. 연결 현금흐름표' (공백 있음)
+        - '4-5. 현금흐름표'
+        """
+        if fs_type == 'OFS':
+            return [
+                r'<TITLE[^>]*>4-5\.\s*현\s*금\s*흐\s*름\s*표</TITLE>',
+                r'<TITLE[^>]*>현\s*금\s*흐\s*름\s*표</TITLE>',
+            ]
+        else:
+            return [
+                r'<TITLE[^>]*>2-5\.\s*연결\s*현\s*금\s*흐\s*름\s*표</TITLE>',
+                r'<TITLE[^>]*>연결\s*현\s*금\s*흐\s*름\s*표</TITLE>',
+                r'<TITLE[^>]*>2\.\s*연결\s*재무제표</TITLE>',  # 상위 섹션 전체 (v2.1)
+            ]
+
+    def _extract_statement_section(self, xml_content: str, title_patterns: List[str]) -> Optional[str]:
+        """특정 재무제표 섹션 추출 (v2.2)
+
+        개선:
+        - "2. 연결재무제표" 같은 상위 섹션 패턴일 경우, 하위 재무제표 전체를 포함하도록
+          "3. 연결재무제표 주석" 또는 "4. 재무제표" 전까지 추출
+        """
+        for pattern in title_patterns:
+            # "2. 연결재무제표" 상위 섹션 패턴 확인
+            is_parent_section = r'연결\s*재무제표</TITLE>' in pattern and '상태표' not in pattern
+
+            if is_parent_section:
+                # 상위 섹션: "3. 연결재무제표 주석" 또는 "4. 재무제표" 전까지 추출
+                section_pattern = rf'({pattern})(.+?)(?=<TITLE[^>]*>\s*3\.\s*연결재무제표\s*주석|<TITLE[^>]*>\s*4\.\s*재무제표|$)'
+            else:
+                # 일반 하위 섹션: 다음 TITLE 까지
+                section_pattern = rf'({pattern})(.+?)(?=<TITLE|$)'
+
+            match = re.search(section_pattern, xml_content, re.DOTALL)
+            if match:
+                return match.group(2)
+        return None
+
+    def _detect_unit_from_content(self, section_content: str) -> int:
+        """섹션 내용에서 단위 감지 (v2.0)
+
+        우선순위:
+        1. 섹션 앞부분의 (단위: 원/천원/백만원) 텍스트
+        2. AUNIT 속성
+        3. 기본값 1 (원)
+        """
+        # 섹션 앞부분 3000자에서 단위 찾기
+        search_area = section_content[:3000]
+
+        # 1. 텍스트 단위 패턴 (우선순위 순서: 백만원 > 천원 > 원)
+        if re.search(r'\(단위\s*[:\s:]\s*백만\s*원\)', search_area):
+            return 1_000_000
+        elif re.search(r'\(단위\s*[:\s:]\s*천\s*원\)', search_area):
+            return 1_000
+        elif re.search(r'\(단위\s*[:\s:]\s*원\)', search_area):
+            return 1
+
+        # 2. AUNIT 속성 확인
+        aunit_match = re.search(r'AUNIT="(\w+)"\s+AUNITVALUE="(\d+)"', search_area)
+        if aunit_match:
+            aunit = aunit_match.group(1).upper()
+            aunit_value = int(aunit_match.group(2))
+            if aunit == 'WON':
+                return aunit_value  # 보통 1
+            elif aunit == 'THOUSAND':
+                return 1_000 * aunit_value
+            elif aunit == 'MILLION':
+                return 1_000_000 * aunit_value
+
+        # 3. ENG 속성에서 단위 확인 (예: "(Unit : KRW)")
+        if re.search(r'Unit\s*:\s*KRW', search_area, re.IGNORECASE):
+            return 1  # 원 단위
+
+        # 4. 기본값: 원 (v2.0에서는 원을 기본으로 변경 - 사업보고서 본문은 대부분 원)
+        logger.debug("Using default unit: 1 (원)")
+        return 1
+
+    def _extract_values_from_xml(self, xml_content: str, table_patterns: List[str], fs_type: str = 'OFS') -> Dict[str, int]:
+        """[DEPRECATED] 기존 메서드 - 하위 호환성 유지용
+
+        v2.0에서는 _extract_values_from_all_statements 사용
+        """
+        return self._extract_values_from_all_statements(xml_content, fs_type)
 
     def _extract_section_content(self, xml_content: str, fs_type: str) -> Optional[str]:
         """재무제표 섹션 내용 추출 (다양한 문서 구조 지원)"""

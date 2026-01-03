@@ -331,6 +331,7 @@ DART API를 직접 호출하는 스크립트 사용 금지.
 |--------|----------------|---------------------------|
 | **financial_details (2022-2024)** | `parse_local_financial_details.py` | ~~`collect_financial_details.py`~~ |
 | **financial_details (2025 Q3)** | `parse_q3_reports_2025.py` | - |
+| **financial_details 재파싱** | `reparse_financial_details_v2.py` | - |
 | **raymonds_index** | `calculate_raymonds_index.py` | - |
 
 ### 수집 순서
@@ -338,11 +339,56 @@ DART API를 직접 호출하는 스크립트 사용 금지.
 2. `parse_q3_reports_2025.py` → 2025년 3분기 데이터
 3. `calculate_raymonds_index.py` → RaymondsIndex 계산
 
+### 재파싱 (데이터 수정 필요시)
+```bash
+cd backend
+source .venv/bin/activate
+DATABASE_URL="postgresql://..." python3 scripts/reparse_financial_details_v2.py --year 2024
+```
+
 ### 사용 금지 스크립트
 ```
 금지: collect_financial_details.py (DART API 직접 호출)
 금지: collect_financial_statements.py (DART API 직접 호출)
 ```
+
+---
+
+## 파서 v2.0 (parse_local_financial_details.py)
+
+### 핵심 개선 (2026-01-02)
+기존 파서가 재무상태표 섹션만 추출하여 손익계산서/현금흐름표 데이터가 누락되거나 단위가 잘못 적용되는 문제 해결
+
+| 항목 | v1.0 (기존) | v2.0 (개선) |
+|------|------------|------------|
+| 섹션 추출 | 재무상태표만 | 재무상태표 + 손익계산서 + 현금흐름표 |
+| 단위 감지 | 문서 전체에서 첫 번째 | 각 섹션별 독립 감지 |
+| XML 선택 | 첫 번째 XML | 사업보고서(11011) 우선 |
+| 기본 단위 | 천원 | 원 |
+
+### 주요 함수
+- `extract_xml_content()`: ZIP에서 사업보고서(11011) 우선 추출
+- `_extract_values_from_all_statements()`: 각 재무제표 섹션 독립 파싱
+- `_detect_unit_from_content()`: 섹션 내용에서 단위 감지
+
+### 재파싱 스크립트 (`reparse_financial_details_v2.py`)
+```bash
+# 2024년 데이터 재파싱
+python scripts/reparse_financial_details_v2.py --year 2024
+
+# 샘플 테스트
+python scripts/reparse_financial_details_v2.py --sample 10 --dry-run
+
+# 옵션
+--year 2024    # 특정 연도만
+--sample 50    # 샘플 개수
+--dry-run      # 실제 DB 업데이트 없이 테스트
+```
+
+### data_source 구분
+- `LOCAL_DART`: 기존 파서로 파싱된 데이터
+- `LOCAL_DART_V2`: v2.0 파서로 재파싱된 데이터
+- `LOCAL_Q3_2025`: Q3 보고서에서 파싱된 데이터
 
 ---
 
