@@ -122,6 +122,7 @@ async def get_company_network_fallback(
         for officer in officers:
             if officer.id not in seen_node_ids:
                 # 해당 임원의 적자기업 경력 수 계산 (동명이인 방지: 이름 + 출생년월 비교)
+                # 주의: 현재 조회 중인 회사(center_id)는 제외 - 과거 경력만 카운트
                 deficit_career_query = text("""
                     SELECT COUNT(DISTINCT op2.company_id)
                     FROM officer_positions op2
@@ -129,11 +130,13 @@ async def get_company_network_fallback(
                     WHERE o2.name = :name
                     AND (o2.birth_date = :birth_date OR (o2.birth_date IS NULL AND :birth_date IS NULL))
                     AND op2.company_id::text = ANY(:deficit_ids)
+                    AND op2.company_id::text != :current_company_id
                 """)
                 deficit_result = await db.execute(deficit_career_query, {
                     "name": officer.name,
                     "birth_date": officer.birth_date,
-                    "deficit_ids": list(deficit_company_ids)
+                    "deficit_ids": list(deficit_company_ids),
+                    "current_company_id": center_id
                 })
                 deficit_career_count = deficit_result.scalar() or 0
 
