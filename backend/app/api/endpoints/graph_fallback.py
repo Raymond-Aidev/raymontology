@@ -66,24 +66,30 @@ async def get_company_network_fallback(
     is_corp_code = len(company_id) == 8 and company_id.isdigit()
     
     try:
-        # 1. 중심 회사 조회
+        # 1. 중심 회사 조회 (investment_grade 포함)
         if is_corp_code:
             company_query = text("""
-                SELECT id::text, name, corp_code, ticker, market, sector
-                FROM companies WHERE corp_code = :company_id
+                SELECT c.id::text, c.name, c.corp_code, c.ticker, c.market, c.sector,
+                       rs.investment_grade
+                FROM companies c
+                LEFT JOIN risk_scores rs ON c.id = rs.company_id
+                WHERE c.corp_code = :company_id
             """)
         else:
             company_query = text("""
-                SELECT id::text, name, corp_code, ticker, market, sector
-                FROM companies WHERE id::text = :company_id
+                SELECT c.id::text, c.name, c.corp_code, c.ticker, c.market, c.sector,
+                       rs.investment_grade
+                FROM companies c
+                LEFT JOIN risk_scores rs ON c.id = rs.company_id
+                WHERE c.id::text = :company_id
             """)
-        
+
         result = await db.execute(company_query, {"company_id": company_id})
         company = result.fetchone()
-        
+
         if not company:
             raise HTTPException(status_code=404, detail="Company not found")
-        
+
         center_id = company.id
         nodes.append(GraphNode(
             id=center_id,
@@ -93,7 +99,8 @@ async def get_company_network_fallback(
                 "corp_code": company.corp_code,
                 "ticker": company.ticker,
                 "market": company.market,
-                "sector": company.sector
+                "sector": company.sector,
+                "investment_grade": company.investment_grade
             }
         ))
         seen_node_ids.add(center_id)
