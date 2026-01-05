@@ -61,3 +61,7 @@ certs/
 *.pem
 *.key
 *.crt
+
+# Backup files
+*.backup
+*.bak
