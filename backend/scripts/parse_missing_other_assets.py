@@ -35,10 +35,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # 환경 변수
-DATABASE_URL = os.getenv(
-    'DATABASE_URL',
-    'postgresql://postgres:ooRdnLPpUTvrYODqhYqvhWwwQtsnmjnR@hopper.proxy.rlwy.net:41316/railway'
-)
+DATABASE_URL = os.getenv('DATABASE_URL')
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL 환경 변수가 설정되지 않았습니다")
 DART_DATA_DIR = Path(__file__).parent.parent / 'data' / 'dart'
 
 # 기타금융자산/기타자산 파싱용 매핑 (확장)

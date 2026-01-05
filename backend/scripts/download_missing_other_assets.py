@@ -30,11 +30,12 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # 설정
-DART_API_KEY = os.getenv('DART_API_KEY', '1fd0cd12ae5260eafb7de3130ad91f16aa61911b')
-DATABASE_URL = os.getenv(
-    'DATABASE_URL',
-    'postgresql://postgres:ooRdnLPpUTvrYODqhYqvhWwwQtsnmjnR@hopper.proxy.rlwy.net:41316/railway'
-)
+DART_API_KEY = os.getenv('DART_API_KEY')
+if not DART_API_KEY:
+    raise ValueError("DART_API_KEY 환경 변수가 설정되지 않았습니다")
+DATABASE_URL = os.getenv('DATABASE_URL')
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL 환경 변수가 설정되지 않았습니다")
 DART_DATA_DIR = Path(__file__).parent.parent / 'data' / 'dart'
 
 # DART API URLs
