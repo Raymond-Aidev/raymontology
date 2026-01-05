@@ -2,27 +2,27 @@
 
 > **중요**: 모든 테이블 접근 시 이 문서 참조 필수. 테이블명 추측 금지.
 >
-> **마지막 업데이트**: 2026-01-01
+> **마지막 업데이트**: 2026-01-05
 >
-> **현재 데이터 상태** (2026-01-01):
+> **현재 데이터 상태** (2026-01-05):
 > - companies: 3,922건
 > - officers: 44,679건
-> - officer_positions: 64,265건 (2026-01-01 중복 정리 완료)
+> - officer_positions: 48,862건 (2026-01-04 중복 정리 완료, position_history JSONB 추가)
 > - disclosures: 213,304건
-> - convertible_bonds: 1,463건
-> - cb_subscribers: 7,490건
+> - convertible_bonds: 1,133건 (2026-01-02 중복 정리 완료)
+> - cb_subscribers: 7,026건 (CB 정리에 따른 연쇄 정리)
 > - financial_statements: 9,432건
 > - risk_signals: 1,412건
 > - risk_scores: 3,912건
-> - major_shareholders: 44,768건 (2026-01-01 데이터 정제 완료)
+> - major_shareholders: 47,453건
 > - affiliates: 973건
-> - financial_details: 7,689건 (2022-2024년 연간 데이터)
+> - financial_details: 10,288건 (2022-2025년, XBRL v3.0 파서 적용)
 > - **raymonds_index: 2,698건** (2026-01-01 재계산 완료)
-> - **stock_prices: 127,324건** (신규 추가)
+> - **stock_prices: 127,324건**
 > - users: 4건
 > - user_query_usage: - (조회 제한 추적)
-> - page_contents: 2건 (페이지 콘텐츠 관리)
-> - site_settings: 2건 (사이트 설정)
+> - page_contents: - (페이지 콘텐츠 관리)
+> - site_settings: - (사이트 설정)
 
 ---
 
@@ -106,7 +106,7 @@
 
 ---
 
-### 3. officer_positions (임원 직책 이력) - 64,265건
+### 3. officer_positions (임원 직책 이력) - 48,862건
 
 | 컬럼명 | 데이터타입 | NULL | 설명 |
 |--------|-----------|------|------|
@@ -122,11 +122,24 @@
 | source_disclosure_id | varchar | YES | 출처 공시번호 |
 | source_report_date | date | YES | 공시일 |
 | appointment_number | integer | YES | 선임 차수 |
+| position_history | jsonb | YES | 직책 이력 (2026-01-04 추가) |
 | created_at | timestamp | NO | 생성일시 |
 | updated_at | timestamp | NO | 수정일시 |
 
 **연관 스크립트**: `parse_officers_from_local.py`
 **중복 판단 기준**: officer_id + company_id + position + birth_date
+
+#### position_history 컬럼 상세 (2026-01-04 추가)
+
+**JSON 형식**:
+```json
+[
+  {"position": "사외이사", "date": "2023-03-15", "source": "20230315000123"},
+  {"position": "감사위원", "date": "2024-03-20", "source": "20240320000456"}
+]
+```
+
+**용도**: 동일 회사 내 직책 변경 이력 추적
 
 ---
 
@@ -154,7 +167,7 @@
 
 ---
 
-### 5. convertible_bonds (전환사채) - 1,463건
+### 5. convertible_bonds (전환사채) - 1,133건
 
 | 컬럼명 | 데이터타입 | NULL | 설명 |
 |--------|-----------|------|------|
@@ -189,7 +202,7 @@
 
 ---
 
-### 6. cb_subscribers (CB 인수자) - 7,490건
+### 6. cb_subscribers (CB 인수자) - 7,026건
 
 | 컬럼명 | 데이터타입 | NULL | 설명 |
 |--------|-----------|------|------|
@@ -389,7 +402,7 @@
 
 ---
 
-### 12. financial_details (상세 재무 데이터) - 12,757건
+### 12. financial_details (상세 재무 데이터) - 10,288건
 
 | 컬럼명 | 데이터타입 | NULL | 설명 |
 |--------|-----------|------|------|
@@ -473,7 +486,7 @@
 
 ---
 
-### 13. raymonds_index (자본 배분 효율성 지수 v2.1) - 7,648건
+### 13. raymonds_index (자본 배분 효율성 지수 v2.1) - 2,698건
 
 | 컬럼명 | 데이터타입 | NULL | 설명 |
 |--------|-----------|------|------|
