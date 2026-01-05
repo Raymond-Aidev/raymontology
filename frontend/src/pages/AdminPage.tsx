@@ -45,7 +45,7 @@ interface Stats {
   superusers: number
 }
 
-type TabType = 'users' | 'database' | 'content' | 'terms' | 'privacy' | 'dataQuality'
+type TabType = 'users' | 'database' | 'dataCoverage' | 'content' | 'terms' | 'privacy' | 'dataQuality'
 
 interface ContentField {
   field: string
@@ -114,6 +114,42 @@ interface DataQualityResponse {
   }
 }
 
+// 데이터 커버리지 모니터링 타입
+interface YearlyCoverageStats {
+  fiscal_year: number
+  total_companies: number
+  coverage_100: number
+  coverage_80_99: number
+  coverage_60_79: number
+  coverage_below_60: number
+}
+
+interface YearlyCoverageResponse {
+  years: YearlyCoverageStats[]
+  data_types: string[]
+  last_updated: string
+}
+
+interface CompanyDataStatus {
+  company_id: string
+  company_name: string
+  ticker: string | null
+  officer_positions_count: number
+  financial_details_count: number
+  financial_statements_count: number
+  raymonds_index_count: number
+  major_shareholders_count: number
+  convertible_bonds_count: number
+  coverage_score: number
+  years_with_data: number[]
+}
+
+interface CompanyDataStatusResponse {
+  companies: CompanyDataStatus[]
+  total: number
+  search_term: string
+}
+
 function AdminPage() {
   const navigate = useNavigate()
   const { user, isAuthenticated, login } = useAuthStore()
@@ -160,6 +196,13 @@ function AdminPage() {
   const [dataQuality, setDataQuality] = useState<DataQualityResponse | null>(null)
   const [dataQualityLoading, setDataQualityLoading] = useState(false)
   const [cleanupLoading, setCleanupLoading] = useState<string | null>(null)
+
+  // 데이터 커버리지 모니터링 상태
+  const [yearlyCoverage, setYearlyCoverage] = useState<YearlyCoverageResponse | null>(null)
+  const [coverageLoading, setCoverageLoading] = useState(false)
+  const [companySearch, setCompanySearch] = useState('')
+  const [companySearchResults, setCompanySearchResults] = useState<CompanyDataStatusResponse | null>(null)
+  const [companySearchLoading, setCompanySearchLoading] = useState(false)
 
   // 로그인 여부 및 관리자 권한 체크
   useEffect(() => {
@@ -394,6 +437,41 @@ function AdminPage() {
       loadDataQuality()
     }
   }, [activeTab, user, loadDataQuality])
+
+  // 데이터 커버리지 로드
+  const loadYearlyCoverage = useCallback(async (refresh: boolean = false) => {
+    setCoverageLoading(true)
+    try {
+      const response = await apiClient.get(`/api/admin/data-coverage/yearly${refresh ? '?refresh=true' : ''}`)
+      setYearlyCoverage(response.data)
+    } catch (err) {
+      console.error('Failed to load yearly coverage:', err)
+      setError('연도별 데이터 커버리지를 불러오는데 실패했습니다.')
+    } finally {
+      setCoverageLoading(false)
+    }
+  }, [])
+
+  // 기업별 데이터 상태 검색
+  const searchCompanyDataStatus = useCallback(async (searchTerm: string) => {
+    setCompanySearchLoading(true)
+    try {
+      const response = await apiClient.get(`/api/admin/data-coverage/company-status?search=${encodeURIComponent(searchTerm)}&limit=20`)
+      setCompanySearchResults(response.data)
+    } catch (err) {
+      console.error('Failed to search company data status:', err)
+      setError('기업 데이터 상태 검색에 실패했습니다.')
+    } finally {
+      setCompanySearchLoading(false)
+    }
+  }, [])
+
+  // 데이터 커버리지 탭 전환 시 로드
+  useEffect(() => {
+    if (activeTab === 'dataCoverage' && user?.is_superuser) {
+      loadYearlyCoverage()
+    }
+  }, [activeTab, user, loadYearlyCoverage])
 
   // 데이터 정제 실행
   const handleDataCleanup = async (tableName: string, issueType: string, dryRun: boolean) => {
@@ -642,6 +720,7 @@ function AdminPage() {
           {[
             { id: 'users', label: '회원 관리' },
             { id: 'database', label: '데이터베이스 현황' },
+            { id: 'dataCoverage', label: '기업별 DB 현황' },
             { id: 'dataQuality', label: '데이터 품질' },
             { id: 'content', label: '콘텐츠 관리' },
             { id: 'terms', label: '이용약관' },
@@ -876,6 +955,200 @@ function AdminPage() {
                   <div className="p-8 text-center text-text-secondary">
                     데이터를 불러오는 중 오류가 발생했습니다.
                   </div>
+                )}
+              </div>
+            )}
+
+            {/* 기업별 DB 현황 탭 */}
+            {activeTab === 'dataCoverage' && (
+              <div className="space-y-6">
+                {coverageLoading ? (
+                  <div className="flex items-center justify-center py-20">
+                    <div className="w-8 h-8 border-4 border-accent-primary border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : (
+                  <>
+                    {/* 연도별 데이터 커버리지 */}
+                    <div className="bg-theme-card border border-theme-border rounded-xl p-6">
+                      <div className="flex items-center justify-between mb-6">
+                        <div>
+                          <h3 className="text-lg font-semibold text-text-primary">연도별 데이터 수집 현황</h3>
+                          <p className="text-sm text-text-secondary mt-1">
+                            5가지 데이터 타입: 임원, 상세재무, 재무제표, RaymondsIndex, 대주주
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => loadYearlyCoverage(true)}
+                          className="px-3 py-1.5 text-xs rounded bg-theme-surface border border-theme-border text-text-secondary hover:bg-theme-hover transition-colors flex items-center gap-1"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          캐시 갱신
+                        </button>
+                      </div>
+
+                      {yearlyCoverage && yearlyCoverage.years.length > 0 ? (
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead className="bg-theme-surface">
+                              <tr>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">연도</th>
+                                <th className="px-4 py-3 text-right text-xs font-medium text-text-secondary uppercase">전체 기업</th>
+                                <th className="px-4 py-3 text-right text-xs font-medium text-text-secondary uppercase">
+                                  <span className="text-accent-success">100%</span> (5/5)
+                                </th>
+                                <th className="px-4 py-3 text-right text-xs font-medium text-text-secondary uppercase">
+                                  <span className="text-accent-primary">80-99%</span> (4/5)
+                                </th>
+                                <th className="px-4 py-3 text-right text-xs font-medium text-text-secondary uppercase">
+                                  <span className="text-accent-warning">60-79%</span> (3/5)
+                                </th>
+                                <th className="px-4 py-3 text-right text-xs font-medium text-text-secondary uppercase">
+                                  <span className="text-accent-danger">60% 미만</span>
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-theme-border">
+                              {yearlyCoverage.years.map((year) => {
+                                const coverage100Pct = year.total_companies > 0 ? (year.coverage_100 / year.total_companies * 100).toFixed(1) : '0.0'
+                                return (
+                                  <tr key={year.fiscal_year} className="hover:bg-theme-hover transition-colors">
+                                    <td className="px-4 py-3 text-sm font-medium text-text-primary">{year.fiscal_year}</td>
+                                    <td className="px-4 py-3 text-sm text-right text-text-secondary">{year.total_companies.toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-right">
+                                      <span className="text-sm font-medium text-accent-success">{year.coverage_100.toLocaleString()}</span>
+                                      <span className="text-xs text-text-muted ml-1">({coverage100Pct}%)</span>
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-right text-accent-primary">{year.coverage_80_99.toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-sm text-right text-accent-warning">{year.coverage_60_79.toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-sm text-right text-accent-danger">{year.coverage_below_60.toLocaleString()}</td>
+                                  </tr>
+                                )
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div className="p-8 text-center text-text-secondary">
+                          연도별 데이터가 없습니다.
+                        </div>
+                      )}
+
+                      {yearlyCoverage && (
+                        <p className="text-xs text-text-muted mt-4">
+                          마지막 업데이트: {new Date(yearlyCoverage.last_updated).toLocaleString('ko-KR')}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 기업별 데이터 상태 검색 */}
+                    <div className="bg-theme-card border border-theme-border rounded-xl p-6">
+                      <h3 className="text-lg font-semibold text-text-primary mb-4">기업별 데이터 상태 검색</h3>
+
+                      <div className="flex gap-2 mb-6">
+                        <input
+                          type="text"
+                          value={companySearch}
+                          onChange={(e) => setCompanySearch(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              searchCompanyDataStatus(companySearch)
+                            }
+                          }}
+                          placeholder="기업명 또는 종목코드 입력"
+                          className="flex-1 px-4 py-2 bg-theme-surface border border-theme-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent-primary/30 focus:border-accent-primary"
+                        />
+                        <button
+                          onClick={() => searchCompanyDataStatus(companySearch)}
+                          disabled={companySearchLoading}
+                          className="px-4 py-2 bg-accent-primary text-white rounded-lg hover:bg-accent-primary/90 disabled:opacity-50 transition-colors"
+                        >
+                          {companySearchLoading ? '검색 중...' : '검색'}
+                        </button>
+                      </div>
+
+                      {companySearchResults && companySearchResults.companies.length > 0 ? (
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead className="bg-theme-surface">
+                              <tr>
+                                <th className="px-3 py-2 text-left text-xs font-medium text-text-secondary">기업명</th>
+                                <th className="px-3 py-2 text-center text-xs font-medium text-text-secondary">종목코드</th>
+                                <th className="px-3 py-2 text-center text-xs font-medium text-text-secondary">커버리지</th>
+                                <th className="px-3 py-2 text-center text-xs font-medium text-text-secondary">임원</th>
+                                <th className="px-3 py-2 text-center text-xs font-medium text-text-secondary">상세재무</th>
+                                <th className="px-3 py-2 text-center text-xs font-medium text-text-secondary">재무제표</th>
+                                <th className="px-3 py-2 text-center text-xs font-medium text-text-secondary">RI</th>
+                                <th className="px-3 py-2 text-center text-xs font-medium text-text-secondary">대주주</th>
+                                <th className="px-3 py-2 text-center text-xs font-medium text-text-secondary">CB</th>
+                                <th className="px-3 py-2 text-left text-xs font-medium text-text-secondary">데이터 연도</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-theme-border">
+                              {companySearchResults.companies.map((company) => (
+                                <tr key={company.company_id} className="hover:bg-theme-hover transition-colors">
+                                  <td className="px-3 py-2 text-sm font-medium text-text-primary">{company.company_name}</td>
+                                  <td className="px-3 py-2 text-xs text-center text-text-muted">{company.ticker || '-'}</td>
+                                  <td className="px-3 py-2 text-center">
+                                    <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                                      company.coverage_score >= 1.0 ? 'bg-accent-success/20 text-accent-success' :
+                                      company.coverage_score >= 0.8 ? 'bg-accent-primary/20 text-accent-primary' :
+                                      company.coverage_score >= 0.6 ? 'bg-accent-warning/20 text-accent-warning' :
+                                      'bg-accent-danger/20 text-accent-danger'
+                                    }`}>
+                                      {(company.coverage_score * 100).toFixed(0)}%
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-2 text-xs text-center">
+                                    <span className={company.officer_positions_count > 0 ? 'text-accent-success' : 'text-text-muted'}>
+                                      {company.officer_positions_count}
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-2 text-xs text-center">
+                                    <span className={company.financial_details_count > 0 ? 'text-accent-success' : 'text-text-muted'}>
+                                      {company.financial_details_count}
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-2 text-xs text-center">
+                                    <span className={company.financial_statements_count > 0 ? 'text-accent-success' : 'text-text-muted'}>
+                                      {company.financial_statements_count}
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-2 text-xs text-center">
+                                    <span className={company.raymonds_index_count > 0 ? 'text-accent-success' : 'text-text-muted'}>
+                                      {company.raymonds_index_count}
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-2 text-xs text-center">
+                                    <span className={company.major_shareholders_count > 0 ? 'text-accent-success' : 'text-text-muted'}>
+                                      {company.major_shareholders_count}
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-2 text-xs text-center">
+                                    <span className={company.convertible_bonds_count > 0 ? 'text-accent-primary' : 'text-text-muted'}>
+                                      {company.convertible_bonds_count}
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-2 text-xs text-text-secondary">
+                                    {company.years_with_data.length > 0 ? company.years_with_data.join(', ') : '-'}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : companySearchResults ? (
+                        <div className="p-8 text-center text-text-secondary">
+                          검색 결과가 없습니다.
+                        </div>
+                      ) : (
+                        <div className="p-8 text-center text-text-muted">
+                          기업명 또는 종목코드를 입력하여 검색하세요.
+                        </div>
+                      )}
+                    </div>
+                  </>
                 )}
               </div>
             )}

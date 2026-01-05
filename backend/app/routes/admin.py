@@ -934,3 +934,246 @@ async def get_shareholder_issues_detail(
         "limit": limit,
         "offset": offset
     }
+
+
+# ============================================================================
+# Data Coverage Monitoring (기업별 DB 현황)
+# ============================================================================
+
+class YearlyCoverageStats(BaseModel):
+    """연도별 데이터 커버리지 통계"""
+    fiscal_year: int
+    total_companies: int
+    coverage_100: int  # 5/5 데이터 타입 보유
+    coverage_80_99: int  # 4/5 데이터 타입 보유
+    coverage_60_79: int  # 3/5 데이터 타입 보유
+    coverage_below_60: int  # 2/5 이하
+
+
+class YearlyCoverageResponse(BaseModel):
+    """연도별 데이터 커버리지 응답"""
+    years: List[YearlyCoverageStats]
+    data_types: List[str]
+    last_updated: datetime
+
+
+class CompanyDataStatus(BaseModel):
+    """개별 기업 데이터 상태"""
+    company_id: str
+    company_name: str
+    ticker: Optional[str]
+    officer_positions_count: int
+    financial_details_count: int
+    financial_statements_count: int
+    raymonds_index_count: int
+    major_shareholders_count: int
+    convertible_bonds_count: int
+    coverage_score: float  # 0.0 ~ 1.0
+    years_with_data: List[int]
+
+
+class CompanyDataStatusResponse(BaseModel):
+    """기업 데이터 상태 검색 응답"""
+    companies: List[CompanyDataStatus]
+    total: int
+    search_term: str
+
+
+# 캐시: 연도별 통계는 1시간 캐시 (무거운 쿼리)
+_yearly_coverage_cache: Optional[Dict] = None
+_yearly_coverage_cache_time: Optional[datetime] = None
+CACHE_DURATION_SECONDS = 3600  # 1시간
+
+
+@router.get("/data-coverage/yearly", response_model=YearlyCoverageResponse)
+async def get_yearly_data_coverage(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+    refresh: bool = False
+):
+    """
+    연도별 데이터 커버리지 통계 조회 (관리자 전용)
+
+    데이터 타입 5가지: officer_positions, financial_details, financial_statements,
+                      raymonds_index, major_shareholders
+
+    - 100%: 5/5 데이터 타입 보유
+    - 80-99%: 4/5 데이터 타입 보유
+    - 60-79%: 3/5 데이터 타입 보유
+    - 60% 미만: 2/5 이하
+
+    캐시: 1시간 (refresh=true로 강제 갱신)
+    """
+    global _yearly_coverage_cache, _yearly_coverage_cache_time
+
+    # 캐시 확인
+    if not refresh and _yearly_coverage_cache and _yearly_coverage_cache_time:
+        if (datetime.utcnow() - _yearly_coverage_cache_time).total_seconds() < CACHE_DURATION_SECONDS:
+            return _yearly_coverage_cache
+
+    # 연도별 데이터 커버리지 쿼리
+    query = text("""
+        WITH company_data AS (
+            SELECT
+                c.id as company_id,
+                COALESCE(fd.fiscal_year, fs.fiscal_year, 2024) as fiscal_year,
+                CASE WHEN EXISTS (SELECT 1 FROM officer_positions op WHERE op.company_id = c.id) THEN 1 ELSE 0 END as has_officers,
+                CASE WHEN fd.company_id IS NOT NULL THEN 1 ELSE 0 END as has_financial_details,
+                CASE WHEN fs.company_id IS NOT NULL THEN 1 ELSE 0 END as has_financial_statements,
+                CASE WHEN ri.company_id IS NOT NULL THEN 1 ELSE 0 END as has_raymonds_index,
+                CASE WHEN EXISTS (SELECT 1 FROM major_shareholders ms WHERE ms.company_id = c.id) THEN 1 ELSE 0 END as has_shareholders
+            FROM companies c
+            LEFT JOIN LATERAL (
+                SELECT DISTINCT company_id, fiscal_year FROM financial_details WHERE company_id = c.id
+            ) fd ON true
+            LEFT JOIN LATERAL (
+                SELECT DISTINCT company_id, fiscal_year FROM financial_statements WHERE company_id = c.id
+            ) fs ON fd.fiscal_year = fs.fiscal_year OR (fd.fiscal_year IS NULL AND fs.fiscal_year IS NOT NULL)
+            LEFT JOIN LATERAL (
+                SELECT DISTINCT company_id FROM raymonds_index WHERE company_id = c.id
+            ) ri ON true
+            WHERE c.listing_status = 'LISTED'
+        ),
+        coverage_calc AS (
+            SELECT
+                fiscal_year,
+                company_id,
+                has_officers + has_financial_details + has_financial_statements + has_raymonds_index + has_shareholders as data_count
+            FROM company_data
+            WHERE fiscal_year IS NOT NULL
+        )
+        SELECT
+            fiscal_year,
+            COUNT(DISTINCT company_id) as total_companies,
+            COUNT(DISTINCT company_id) FILTER (WHERE data_count = 5) as coverage_100,
+            COUNT(DISTINCT company_id) FILTER (WHERE data_count = 4) as coverage_80_99,
+            COUNT(DISTINCT company_id) FILTER (WHERE data_count = 3) as coverage_60_79,
+            COUNT(DISTINCT company_id) FILTER (WHERE data_count <= 2) as coverage_below_60
+        FROM coverage_calc
+        GROUP BY fiscal_year
+        ORDER BY fiscal_year DESC
+    """)
+
+    result = await db.execute(query)
+    rows = result.fetchall()
+
+    years = []
+    for row in rows:
+        years.append(YearlyCoverageStats(
+            fiscal_year=row.fiscal_year,
+            total_companies=row.total_companies,
+            coverage_100=row.coverage_100,
+            coverage_80_99=row.coverage_80_99,
+            coverage_60_79=row.coverage_60_79,
+            coverage_below_60=row.coverage_below_60
+        ))
+
+    response = YearlyCoverageResponse(
+        years=years,
+        data_types=["officer_positions", "financial_details", "financial_statements", "raymonds_index", "major_shareholders"],
+        last_updated=datetime.utcnow()
+    )
+
+    # 캐시 업데이트
+    _yearly_coverage_cache = response
+    _yearly_coverage_cache_time = datetime.utcnow()
+
+    return response
+
+
+@router.get("/data-coverage/company-status", response_model=CompanyDataStatusResponse)
+async def get_company_data_status(
+    search: str = "",
+    limit: int = 20,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin)
+):
+    """
+    개별 기업 데이터 상태 조회 (관리자 전용)
+
+    기업명 또는 종목코드로 검색하여 해당 기업의 데이터 보유 현황 확인
+
+    - search: 기업명 또는 종목코드 (빈 문자열이면 상위 기업 반환)
+    - limit: 결과 개수 (기본 20, 최대 100)
+    """
+    limit = min(limit, 100)
+
+    if search:
+        # 검색어가 있는 경우
+        query = text("""
+            SELECT
+                c.id,
+                c.name,
+                c.ticker,
+                (SELECT COUNT(*) FROM officer_positions WHERE company_id = c.id) as officer_count,
+                (SELECT COUNT(*) FROM financial_details WHERE company_id = c.id) as fd_count,
+                (SELECT COUNT(*) FROM financial_statements WHERE company_id = c.id) as fs_count,
+                (SELECT COUNT(*) FROM raymonds_index WHERE company_id = c.id) as ri_count,
+                (SELECT COUNT(*) FROM major_shareholders WHERE company_id = c.id) as sh_count,
+                (SELECT COUNT(*) FROM convertible_bonds WHERE company_id = c.id) as cb_count,
+                (SELECT array_agg(DISTINCT fiscal_year ORDER BY fiscal_year DESC)
+                 FROM financial_details WHERE company_id = c.id) as years
+            FROM companies c
+            WHERE c.name ILIKE :search OR c.ticker ILIKE :search
+            ORDER BY c.name
+            LIMIT :limit
+        """)
+        result = await db.execute(query, {"search": f"%{search}%", "limit": limit})
+    else:
+        # 검색어 없으면 데이터 많은 순서로 반환
+        query = text("""
+            SELECT
+                c.id,
+                c.name,
+                c.ticker,
+                (SELECT COUNT(*) FROM officer_positions WHERE company_id = c.id) as officer_count,
+                (SELECT COUNT(*) FROM financial_details WHERE company_id = c.id) as fd_count,
+                (SELECT COUNT(*) FROM financial_statements WHERE company_id = c.id) as fs_count,
+                (SELECT COUNT(*) FROM raymonds_index WHERE company_id = c.id) as ri_count,
+                (SELECT COUNT(*) FROM major_shareholders WHERE company_id = c.id) as sh_count,
+                (SELECT COUNT(*) FROM convertible_bonds WHERE company_id = c.id) as cb_count,
+                (SELECT array_agg(DISTINCT fiscal_year ORDER BY fiscal_year DESC)
+                 FROM financial_details WHERE company_id = c.id) as years
+            FROM companies c
+            WHERE c.listing_status = 'LISTED'
+            ORDER BY (
+                (SELECT COUNT(*) FROM financial_details WHERE company_id = c.id) +
+                (SELECT COUNT(*) FROM raymonds_index WHERE company_id = c.id)
+            ) DESC
+            LIMIT :limit
+        """)
+        result = await db.execute(query, {"limit": limit})
+
+    rows = result.fetchall()
+
+    companies = []
+    for row in rows:
+        # 커버리지 점수 계산 (5가지 데이터 타입 기준)
+        data_types_present = sum([
+            1 if row.officer_count > 0 else 0,
+            1 if row.fd_count > 0 else 0,
+            1 if row.fs_count > 0 else 0,
+            1 if row.ri_count > 0 else 0,
+            1 if row.sh_count > 0 else 0
+        ])
+        coverage_score = data_types_present / 5.0
+
+        companies.append(CompanyDataStatus(
+            company_id=str(row.id),
+            company_name=row.name,
+            ticker=row.ticker,
+            officer_positions_count=row.officer_count,
+            financial_details_count=row.fd_count,
+            financial_statements_count=row.fs_count,
+            raymonds_index_count=row.ri_count,
+            major_shareholders_count=row.sh_count,
+            convertible_bonds_count=row.cb_count,
+            coverage_score=coverage_score,
+            years_with_data=row.years if row.years else []
+        ))
+
+    return CompanyDataStatusResponse(
+        companies=companies,
+        total=len(companies),
+        search_term=search
+    )

@@ -4,11 +4,11 @@
 
 ---
 
-## 상태: 데이터 보완 작업 완료 (2026-01-02)
-전체 17개 테이블 데이터 적재 완료. **RaymondsIndex 계산 완료 (2,698건)**.
+## 상태: 최대주주 기본정보 파서 추가 (2026-01-05)
+전체 18개 테이블 데이터 적재 완료. **RaymondsIndex 계산 완료 (2,707건)**.
 **RaymondsIndex 독립 사이트**: https://raymondsindex.konnect-ai.net 배포 완료.
 **RaymondsRisk 앱인토스**: 토스 로그인 연동 완료, 샌드박스 테스트 진행 중.
-**최근 업데이트**: 주의 필요 기업 API 개선, 임원 주의 표시 로직 구현 (2026-01-02)
+**최근 업데이트**: 최대주주 기본정보 파서 구현 및 4,599건 적재 (2026-01-05)
 
 ---
 
@@ -24,6 +24,7 @@
 | **앱인토스 가이드** | **토스 앱인앱 연동 개발** | **`docs/APPS_IN_TOSS_GUIDE.md`** |
 | **RaymondsIndex 화면기획** | **독립 사이트 UI/UX 설계** | **`docs/RAYMONDSINDEX_UI_SPEC_v2.md`** |
 | **RaymondsIndex 개발계획** | **독립 사이트 개발 일정** | **`docs/RAYMONDSINDEX_DEVELOPMENT_PLAN.md`** |
+| **파이프라인 개선 계획** | **데이터 수집/파싱 자동화** | **`docs/DATA_PIPELINE_IMPROVEMENT_PLAN.md`** |
 
 ---
 
@@ -115,24 +116,25 @@
 
 ---
 
-## 현재 DB 상태 (2026-01-02 기준)
+## 현재 DB 상태 (2026-01-05 기준)
 
 | 테이블 | 레코드 수 | 상태 |
 |--------|----------|------|
 | companies | 3,922 | ✅ |
 | officers | 44,679 | ✅ |
-| officer_positions | 64,265 | ✅ (중복 정리 완료) |
+| officer_positions | 48,862 | ✅ (중복 정리 완료, position_history JSONB 추가) |
 | disclosures | 213,304 | ✅ |
 | convertible_bonds | 1,133 | ✅ (중복 정리 완료, 330건 제거) |
 | cb_subscribers | 7,026 | ✅ (CB 정리에 따른 연쇄 정리) |
 | financial_statements | 9,432 | ✅ |
 | risk_signals | 1,412 | ✅ |
 | risk_scores | 3,912 | ✅ |
-| major_shareholders | 47,453 | ✅ |
+| major_shareholders | 44,574 | ✅ (비정상 키워드 194건 정리) |
 | affiliates | 973 | ✅ |
-| financial_details | 7,689 | ⚠️ 2025 Q3 파싱 필요 |
-| **raymonds_index** | **2,698** | ✅ 계산 완료 |
-| **stock_prices** | **127,324** | ✅ 신규 |
+| financial_details | 10,288 | ✅ (XBRL v3.0 파서 적용) |
+| **raymonds_index** | **2,707** | ✅ 계산 완료 |
+| **stock_prices** | **127,324** | ✅ |
+| **largest_shareholder_info** | **4,599** | ✅ 신규 (2026-01-05) |
 | user_query_usage | - | ✅ |
 | page_contents | - | ✅ |
 
@@ -312,39 +314,125 @@ https://raymontology-production.up.railway.app
 
 ---
 
+## 분기별 데이터 파이프라인 (2026-01-04 구현)
+
+### 파이프라인 개요
+새로운 분기 데이터 수집/파싱/적재를 자동화하는 통합 파이프라인입니다.
+
+```
+다운로드 → 파싱 → 검증 → 적재 → RaymondsIndex 계산 → 보고서
+```
+
+### 전체 파이프라인 실행 (권장)
+```bash
+cd backend
+source .venv/bin/activate
+
+# 전체 파이프라인 실행
+python -m scripts.pipeline.run_quarterly_pipeline --quarter Q1 --year 2025
+
+# 테스트 모드 (샘플만)
+python -m scripts.pipeline.run_quarterly_pipeline --quarter Q1 --year 2025 --sample 10 --dry-run
+
+# 특정 단계부터 시작
+python -m scripts.pipeline.run_quarterly_pipeline --quarter Q1 --year 2025 --start-from parse
+```
+
+### 개별 단계 실행
+```bash
+# 1. 다운로드 (DART_API_KEY 환경변수 필요)
+python -m scripts.pipeline.download_quarterly_reports --quarter Q1 --year 2025
+
+# 2. 파싱
+python -m scripts.pipeline.run_unified_parser --quarter Q1 --year 2025
+
+# 3. 검증
+python -m scripts.pipeline.validate_parsed_data --quarter Q1 --year 2025
+
+# 4. RaymondsIndex 계산
+python -m scripts.pipeline.calculate_index --year 2025
+
+# 5. 보고서 생성
+python -m scripts.pipeline.generate_report --quarter Q1 --year 2025 --save
+```
+
+### 분기별 일정
+| 분기 | 보고서 마감 | 파이프라인 실행 | 비고 |
+|------|------------|----------------|------|
+| Q1 (1분기) | 5월 15일 | 5월 20일 | |
+| Q2 (반기) | 8월 14일 | 8월 20일 | |
+| Q3 (3분기) | 11월 14일 | 11월 20일 | |
+| Q4 (사업보고서) | 3월 31일 | 4월 5일 | 연간 데이터 확정 |
+
+### 파이프라인 모듈 구조
+```
+scripts/pipeline/
+├── __init__.py                    # 모듈 진입점
+├── download_quarterly_reports.py  # DART 다운로드
+├── run_unified_parser.py          # 통합 파서 실행
+├── validate_parsed_data.py        # 데이터 품질 검증
+├── calculate_index.py             # RaymondsIndex 계산
+├── generate_report.py             # 보고서 생성
+└── run_quarterly_pipeline.py      # 전체 파이프라인 통합
+```
+
+### 통합 파서 모듈 구조
+```
+scripts/parsers/
+├── __init__.py           # 모듈 진입점
+├── base.py               # BaseParser (공통 기능)
+├── financial.py          # FinancialParser (230+ 계정 매핑)
+├── officer.py            # OfficerParser (position_history 지원)
+├── validators.py         # DataValidator (품질 검증)
+├── unified.py            # DARTUnifiedParser (CLI 통합)
+├── largest_shareholder.py # LargestShareholderParser (최대주주 기본정보)
+└── xbrl_enhancer.py      # XBRLEnhancer (XBRL 데이터 보완)
+```
+
+### 통합 파서 사용법
+```bash
+# CLI 실행
+python -m scripts.parsers.unified --year 2024 --type all
+python -m scripts.parsers.unified --validate  # 데이터 검증만
+python -m scripts.parsers.unified --stats     # 통계만
+
+# Python에서 사용
+from scripts.parsers import DARTUnifiedParser
+
+parser = DARTUnifiedParser()
+await parser.parse_all(target_years=[2024])
+report = await parser.validate()
+print(report.to_string())
+```
+
+---
+
 ## 데이터 수집 규칙 (중요!)
 
-### 핵심 원칙: 로컬 다운로드 → 파싱 (DART API 직접 호출 X)
+### 핵심 원칙: 파이프라인 사용 우선
 
-모든 DART 데이터는 **로컬에 먼저 다운로드 후 파싱**합니다.
-DART API를 직접 호출하는 스크립트 사용 금지.
+**새로운 분기 데이터 수집 시 반드시 파이프라인 사용:**
+```bash
+python -m scripts.pipeline.run_quarterly_pipeline --quarter Q1 --year 2025
+```
+
+기존 개별 스크립트 직접 호출 금지 (레거시).
 
 ### 로컬 데이터 위치
 | 데이터 | 경로 | 용도 |
 |--------|------|------|
 | **사업보고서 (연간)** | `data/dart/batch_*` | 2022-2024년 연간 재무 데이터 |
+| **분기별 보고서** | `data/dart/quarterly/{year}/{quarter}/` | 분기별 데이터 (파이프라인 생성) |
 | **3분기보고서 (2025)** | `data/q3_reports_2025/` | 2025년 3분기 재무 데이터 |
 | **CB 공시 JSON** | `data/cb_disclosures_by_company_full.json` | 전환사채 정보 |
+| **품질 보고서** | `data/reports/` | 파이프라인 실행 보고서 |
 
-### 파싱 스크립트 매핑
-| 데이터 | 올바른 스크립트 | 잘못된 스크립트 (사용 금지) |
-|--------|----------------|---------------------------|
-| **financial_details (2022-2024)** | `parse_local_financial_details.py` | ~~`collect_financial_details.py`~~ |
-| **financial_details (2025 Q3)** | `parse_q3_reports_2025.py` | - |
-| **financial_details 재파싱** | `reparse_financial_details_v2.py` | - |
-| **raymonds_index** | `calculate_raymonds_index.py` | - |
-
-### 수집 순서
-1. `parse_local_financial_details.py` → 2022-2024년 연간 데이터
-2. `parse_q3_reports_2025.py` → 2025년 3분기 데이터
-3. `calculate_raymonds_index.py` → RaymondsIndex 계산
-
-### 재파싱 (데이터 수정 필요시)
-```bash
-cd backend
-source .venv/bin/activate
-DATABASE_URL="postgresql://..." python3 scripts/reparse_financial_details_v2.py --year 2024
-```
+### 레거시 스크립트 (직접 호출 비권장)
+| 데이터 | 레거시 스크립트 | 권장 대체 방법 |
+|--------|----------------|---------------|
+| **financial_details** | `parse_local_financial_details.py` | `scripts.parsers.unified` |
+| **재파싱** | `reparse_financial_details_v2.py` | `scripts.pipeline.run_unified_parser` |
+| **raymonds_index** | `calculate_raymonds_index.py` | `scripts.pipeline.calculate_index` |
 
 ### 사용 금지 스크립트
 ```
@@ -413,3 +501,36 @@ python scripts/reparse_financial_details_v2.py --sample 10 --dry-run
 ### FastAPI 라우트 순서 주의
 - 동적 라우트 (`/{company_id}`) **앞에** 정적 라우트 (`/high-risk`) 배치
 - 순서 잘못되면 404 오류 발생 (동적 라우트가 먼저 매칭됨)
+
+---
+
+## 최대주주 기본정보 테이블 (2026-01-05 신규)
+
+### 테이블명: `largest_shareholder_info`
+
+최대주주가 법인인 경우, 그 법인의 기본정보와 재무현황을 저장합니다.
+
+| 컬럼 | 설명 | 채움률 |
+|------|------|--------|
+| `shareholder_name` | 최대주주 법인명 | 100% |
+| `investor_count` | 출자자수 | 91.5% |
+| `largest_investor_name` | 최대출자자 성명 | 94.5% |
+| `largest_investor_share_ratio` | 최대출자자 지분율 | 94.5% |
+| `fin_total_assets` | 자산총계 | 96.1% |
+| `fin_total_liabilities` | 부채총계 | 96.1% |
+| `fin_total_equity` | 자본총계 | 96.1% |
+| `fin_revenue` | 매출액 | 96.1% |
+| `fin_operating_income` | 영업이익 | 96.1% |
+| `fin_net_income` | 당기순이익 | 96.1% |
+
+### 파서 실행
+```bash
+cd backend
+source .venv/bin/activate
+DATABASE_URL="postgresql://..." python scripts/parsers/largest_shareholder.py
+```
+
+### 활용 가치
+1. **실질 지배구조 파악**: 최대주주 법인의 최대출자자까지 추적
+2. **연쇄 리스크 분석**: 최대주주 법인의 재무건전성 평가
+3. **지배구조 복잡도**: 출자자수로 복잡도 측정
