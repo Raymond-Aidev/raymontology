@@ -105,13 +105,10 @@ async def exchange_code_for_token(
     2. accessToken, refreshToken 수신
     3. 사용자 정보 조회 및 저장
     """
-    # 샌드박스/개발 환경: 모의 응답
-    # mTLS 클라이언트가 없거나, debug 모드이거나, sandbox referrer인 경우
-    use_mock = (
-        not _toss_client_available or  # mTLS 인증서 미설정
-        settings.debug or               # 개발 모드
-        request.referrer == "sandbox"   # 샌드박스 referrer
-    )
+    # 모의 응답 사용 조건:
+    # - mTLS 클라이언트가 없는 경우에만 mock 사용
+    # - 샌드박스 환경에서도 실제 토스 API 호출 필요 (인가코드 검증)
+    use_mock = not _toss_client_available  # mTLS 인증서 미설정 시에만 mock
 
     if use_mock:
         # 모의 토큰 생성
@@ -143,7 +140,7 @@ async def exchange_code_for_token(
             user.last_login_at = datetime.utcnow()
 
         await db.commit()
-        logger.info(f"[Mock] Token issued for: {mock_user_key} (mTLS={_toss_client_available}, debug={settings.debug}, referrer={request.referrer})")
+        logger.info(f"[Mock] Token issued for: {mock_user_key} (mTLS not available)")
 
         return TokenResponse(
             accessToken=mock_token,
@@ -281,12 +278,8 @@ async def refresh_access_token(
             detail="유효하지 않은 리프레시 토큰입니다"
         )
 
-    # Mock 토큰 갱신 (mTLS 미설정 시에도 동작)
-    # mTLS가 없거나 mock 토큰인 경우 모의 갱신
-    use_mock_refresh = (
-        not _toss_client_available or
-        request.refreshToken.startswith("mock_")
-    )
+    # Mock 토큰 갱신: mock 토큰인 경우에만 모의 갱신
+    use_mock_refresh = request.refreshToken.startswith("mock_")
 
     if use_mock_refresh:
         new_access_token = f"mock_access_refreshed_{user.toss_user_key[:8]}"
@@ -297,7 +290,7 @@ async def refresh_access_token(
         user.token_expires_at = datetime.utcnow() + timedelta(hours=1)
 
         await db.commit()
-        logger.info(f"[Mock] Token refreshed for: {user.toss_user_key} (mTLS={_toss_client_available})")
+        logger.info(f"[Mock] Token refreshed for: {user.toss_user_key}")
 
         return TokenResponse(
             accessToken=new_access_token,
