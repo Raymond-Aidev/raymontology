@@ -24,6 +24,7 @@ const PricingPage = lazy(() => import('./pages/PricingPage'))
 const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'))
 const PaymentFailPage = lazy(() => import('./pages/PaymentFailPage'))
 const RaymondsIndexRankingPage = lazy(() => import('./pages/RaymondsIndexRankingPage'))
+const ServiceApplicationPage = lazy(() => import('./pages/ServiceApplicationPage'))
 
 function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth)
@@ -67,6 +68,7 @@ function App() {
         }>
           <Route path="/company/:companyId/graph" element={<GraphPage />} />
           <Route path="/company/:companyId/report" element={<ReportPage />} />
+          <Route path="/service-application" element={<ServiceApplicationPage />} />
         </Route>
         <Route path="*" element={<NotFoundPage />} />
       </Routes>

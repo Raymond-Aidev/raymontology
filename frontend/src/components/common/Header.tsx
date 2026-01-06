@@ -48,10 +48,10 @@ function Header() {
               문의
             </Link>
             <Link
-              to="/pricing"
+              to="/service-application"
               className="px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-dark-hover rounded-lg transition-all"
             >
-              이용권
+              서비스 이용신청
             </Link>
           </nav>
 
@@ -176,11 +176,11 @@ function Header() {
                 문의
               </Link>
               <Link
-                to="/pricing"
+                to="/service-application"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="px-4 py-2.5 text-sm text-text-secondary hover:text-text-primary hover:bg-dark-hover rounded-lg transition-all"
               >
-                이용권
+                서비스 이용신청
               </Link>
               <div className="my-2 border-t border-dark-border" />
               {isAuthenticated && user ? (

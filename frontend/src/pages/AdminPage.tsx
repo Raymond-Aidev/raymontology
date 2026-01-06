@@ -3,6 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import apiClient from '../api/client'
 import RaymondsRiskLogo from '../components/common/RaymondsRiskLogo'
+import {
+  ServiceApplicationAdmin,
+  ApplicationStatus,
+  APPLICATION_STATUS_INFO,
+  ENTERPRISE_PLANS
+} from '../types/serviceApplication'
 
 interface User {
   id: string
@@ -45,7 +51,7 @@ interface Stats {
   superusers: number
 }
 
-type TabType = 'users' | 'database' | 'dataCoverage' | 'content' | 'terms' | 'privacy' | 'dataQuality'
+type TabType = 'users' | 'serviceApplications' | 'database' | 'dataCoverage' | 'content' | 'terms' | 'privacy' | 'dataQuality'
 
 interface ContentField {
   field: string
@@ -203,6 +209,22 @@ function AdminPage() {
   const [companySearch, setCompanySearch] = useState('')
   const [companySearchResults, setCompanySearchResults] = useState<CompanyDataStatusResponse | null>(null)
   const [companySearchLoading, setCompanySearchLoading] = useState(false)
+
+  // 서비스 신청 관리 상태
+  const [serviceApplications, setServiceApplications] = useState<ServiceApplicationAdmin[]>([])
+  const [serviceApplicationsTotal, setServiceApplicationsTotal] = useState(0)
+  const [serviceApplicationsPage, setServiceApplicationsPage] = useState(1)
+  const [serviceApplicationsLoading, setServiceApplicationsLoading] = useState(false)
+  const [serviceApplicationsFilter, setServiceApplicationsFilter] = useState<ApplicationStatus | ''>('')
+  const [statusUpdateModal, setStatusUpdateModal] = useState<{
+    isOpen: boolean
+    application: ServiceApplicationAdmin | null
+  }>({ isOpen: false, application: null })
+  const [newStatus, setNewStatus] = useState<'PAYMENT_CONFIRMED' | 'APPROVED' | 'REJECTED'>('PAYMENT_CONFIRMED')
+  const [adminMemo, setAdminMemo] = useState('')
+  const [subscriptionStartDate, setSubscriptionStartDate] = useState('')
+  const [subscriptionEndDate, setSubscriptionEndDate] = useState('')
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
 
   // 로그인 여부 및 관리자 권한 체크
   useEffect(() => {
@@ -473,6 +495,127 @@ function AdminPage() {
     }
   }, [activeTab, user, loadYearlyCoverage])
 
+  // 서비스 신청 로드
+  const loadServiceApplications = useCallback(async (page: number = 1, status: ApplicationStatus | '' = '') => {
+    setServiceApplicationsLoading(true)
+    try {
+      const params = new URLSearchParams()
+      params.append('page', page.toString())
+      params.append('per_page', '10')
+      if (status) {
+        params.append('status', status)
+      }
+      const response = await apiClient.get(`/api/admin/service-applications?${params.toString()}`)
+      setServiceApplications(response.data.applications)
+      setServiceApplicationsTotal(response.data.total)
+      setServiceApplicationsPage(page)
+    } catch (err) {
+      console.error('Failed to load service applications:', err)
+      setError('서비스 신청 목록을 불러오는데 실패했습니다.')
+    } finally {
+      setServiceApplicationsLoading(false)
+    }
+  }, [])
+
+  // 서비스 신청 탭 전환 시 로드
+  useEffect(() => {
+    if (activeTab === 'serviceApplications' && user?.is_superuser) {
+      loadServiceApplications(1, serviceApplicationsFilter)
+    }
+  }, [activeTab, user, loadServiceApplications, serviceApplicationsFilter])
+
+  // 서비스 신청 상태 변경
+  const handleStatusUpdate = async () => {
+    if (!statusUpdateModal.application) return
+
+    setIsUpdatingStatus(true)
+    setError(null)
+
+    try {
+      const payload: {
+        status: 'PAYMENT_CONFIRMED' | 'APPROVED' | 'REJECTED'
+        admin_memo?: string
+        subscription_start_date?: string
+        subscription_end_date?: string
+      } = {
+        status: newStatus,
+        admin_memo: adminMemo || undefined
+      }
+
+      if (newStatus === 'APPROVED') {
+        if (!subscriptionStartDate || !subscriptionEndDate) {
+          setError('승인 시 이용 기간을 설정해주세요.')
+          setIsUpdatingStatus(false)
+          return
+        }
+        payload.subscription_start_date = subscriptionStartDate
+        payload.subscription_end_date = subscriptionEndDate
+      }
+
+      await apiClient.put(
+        `/api/admin/service-applications/${statusUpdateModal.application.id}/status`,
+        payload
+      )
+
+      setSaveSuccess('상태가 변경되었습니다.')
+      setTimeout(() => setSaveSuccess(null), 3000)
+      closeStatusUpdateModal()
+      loadServiceApplications(serviceApplicationsPage, serviceApplicationsFilter)
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } }
+      setError(error.response?.data?.detail || '상태 변경에 실패했습니다.')
+    } finally {
+      setIsUpdatingStatus(false)
+    }
+  }
+
+  // 상태 변경 모달 열기
+  const openStatusUpdateModal = (app: ServiceApplicationAdmin) => {
+    setStatusUpdateModal({ isOpen: true, application: app })
+    setNewStatus('PAYMENT_CONFIRMED')
+    setAdminMemo('')
+
+    // APPROVED 시 기본 날짜 설정
+    const today = new Date()
+    const plan = ENTERPRISE_PLANS.find((p: { plan_type: string; duration_days: number }) => p.plan_type === app.plan_type)
+    const endDate = new Date(today)
+    endDate.setDate(endDate.getDate() + (plan?.duration_days || 30))
+
+    setSubscriptionStartDate(today.toISOString().split('T')[0])
+    setSubscriptionEndDate(endDate.toISOString().split('T')[0])
+    setError(null)
+  }
+
+  // 상태 변경 모달 닫기
+  const closeStatusUpdateModal = () => {
+    setStatusUpdateModal({ isOpen: false, application: null })
+    setNewStatus('PAYMENT_CONFIRMED')
+    setAdminMemo('')
+    setSubscriptionStartDate('')
+    setSubscriptionEndDate('')
+  }
+
+  // 사업자등록증 다운로드
+  const downloadBusinessRegistration = async (applicationId: string, fileName: string) => {
+    try {
+      const response = await apiClient.get(
+        `/api/admin/service-applications/${applicationId}/file`,
+        { responseType: 'blob' }
+      )
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', fileName || 'business_registration')
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Failed to download file:', err)
+      setError('파일 다운로드에 실패했습니다.')
+    }
+  }
+
   // 데이터 정제 실행
   const handleDataCleanup = async (tableName: string, issueType: string, dryRun: boolean) => {
     const key = `${tableName}_${issueType}`
@@ -719,6 +862,7 @@ function AdminPage() {
         <div className="flex gap-2 mb-6 border-b border-theme-border overflow-x-auto">
           {[
             { id: 'users', label: '회원 관리' },
+            { id: 'serviceApplications', label: '서비스 신청' },
             { id: 'database', label: '데이터베이스 현황' },
             { id: 'dataCoverage', label: '기업별 DB 현황' },
             { id: 'dataQuality', label: '데이터 품질' },
@@ -857,6 +1001,153 @@ function AdminPage() {
                 {users.length === 0 && (
                   <div className="p-8 text-center text-text-secondary">
                     등록된 회원이 없습니다.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 서비스 신청 관리 탭 */}
+            {activeTab === 'serviceApplications' && (
+              <div className="space-y-6">
+                {/* 필터 */}
+                <div className="flex items-center gap-4">
+                  <select
+                    value={serviceApplicationsFilter}
+                    onChange={(e) => setServiceApplicationsFilter(e.target.value as ApplicationStatus | '')}
+                    className="px-4 py-2 bg-theme-surface border border-theme-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/30"
+                  >
+                    <option value="">전체 상태</option>
+                    <option value="PENDING">신청완료 (입금대기)</option>
+                    <option value="PAYMENT_CONFIRMED">입금확인</option>
+                    <option value="APPROVED">승인완료</option>
+                    <option value="REJECTED">거절</option>
+                    <option value="CANCELLED">취소</option>
+                  </select>
+                  <button
+                    onClick={() => loadServiceApplications(1, serviceApplicationsFilter)}
+                    className="px-4 py-2 bg-theme-surface border border-theme-border rounded-lg text-text-secondary hover:bg-theme-hover transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    새로고침
+                  </button>
+                </div>
+
+                {serviceApplicationsLoading ? (
+                  <div className="flex items-center justify-center py-20">
+                    <div className="w-8 h-8 border-4 border-accent-primary border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : (
+                  <div className="bg-theme-card border border-theme-border rounded-xl overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-theme-surface">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">신청일</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">이메일</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">플랜</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">금액</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">상태</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">사업자등록증</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">이용기간</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">액션</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-theme-border">
+                          {serviceApplications.map((app: ServiceApplicationAdmin) => {
+                            const statusInfo = APPLICATION_STATUS_INFO[app.status as ApplicationStatus]
+                            return (
+                              <tr key={app.id} className="hover:bg-theme-hover transition-colors">
+                                <td className="px-4 py-3 text-sm text-text-secondary">
+                                  {new Date(app.created_at).toLocaleDateString('ko-KR')}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-text-primary">
+                                  {app.applicant_email}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-text-primary">
+                                  {app.plan_name_ko}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-text-primary">
+                                  {app.plan_amount.toLocaleString()}원
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span className={`px-2 py-0.5 text-xs rounded ${statusInfo.bgColor} ${statusInfo.textColor}`}>
+                                    {statusInfo.label}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3">
+                                  {app.has_business_registration ? (
+                                    <button
+                                      onClick={() => downloadBusinessRegistration(app.id, app.business_registration_file_name || 'file')}
+                                      className="text-xs text-accent-primary hover:underline flex items-center gap-1"
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                      </svg>
+                                      다운로드
+                                    </button>
+                                  ) : (
+                                    <span className="text-xs text-text-muted">없음</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-text-secondary">
+                                  {app.subscription_start_date && app.subscription_end_date ? (
+                                    `${app.subscription_start_date} ~ ${app.subscription_end_date}`
+                                  ) : (
+                                    <span className="text-text-muted">-</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3">
+                                  {(app.status === 'PENDING' || app.status === 'PAYMENT_CONFIRMED') && (
+                                    <button
+                                      onClick={() => openStatusUpdateModal(app)}
+                                      className="px-2 py-1 text-xs rounded bg-accent-primary/10 text-accent-primary hover:bg-accent-primary/20 transition-colors"
+                                    >
+                                      상태 변경
+                                    </button>
+                                  )}
+                                  {app.admin_memo && (
+                                    <span className="ml-2 text-xs text-text-muted" title={app.admin_memo}>
+                                      메모 있음
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {serviceApplications.length === 0 && (
+                      <div className="p-8 text-center text-text-secondary">
+                        신청 내역이 없습니다.
+                      </div>
+                    )}
+
+                    {/* 페이지네이션 */}
+                    {serviceApplicationsTotal > 10 && (
+                      <div className="flex items-center justify-center gap-2 p-4 border-t border-theme-border">
+                        <button
+                          onClick={() => loadServiceApplications(serviceApplicationsPage - 1, serviceApplicationsFilter)}
+                          disabled={serviceApplicationsPage === 1}
+                          className="px-3 py-1.5 text-sm rounded bg-theme-surface border border-theme-border text-text-secondary hover:bg-theme-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          이전
+                        </button>
+                        <span className="text-sm text-text-secondary">
+                          {serviceApplicationsPage} / {Math.ceil(serviceApplicationsTotal / 10)}
+                        </span>
+                        <button
+                          onClick={() => loadServiceApplications(serviceApplicationsPage + 1, serviceApplicationsFilter)}
+                          disabled={serviceApplicationsPage >= Math.ceil(serviceApplicationsTotal / 10)}
+                          className="px-3 py-1.5 text-sm rounded bg-theme-surface border border-theme-border text-text-secondary hover:bg-theme-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          다음
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1648,6 +1939,179 @@ function AdminPage() {
                 }`}
               >
                 {isUpdatingSubscription ? '저장 중...' : '저장'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 서비스 신청 상태 변경 모달 */}
+      {statusUpdateModal.isOpen && statusUpdateModal.application && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-theme-card border border-theme-border rounded-2xl w-full max-w-lg shadow-2xl">
+            {/* 모달 헤더 */}
+            <div className="flex items-center justify-between p-6 border-b border-theme-border">
+              <div>
+                <h3 className="text-lg font-semibold text-text-primary">서비스 신청 상태 변경</h3>
+                <p className="text-sm text-text-secondary mt-1">{statusUpdateModal.application.applicant_email}</p>
+              </div>
+              <button
+                onClick={closeStatusUpdateModal}
+                className="p-2 text-text-muted hover:text-text-secondary hover:bg-theme-hover rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* 모달 내용 */}
+            <div className="p-6 space-y-6">
+              {/* 현재 신청 정보 */}
+              <div className="p-4 bg-theme-surface rounded-lg space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-text-secondary">플랜</span>
+                  <span className="text-sm font-medium text-text-primary">{statusUpdateModal.application.plan_name_ko}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-text-secondary">금액</span>
+                  <span className="text-sm font-medium text-text-primary">{statusUpdateModal.application.plan_amount.toLocaleString()}원</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-text-secondary">현재 상태</span>
+                  <span className={`px-2 py-0.5 text-xs rounded ${APPLICATION_STATUS_INFO[statusUpdateModal.application.status as ApplicationStatus].bgColor} ${APPLICATION_STATUS_INFO[statusUpdateModal.application.status as ApplicationStatus].textColor}`}>
+                    {APPLICATION_STATUS_INFO[statusUpdateModal.application.status as ApplicationStatus].label}
+                  </span>
+                </div>
+              </div>
+
+              {/* 에러 메시지 */}
+              {error && (
+                <div className="p-4 bg-accent-danger/10 border border-accent-danger/30 rounded-lg">
+                  <p className="text-sm text-accent-danger">{error}</p>
+                </div>
+              )}
+
+              {/* 변경할 상태 선택 */}
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-3">
+                  변경할 상태
+                </label>
+                <div className="space-y-2">
+                  {statusUpdateModal.application.status === 'PENDING' && (
+                    <button
+                      onClick={() => setNewStatus('PAYMENT_CONFIRMED')}
+                      className={`w-full px-4 py-3 rounded-lg border text-left transition-all ${
+                        newStatus === 'PAYMENT_CONFIRMED'
+                          ? 'border-blue-500 bg-blue-500/10'
+                          : 'border-theme-border bg-theme-surface hover:border-theme-border-hover'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className={`font-medium ${newStatus === 'PAYMENT_CONFIRMED' ? 'text-blue-500' : 'text-text-primary'}`}>
+                          입금확인
+                        </span>
+                        <span className="text-xs text-text-muted">입금을 확인했습니다</span>
+                      </div>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setNewStatus('APPROVED')}
+                    className={`w-full px-4 py-3 rounded-lg border text-left transition-all ${
+                      newStatus === 'APPROVED'
+                        ? 'border-green-500 bg-green-500/10'
+                        : 'border-theme-border bg-theme-surface hover:border-theme-border-hover'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className={`font-medium ${newStatus === 'APPROVED' ? 'text-green-500' : 'text-text-primary'}`}>
+                        승인
+                      </span>
+                      <span className="text-xs text-text-muted">이용권을 부여합니다</span>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setNewStatus('REJECTED')}
+                    className={`w-full px-4 py-3 rounded-lg border text-left transition-all ${
+                      newStatus === 'REJECTED'
+                        ? 'border-red-500 bg-red-500/10'
+                        : 'border-theme-border bg-theme-surface hover:border-theme-border-hover'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className={`font-medium ${newStatus === 'REJECTED' ? 'text-red-500' : 'text-text-primary'}`}>
+                        거절
+                      </span>
+                      <span className="text-xs text-text-muted">신청을 거절합니다</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* 승인 시 이용 기간 설정 */}
+              {newStatus === 'APPROVED' && (
+                <div className="p-4 bg-theme-surface rounded-lg space-y-4">
+                  <p className="text-sm font-medium text-text-primary">이용 기간 설정</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs text-text-secondary mb-1">시작일</label>
+                      <input
+                        type="date"
+                        value={subscriptionStartDate}
+                        onChange={(e) => setSubscriptionStartDate(e.target.value)}
+                        className="w-full px-3 py-2 bg-theme-bg border border-theme-border rounded-lg text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/30"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-text-secondary mb-1">종료일</label>
+                      <input
+                        type="date"
+                        value={subscriptionEndDate}
+                        onChange={(e) => setSubscriptionEndDate(e.target.value)}
+                        className="w-full px-3 py-2 bg-theme-bg border border-theme-border rounded-lg text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/30"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 관리자 메모 */}
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-2">
+                  관리자 메모 (선택)
+                </label>
+                <textarea
+                  value={adminMemo}
+                  onChange={(e) => setAdminMemo(e.target.value)}
+                  rows={3}
+                  placeholder="내부 메모를 입력하세요..."
+                  className="w-full px-4 py-3 bg-theme-surface border border-theme-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent-primary/30 text-sm"
+                />
+              </div>
+            </div>
+
+            {/* 모달 푸터 */}
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-theme-border">
+              <button
+                onClick={closeStatusUpdateModal}
+                className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleStatusUpdate}
+                disabled={isUpdatingStatus}
+                className={`px-6 py-2 rounded-lg text-sm font-medium text-white transition-colors ${
+                  isUpdatingStatus
+                    ? 'bg-accent-primary/50 cursor-not-allowed'
+                    : newStatus === 'APPROVED'
+                      ? 'bg-green-600 hover:bg-green-500'
+                      : newStatus === 'REJECTED'
+                        ? 'bg-red-600 hover:bg-red-500'
+                        : 'bg-accent-primary hover:bg-accent-primary/90'
+                }`}
+              >
+                {isUpdatingStatus ? '처리 중...' : '상태 변경'}
               </button>
             </div>
           </div>

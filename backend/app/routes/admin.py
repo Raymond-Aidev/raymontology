@@ -13,7 +13,14 @@ import uuid as uuid_module
 from app.database import get_db
 from app.models.users import User
 from app.models.site_settings import SiteSetting
+from app.models.service_application import ServiceApplication, ApplicationStatus, ENTERPRISE_PLANS
 from app.core.security import get_current_user
+from app.schemas.service_application import (
+    ServiceApplicationAdminResponse,
+    ServiceApplicationAdminListResponse,
+    ServiceApplicationStatusUpdate,
+    ServiceApplicationStatusUpdateResult
+)
 
 logger = logging.getLogger(__name__)
 
@@ -1177,3 +1184,242 @@ async def get_company_data_status(
         total=len(companies),
         search_term=search
     )
+
+
+# ============================================================================
+# Service Applications Management (서비스 이용신청 관리)
+# ============================================================================
+
+@router.get("/service-applications", response_model=ServiceApplicationAdminListResponse)
+async def list_service_applications(
+    status_filter: Optional[str] = None,
+    page: int = 1,
+    limit: int = 20,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin)
+):
+    """
+    서비스 이용신청 목록 조회 (관리자 전용)
+
+    - status_filter: PENDING, PAYMENT_CONFIRMED, APPROVED, REJECTED, CANCELLED
+    - page: 페이지 번호 (1부터 시작)
+    - limit: 페이지당 항목 수 (기본 20, 최대 100)
+    """
+    limit = min(limit, 100)
+    offset = (page - 1) * limit
+
+    # 기본 쿼리
+    query = select(ServiceApplication).order_by(ServiceApplication.created_at.desc())
+    count_query = select(func.count(ServiceApplication.id))
+
+    # 상태 필터
+    if status_filter:
+        query = query.where(ServiceApplication.status == status_filter)
+        count_query = count_query.where(ServiceApplication.status == status_filter)
+
+    # 전체 수 조회
+    count_result = await db.execute(count_query)
+    total = count_result.scalar()
+
+    # 페이지네이션 적용
+    query = query.offset(offset).limit(limit)
+    result = await db.execute(query)
+    applications = result.scalars().all()
+
+    total_pages = (total + limit - 1) // limit
+
+    return ServiceApplicationAdminListResponse(
+        applications=[
+            ServiceApplicationAdminResponse(
+                id=app.id,
+                user_id=app.user_id,
+                applicant_email=app.applicant_email,
+                plan_type=app.plan_type,
+                plan_name_ko=ENTERPRISE_PLANS.get(app.plan_type, {}).get("name_ko", app.plan_type),
+                plan_amount=app.plan_amount,
+                status=app.status,
+                has_business_registration=bool(app.business_registration_file_content),
+                business_registration_file_name=app.business_registration_file_name,
+                admin_memo=app.admin_memo,
+                processed_by=app.processed_by,
+                processed_at=app.processed_at,
+                subscription_start_date=app.subscription_start_date,
+                subscription_end_date=app.subscription_end_date,
+                created_at=app.created_at,
+                updated_at=app.updated_at
+            )
+            for app in applications
+        ],
+        total=total,
+        page=page,
+        total_pages=total_pages
+    )
+
+
+@router.put("/service-applications/{application_id}/status", response_model=ServiceApplicationStatusUpdateResult)
+async def update_service_application_status(
+    application_id: str,
+    data: ServiceApplicationStatusUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    서비스 이용신청 상태 변경 (관리자 전용)
+
+    - PAYMENT_CONFIRMED: 입금 확인
+    - APPROVED: 승인 (이용권 부여) - subscription_start_date, subscription_end_date 필수
+    - REJECTED: 거절
+    """
+    try:
+        app_uuid = uuid_module.UUID(application_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="유효하지 않은 신청 ID입니다."
+        )
+
+    result = await db.execute(
+        select(ServiceApplication).where(ServiceApplication.id == app_uuid)
+    )
+    application = result.scalar_one_or_none()
+
+    if not application:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="신청을 찾을 수 없습니다."
+        )
+
+    # 상태 변경 검증
+    current_status = application.status
+    new_status = data.status
+
+    # 상태 전이 규칙
+    valid_transitions = {
+        ApplicationStatus.PENDING.value: [
+            ApplicationStatus.PAYMENT_CONFIRMED.value,
+            ApplicationStatus.REJECTED.value
+        ],
+        ApplicationStatus.PAYMENT_CONFIRMED.value: [
+            ApplicationStatus.APPROVED.value,
+            ApplicationStatus.REJECTED.value
+        ]
+    }
+
+    if current_status not in valid_transitions:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"현재 상태({current_status})에서는 상태를 변경할 수 없습니다."
+        )
+
+    if new_status not in valid_transitions[current_status]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"'{current_status}'에서 '{new_status}'로 변경할 수 없습니다."
+        )
+
+    # APPROVED 시 필수 필드 검증
+    if new_status == ApplicationStatus.APPROVED.value:
+        if not data.subscription_start_date or not data.subscription_end_date:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="승인 시 이용 시작일과 종료일을 지정해야 합니다."
+            )
+        application.subscription_start_date = data.subscription_start_date
+        application.subscription_end_date = data.subscription_end_date
+
+        # 사용자 이용권 업데이트
+        user_result = await db.execute(
+            select(User).where(User.id == application.user_id)
+        )
+        user = user_result.scalar_one_or_none()
+        if user:
+            user.subscription_tier = 'max'  # 엔터프라이즈는 max 등급
+            user.subscription_expires_at = datetime.combine(
+                data.subscription_end_date,
+                datetime.max.time()
+            )
+            logger.info(f"User {user.email} subscription updated to max until {data.subscription_end_date}")
+
+    # 상태 업데이트
+    application.status = new_status
+    application.admin_memo = data.admin_memo
+    application.processed_by = current_user.id
+    application.processed_at = datetime.utcnow()
+    application.updated_at = datetime.utcnow()
+
+    await db.commit()
+
+    logger.info(f"Service application {application_id} status changed: {current_status} -> {new_status} by {current_user.email}")
+
+    # 이메일 발송
+    try:
+        from app.services.email_service import email_service
+        if new_status == ApplicationStatus.PAYMENT_CONFIRMED.value:
+            await email_service.send_payment_confirmed_email(application.applicant_email)
+        elif new_status == ApplicationStatus.APPROVED.value:
+            await email_service.send_subscription_approved_email(
+                to_email=application.applicant_email,
+                start_date=data.subscription_start_date,
+                end_date=data.subscription_end_date
+            )
+        elif new_status == ApplicationStatus.REJECTED.value:
+            await email_service.send_application_rejected_email(
+                to_email=application.applicant_email,
+                reason=data.admin_memo
+            )
+    except Exception as e:
+        logger.warning(f"Email sending failed: {e}")
+
+    status_messages = {
+        ApplicationStatus.PAYMENT_CONFIRMED.value: "입금이 확인되었습니다.",
+        ApplicationStatus.APPROVED.value: "이용권이 승인되었습니다.",
+        ApplicationStatus.REJECTED.value: "신청이 거절되었습니다."
+    }
+
+    return ServiceApplicationStatusUpdateResult(
+        id=application.id,
+        status=new_status,
+        message=status_messages.get(new_status, "상태가 변경되었습니다.")
+    )
+
+
+@router.get("/service-applications/{application_id}/file")
+async def download_business_registration_file(
+    application_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin)
+):
+    """
+    사업자등록증 파일 다운로드 (관리자 전용)
+    Base64 인코딩된 파일 데이터를 Data URL 형태로 반환
+    """
+    try:
+        app_uuid = uuid_module.UUID(application_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="유효하지 않은 신청 ID입니다."
+        )
+
+    result = await db.execute(
+        select(ServiceApplication).where(ServiceApplication.id == app_uuid)
+    )
+    application = result.scalar_one_or_none()
+
+    if not application:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="신청을 찾을 수 없습니다."
+        )
+
+    if not application.business_registration_file_content:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="첨부된 파일이 없습니다."
+        )
+
+    return {
+        "file_name": application.business_registration_file_name,
+        "mime_type": application.business_registration_mime_type,
+        "data_url": f"data:{application.business_registration_mime_type};base64,{application.business_registration_file_content}"
+    }

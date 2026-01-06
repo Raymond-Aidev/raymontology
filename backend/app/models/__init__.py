@@ -25,6 +25,7 @@ from app.models.major_shareholders import MajorShareholder
 from app.models.risk_scores import RiskScore
 from app.models.toss_users import TossUser, CreditTransaction, ReportView, CreditProduct
 from app.models.stock_prices import StockPrice
+from app.models.service_application import ServiceApplication, ApplicationStatus, PlanType, ENTERPRISE_PLANS
 
 __all__ = [
     "Base",
@@ -53,4 +54,8 @@ __all__ = [
     "ReportView",
     "CreditProduct",
     "StockPrice",
+    "ServiceApplication",
+    "ApplicationStatus",
+    "PlanType",
+    "ENTERPRISE_PLANS",
 ]
