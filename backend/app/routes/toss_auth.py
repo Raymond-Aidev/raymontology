@@ -164,7 +164,8 @@ async def exchange_code_for_token(
 
         # 2. 사용자 정보 조회
         user_info = await client.get_user_info(access_token)
-        user_key = user_info.user_key
+        # user_key는 정수로 올 수 있으므로 문자열로 변환
+        user_key = str(user_info.user_key)
 
         # 3. DB에 사용자 조회 또는 생성
         result = await db.execute(
