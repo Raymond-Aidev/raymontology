@@ -5,7 +5,7 @@ export default defineConfig({
   brand: {
     displayName: 'RaymondsRisk', // 화면에 노출될 앱의 한글 이름
     primaryColor: '#E74C3C', // RaymondsRisk 브랜드 컬러 (빨간색)
-    icon: '', // 앱 아이콘 이미지 주소 (빈 문자열로 테스트 가능)
+    icon: 'https://raymontology-production.up.railway.app/static/icons/app-icon.png', // 앱 아이콘 이미지 주소
   },
   web: {
     host: '192.168.35.235', // 실기기 테스트용 로컬 IP (ipconfig getifaddr en0로 확인)

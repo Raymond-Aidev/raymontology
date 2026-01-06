@@ -298,16 +298,18 @@ export default function ReportPage() {
           </button>
         </div>
 
-        {/* 디버그 패널 */}
-        <DebugPanel
-          showDebug={showDebug}
-          setShowDebug={setShowDebug}
-          forceUpdate={forceUpdate}
-          isAuthenticated={isAuthenticated}
-          authLoading={authLoading}
-          credits={credits}
-          corpCode={corpCode}
-        />
+        {/* 디버그 패널 - 개발 환경에서만 표시 */}
+        {import.meta.env.DEV && (
+          <DebugPanel
+            showDebug={showDebug}
+            setShowDebug={setShowDebug}
+            forceUpdate={forceUpdate}
+            isAuthenticated={isAuthenticated}
+            authLoading={authLoading}
+            credits={credits}
+            corpCode={corpCode}
+          />
+        )}
       </div>
     )
   }
@@ -626,16 +628,18 @@ export default function ReportPage() {
           />
         </nav>
 
-        {/* 디버그 패널 */}
-        <DebugPanel
-          showDebug={showDebug}
-          setShowDebug={setShowDebug}
-          forceUpdate={forceUpdate}
-          isAuthenticated={isAuthenticated}
-          authLoading={authLoading}
-          credits={credits}
-          corpCode={corpCode}
-        />
+        {/* 디버그 패널 - 개발 환경에서만 표시 */}
+        {import.meta.env.DEV && (
+          <DebugPanel
+            showDebug={showDebug}
+            setShowDebug={setShowDebug}
+            forceUpdate={forceUpdate}
+            isAuthenticated={isAuthenticated}
+            authLoading={authLoading}
+            credits={credits}
+            corpCode={corpCode}
+          />
+        )}
       </main>
     </div>
   )

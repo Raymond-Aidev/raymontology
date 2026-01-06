@@ -24,6 +24,7 @@ function App() {
           <Routes>
             {/* 무료 영역 */}
             <Route path="/" element={<HomePage />} />
+            <Route path="/home" element={<HomePage />} />
             <Route path="/search" element={<SearchPage />} />
 
             {/* 유료 전환 (Paywall) */}
