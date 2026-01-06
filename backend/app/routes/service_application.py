@@ -4,8 +4,7 @@
 """
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
-from typing import Optional
+from sqlalchemy import select
 from datetime import datetime
 import logging
 import base64
@@ -67,7 +66,7 @@ async def get_enterprise_plans():
 async def create_service_application(
     applicant_email: str = Form(...),
     plan_type: str = Form(...),
-    business_registration_file: Optional[UploadFile] = File(None),
+    business_registration_file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -76,8 +75,14 @@ async def create_service_application(
 
     - applicant_email: 신청자 이메일
     - plan_type: 플랜 타입 (1_MONTH, 6_MONTHS, 1_YEAR)
-    - business_registration_file: 사업자등록증 파일 (선택, PDF/JPG/PNG, 최대 10MB)
+    - business_registration_file: 사업자등록증 파일 (필수, PDF/JPG/PNG, 최대 10MB)
     """
+    # 사업자등록증 필수 확인
+    if not business_registration_file or not business_registration_file.filename:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="사업자등록증 파일은 필수입니다."
+        )
     # 플랜 타입 검증
     if plan_type not in ENTERPRISE_PLANS:
         raise HTTPException(
@@ -97,31 +102,26 @@ async def create_service_application(
             detail="이미 처리 중인 신청이 있습니다. 기존 신청이 완료된 후 다시 시도해주세요."
         )
 
-    # 파일 처리
-    file_content = None
-    file_name = None
-    mime_type = None
+    # 파일 처리 (필수)
+    # 파일 타입 검증
+    if business_registration_file.content_type not in ALLOWED_MIME_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="허용되지 않는 파일 형식입니다. PDF, JPG, PNG만 가능합니다."
+        )
 
-    if business_registration_file:
-        # 파일 타입 검증
-        if business_registration_file.content_type not in ALLOWED_MIME_TYPES:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="허용되지 않는 파일 형식입니다. PDF, JPG, PNG만 가능합니다."
-            )
+    # 파일 크기 검증
+    content = await business_registration_file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"파일 크기가 너무 큽니다. 최대 {MAX_FILE_SIZE // (1024 * 1024)}MB까지 가능합니다."
+        )
 
-        # 파일 크기 검증
-        content = await business_registration_file.read()
-        if len(content) > MAX_FILE_SIZE:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"파일 크기가 너무 큽니다. 최대 {MAX_FILE_SIZE // (1024 * 1024)}MB까지 가능합니다."
-            )
-
-        # Base64 인코딩
-        file_content = base64.b64encode(content).decode('utf-8')
-        file_name = business_registration_file.filename
-        mime_type = business_registration_file.content_type
+    # Base64 인코딩
+    file_content = base64.b64encode(content).decode('utf-8')
+    file_name = business_registration_file.filename
+    mime_type = business_registration_file.content_type
 
     # 플랜 정보
     plan_info = ENTERPRISE_PLANS[plan_type]

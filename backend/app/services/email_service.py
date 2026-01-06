@@ -294,15 +294,15 @@ class EmailService:
                     <div class="info-box">
                         <h3>신청 정보</h3>
                         <div class="info-row">
-                            <span class="info-label">신청일시</span>
+                            <span class="info-label">신청일시:</span>
                             <span class="info-value">{current_time}</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">신청 플랜</span>
+                            <span class="info-label">신청 플랜:</span>
                             <span class="info-value">{plan_name}</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">결제 금액</span>
+                            <span class="info-label">결제 금액:</span>
                             <span class="info-value amount">{plan_amount:,}원</span>
                         </div>
                     </div>
@@ -310,23 +310,23 @@ class EmailService:
                     <div class="bank-info">
                         <h3>입금 안내</h3>
                         <div class="info-row">
-                            <span class="info-label">사명</span>
+                            <span class="info-label">사명:</span>
                             <span class="info-value">코넥트</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">사업자등록번호</span>
+                            <span class="info-label">사업자등록번호:</span>
                             <span class="info-value">686-19-02309</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">입금계좌</span>
+                            <span class="info-label">입금계좌:</span>
                             <span class="info-value">카카오뱅크 3333-31-9041159</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">예금주</span>
+                            <span class="info-label">예금주:</span>
                             <span class="info-value">코넥트 / 박재준</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">입금액</span>
+                            <span class="info-label">입금액:</span>
                             <span class="info-value" style="color: #DC2626; font-weight: 700;">{plan_amount:,}원</span>
                         </div>
                     </div>
@@ -528,8 +528,8 @@ class EmailService:
 
                     <div class="info-box">
                         <h3 style="margin: 0 0 15px 0; color: #059669;">이용 기간</h3>
-                        <p style="margin: 5px 0;"><strong>시작일:</strong> {start_str}</p>
-                        <p style="margin: 5px 0;"><strong>종료일:</strong> {end_str}</p>
+                        <p style="margin: 5px 0;"><strong>시작일: </strong>{start_str}</p>
+                        <p style="margin: 5px 0;"><strong>종료일: </strong>{end_str}</p>
                     </div>
 
                     <p>지금 바로 서비스를 이용해보세요!</p>

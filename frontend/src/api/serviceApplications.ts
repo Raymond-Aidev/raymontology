@@ -26,14 +26,12 @@ export async function getEnterprisePlans(): Promise<{ plans: EnterprisePlanInfo[
 export async function createServiceApplication(
   applicantEmail: string,
   planType: string,
-  file?: File
+  file: File
 ): Promise<PaymentInfoResponse> {
   const formData = new FormData()
   formData.append('applicant_email', applicantEmail)
   formData.append('plan_type', planType)
-  if (file) {
-    formData.append('business_registration_file', file)
-  }
+  formData.append('business_registration_file', file)
 
   const response = await apiClient.post('/api/service-applications/', formData, {
     headers: {

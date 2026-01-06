@@ -45,7 +45,7 @@ function ServiceApplicationPage() {
   const [paymentInfo, setPaymentInfo] = useState<PaymentInfoResponse | null>(null)
 
   // 폼 상태
-  const [selectedPlan, setSelectedPlan] = useState<string>('')
+  const [selectedPlan, setSelectedPlan] = useState<string>('1_YEAR') // 기본 선택: 1년
   const [applicantEmail, setApplicantEmail] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -93,18 +93,22 @@ function ServiceApplicationPage() {
 
     setShowApplicationModal(true)
     setError(null)
-    setSelectedPlan('')
+    // selectedPlan은 유지 (첫 화면에서 선택한 플랜)
     setFile(null)
   }
 
   // 신청 제출
   const handleSubmit = async () => {
-    if (!selectedPlan) {
-      setError('이용 기간을 선택해주세요.')
-      return
-    }
     if (!applicantEmail) {
       setError('이메일을 입력해주세요.')
+      return
+    }
+    if (!file) {
+      setError('사업자등록증을 첨부해주세요.')
+      return
+    }
+    if (!selectedPlan) {
+      setError('이용 기간을 선택해주세요.')
       return
     }
 
@@ -112,7 +116,7 @@ function ServiceApplicationPage() {
     setError(null)
 
     try {
-      const result = await createServiceApplication(applicantEmail, selectedPlan, file || undefined)
+      const result = await createServiceApplication(applicantEmail, selectedPlan, file!)
       setPaymentInfo(result)
       setShowApplicationModal(false)
       setShowPaymentInfoModal(true)
@@ -281,10 +285,11 @@ function ServiceApplicationPage() {
             {plans.map((plan) => (
               <div
                 key={plan.plan_type}
-                className={`p-6 rounded-xl border transition-all ${
-                  plan.plan_type === '1_YEAR'
+                onClick={() => setSelectedPlan(plan.plan_type)}
+                className={`p-6 rounded-xl border transition-all cursor-pointer ${
+                  selectedPlan === plan.plan_type
                     ? 'border-accent-primary bg-accent-primary/5'
-                    : 'border-theme-border'
+                    : 'border-theme-border hover:border-accent-primary/50'
                 }`}
               >
                 {plan.plan_type === '1_YEAR' && (
@@ -295,7 +300,15 @@ function ServiceApplicationPage() {
                   <span className="text-2xl font-bold text-text-primary">{plan.price_display}</span>
                 </div>
                 {plan.discount && (
-                  <span className="text-xs text-accent-success">({plan.discount} 할인)</span>
+                  <span className="text-xs text-accent-success">({plan.discount})</span>
+                )}
+                {selectedPlan === plan.plan_type && (
+                  <div className="mt-3 flex items-center gap-1 text-xs text-accent-primary">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    선택됨
+                  </div>
                 )}
               </div>
             ))}
@@ -403,7 +416,7 @@ function ServiceApplicationPage() {
                 {/* 사업자등록증 */}
                 <div>
                   <label className="block text-sm font-medium text-text-secondary mb-2">
-                    사업자등록증 첨부 (선택)
+                    사업자등록증 첨부 <span className="text-red-400">*</span>
                   </label>
                   <div className="relative">
                     <input
@@ -415,17 +428,27 @@ function ServiceApplicationPage() {
                     />
                     <label
                       htmlFor="file-upload"
-                      className="flex items-center gap-3 px-4 py-3 bg-theme-surface border border-theme-border border-dashed rounded-xl cursor-pointer hover:border-accent-primary transition-colors"
+                      className={`flex items-center gap-3 px-4 py-3 bg-theme-surface border border-dashed rounded-xl cursor-pointer transition-colors ${
+                        file
+                          ? 'border-accent-success bg-accent-success/5'
+                          : 'border-theme-border hover:border-accent-primary'
+                      }`}
                     >
-                      <svg className="w-5 h-5 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                      </svg>
-                      <span className="text-sm text-text-secondary">
+                      {file ? (
+                        <svg className="w-5 h-5 text-accent-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                      )}
+                      <span className={`text-sm ${file ? 'text-accent-success' : 'text-text-secondary'}`}>
                         {file ? file.name : '파일 선택 (PDF, JPG, PNG)'}
                       </span>
                     </label>
                   </div>
-                  <p className="text-xs text-text-muted mt-1">최대 10MB</p>
+                  <p className="text-xs text-text-muted mt-1">최대 10MB · 사업자등록증은 필수 첨부 항목입니다</p>
                 </div>
 
                 {/* 이용 기간 선택 */}
