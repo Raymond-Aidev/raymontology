@@ -91,6 +91,11 @@ function ServiceApplicationPage() {
       return
     }
 
+    // 모달 열 때 이메일 재확인 (로그인된 사용자 이메일)
+    if (user?.email) {
+      setApplicantEmail(user.email)
+    }
+
     setShowApplicationModal(true)
     setError(null)
     // selectedPlan은 유지 (첫 화면에서 선택한 플랜)
@@ -399,18 +404,18 @@ function ServiceApplicationPage() {
               )}
 
               <div className="space-y-4">
-                {/* 이메일 */}
+                {/* 이메일 (로그인된 이메일 - 읽기 전용) */}
                 <div>
                   <label className="block text-sm font-medium text-text-secondary mb-2">
-                    신청자 이메일 <span className="text-red-400">*</span>
+                    신청자 이메일
                   </label>
-                  <input
-                    type="email"
-                    value={applicantEmail}
-                    onChange={(e) => setApplicantEmail(e.target.value)}
-                    className="w-full px-4 py-3 bg-theme-surface border border-theme-border rounded-xl text-text-primary focus:outline-none focus:border-accent-primary"
-                    placeholder="email@company.com"
-                  />
+                  <div className="w-full px-4 py-3 bg-theme-surface/50 border border-theme-border rounded-xl text-text-primary flex items-center gap-2">
+                    <svg className="w-4 h-4 text-accent-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    <span>{applicantEmail}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-text-muted">로그인된 계정의 이메일로 자동 입력됩니다.</p>
                 </div>
 
                 {/* 사업자등록증 */}
