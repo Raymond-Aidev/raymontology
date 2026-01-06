@@ -5,10 +5,20 @@ Toss Apps-in-Toss API Client (mTLS)
 토스 로그인, 인앱결제 검증 등에 사용.
 
 참조: https://developers-apps-in-toss.toss.im/development/integration-process.md
+
+환경변수 설정 방법:
+  방법 1 (권장 - Railway): 인증서 내용을 환경변수에 저장
+    - TOSS_MTLS_CERT_CONTENT: 인증서 내용 (PEM 형식)
+    - TOSS_MTLS_KEY_CONTENT: 키 내용 (PEM 형식)
+
+  방법 2 (로컬): 파일 경로 지정
+    - TOSS_MTLS_CERT_PATH: 인증서 파일 경로
+    - TOSS_MTLS_KEY_PATH: 키 파일 경로
 """
 
 import os
 import logging
+import tempfile
 from typing import Optional
 from dataclasses import dataclass
 from datetime import datetime
@@ -16,6 +26,58 @@ from datetime import datetime
 import httpx
 
 logger = logging.getLogger(__name__)
+
+# 임시 파일 경로 (환경변수 내용을 파일로 저장할 때 사용)
+_temp_cert_path: Optional[str] = None
+_temp_key_path: Optional[str] = None
+
+
+def _setup_cert_files_from_env() -> tuple[Optional[str], Optional[str]]:
+    """
+    환경변수에서 인증서 내용을 읽어 임시 파일로 저장
+
+    Returns:
+        tuple[Optional[str], Optional[str]]: (cert_path, key_path) 또는 (None, None)
+    """
+    global _temp_cert_path, _temp_key_path
+
+    # 이미 설정된 경우 재사용
+    if _temp_cert_path and _temp_key_path:
+        if os.path.exists(_temp_cert_path) and os.path.exists(_temp_key_path):
+            return _temp_cert_path, _temp_key_path
+
+    cert_content = os.getenv("TOSS_MTLS_CERT_CONTENT")
+    key_content = os.getenv("TOSS_MTLS_KEY_CONTENT")
+
+    if not cert_content or not key_content:
+        return None, None
+
+    try:
+        # 임시 디렉토리에 인증서 파일 생성
+        temp_dir = tempfile.gettempdir()
+
+        _temp_cert_path = os.path.join(temp_dir, "toss_mtls_cert.crt")
+        _temp_key_path = os.path.join(temp_dir, "toss_mtls_key.key")
+
+        # 인증서 내용 저장 (Railway에서 줄바꿈이 \n 문자열로 저장될 수 있음)
+        cert_content_fixed = cert_content.replace("\\n", "\n")
+        key_content_fixed = key_content.replace("\\n", "\n")
+
+        with open(_temp_cert_path, "w") as f:
+            f.write(cert_content_fixed)
+
+        with open(_temp_key_path, "w") as f:
+            f.write(key_content_fixed)
+
+        # 키 파일 권한 제한 (보안)
+        os.chmod(_temp_key_path, 0o600)
+
+        logger.info(f"환경변수에서 mTLS 인증서 파일 생성 완료: {_temp_cert_path}")
+        return _temp_cert_path, _temp_key_path
+
+    except Exception as e:
+        logger.error(f"환경변수에서 인증서 파일 생성 실패: {e}")
+        return None, None
 
 
 class TossAPIError(Exception):
@@ -107,16 +169,35 @@ class TossAPIClient:
     ):
         """
         Args:
-            cert_path: mTLS 인증서 경로 (기본: 환경변수 TOSS_MTLS_CERT_PATH)
-            key_path: mTLS 키 경로 (기본: 환경변수 TOSS_MTLS_KEY_PATH)
+            cert_path: mTLS 인증서 경로 (기본: 환경변수에서 자동 설정)
+            key_path: mTLS 키 경로 (기본: 환경변수에서 자동 설정)
+
+        환경변수 우선순위:
+            1. TOSS_MTLS_CERT_CONTENT / TOSS_MTLS_KEY_CONTENT (내용 직접 저장)
+            2. TOSS_MTLS_CERT_PATH / TOSS_MTLS_KEY_PATH (파일 경로)
         """
-        self.cert_path = cert_path or os.getenv("TOSS_MTLS_CERT_PATH")
-        self.key_path = key_path or os.getenv("TOSS_MTLS_KEY_PATH")
+        # 방법 1: 직접 전달된 경로 사용
+        if cert_path and key_path:
+            self.cert_path = cert_path
+            self.key_path = key_path
+        else:
+            # 방법 2: 환경변수 내용에서 임시 파일 생성 (Railway 권장)
+            env_cert_path, env_key_path = _setup_cert_files_from_env()
+
+            if env_cert_path and env_key_path:
+                self.cert_path = env_cert_path
+                self.key_path = env_key_path
+                logger.info("환경변수 내용에서 mTLS 인증서 로드")
+            else:
+                # 방법 3: 환경변수 경로 사용 (로컬 개발)
+                self.cert_path = os.getenv("TOSS_MTLS_CERT_PATH")
+                self.key_path = os.getenv("TOSS_MTLS_KEY_PATH")
 
         if not self.cert_path or not self.key_path:
             raise ValueError(
-                "mTLS 인증서 경로가 설정되지 않았습니다. "
-                "TOSS_MTLS_CERT_PATH, TOSS_MTLS_KEY_PATH 환경변수를 설정하세요."
+                "mTLS 인증서가 설정되지 않았습니다. 다음 중 하나를 설정하세요:\n"
+                "  - TOSS_MTLS_CERT_CONTENT, TOSS_MTLS_KEY_CONTENT (인증서 내용)\n"
+                "  - TOSS_MTLS_CERT_PATH, TOSS_MTLS_KEY_PATH (파일 경로)"
             )
 
         if not os.path.exists(self.cert_path):
@@ -124,7 +205,7 @@ class TossAPIClient:
         if not os.path.exists(self.key_path):
             raise FileNotFoundError(f"키 파일을 찾을 수 없습니다: {self.key_path}")
 
-        logger.info(f"TossAPIClient 초기화: cert={self.cert_path}")
+        logger.info(f"TossAPIClient 초기화 완료: cert={self.cert_path}")
 
     def _get_client(self) -> httpx.AsyncClient:
         """mTLS가 설정된 HTTP 클라이언트 생성"""
