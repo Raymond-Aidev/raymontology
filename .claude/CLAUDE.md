@@ -4,11 +4,11 @@
 
 ---
 
-## 상태: 임원 경력 파서 v2.3 업그레이드 (2026-01-07)
+## 상태: 임원 경력 원문 표시 v2.4 (2026-01-07)
 전체 18개 테이블 데이터 적재 완료. **RaymondsIndex 계산 완료 (2,707건)**.
 **RaymondsIndex 독립 사이트**: https://raymondsindex.konnect-ai.net 배포 완료.
 **RaymondsRisk 앱인토스**: 토스 로그인 연동 완료, 샌드박스 테스트 진행 중.
-**최근 업데이트**: 임원 경력 파서 v2.3 (한글 패턴 지원) - 2,538명 경력 데이터 복구 (2026-01-07)
+**최근 업데이트**: 임원 경력 원문 표시 v2.4 - `career_raw_text` 컬럼 추가 (2026-01-07)
 
 ---
 
@@ -224,18 +224,35 @@ query = (
 
 Neo4j 미설정 시 `graph.py`가 자동으로 PostgreSQL fallback 사용
 
-### 임원 경력 파서 v2.3 (2026-01-07)
+### 임원 경력 표시 v2.4 (2026-01-07) ⭐
 
-경력 데이터 파싱 패턴:
+**이중 표시 방식**:
+1. **상장사 임원 DB** (구조화된 `career_history`): 前/現/전/현 패턴 파싱 결과
+2. **사업보고서 주요경력 원문** (`career_raw_text`): 파싱 실패 시에도 원문 표시
+
+| 컬럼 | 용도 | 데이터 형식 |
+|------|------|------------|
+| `career_history` | 구조화된 경력 (기존) | JSONB `[{text, status}]` |
+| `career_raw_text` | 원문 표시 (v2.4 신규) | TEXT (□→• 변환) |
+
+**경력 데이터 파싱 패턴**:
 - **한자 패턴**: `前)`, `現)` (기존)
 - **한글 패턴**: `전)`, `현)` (v2.3 추가)
 - **연속 패턴**: `현) A현) B` → 2개 경력으로 분리
 
-관련 파일: `scripts/parsers/officer.py:179-227`
+**관련 파일**:
+- 파서: `scripts/parsers/officer.py`
+- 재파싱: `scripts/maintenance/reparse_officer_careers.py`
+- API: `app/api/endpoints/graph_fallback.py`
+- 프론트엔드: `frontend/src/components/graph/NodeDetailPanel.tsx`
 
-재파싱 스크립트:
+**재파싱 스크립트**:
 ```bash
-DATABASE_URL="..." python scripts/maintenance/reparse_officer_careers.py --sample 10 --dry-run
+# 테스트 (샘플 5개 기업)
+DATABASE_URL="..." python scripts/maintenance/reparse_officer_careers.py --sample 5 --dry-run
+
+# 전체 실행 (career_history + career_raw_text 업데이트)
+DATABASE_URL="..." python scripts/maintenance/reparse_officer_careers.py
 ```
 
 ---

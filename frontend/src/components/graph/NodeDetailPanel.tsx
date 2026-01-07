@@ -36,6 +36,7 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
   // Note: _onNavigateToCompany is available for future use when company cards are clickable
   // 임원 경력 상태
   const [career, setCareer] = useState<OfficerCareer[]>([])
+  const [careerRawText, setCareerRawText] = useState<string | null>(null)  // 사업보고서 주요경력 원문 (v2.4)
   const [careerLoading, setCareerLoading] = useState(false)
   const [careerError, setCareerError] = useState<string | null>(null)
 
@@ -62,8 +63,9 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
       setCareerLoading(true)
       setCareerError(null)
       fetchOfficerCareer(node.id)
-        .then(data => {
-          setCareer(data)
+        .then(result => {
+          setCareer(result.careers)
+          setCareerRawText(result.careerRawText || null)  // 원문 텍스트 설정
         })
         .catch(() => {
           setCareerError('경력 정보를 불러오는데 실패했습니다')
@@ -73,6 +75,7 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
         })
     } else {
       setCareer([])
+      setCareerRawText(null)
       setCareerError(null)
     }
   }, [node?.id, node?.type])
@@ -314,8 +317,23 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
                     </div>
                   )}
 
-                  {/* 사업보고서 주요경력 (source="disclosure") */}
-                  {career.filter(c => c.source === 'disclosure').length > 0 && (
+                  {/* 사업보고서 주요경력 원문 (v2.4) */}
+                  {careerRawText && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs font-medium text-amber-500">사업보고서 주요경력</span>
+                        <span className="text-xs text-text-muted">(원문)</span>
+                      </div>
+                      <div className="bg-dark-surface rounded-lg p-3">
+                        <pre className="whitespace-pre-wrap text-xs text-text-secondary leading-relaxed font-sans">
+                          {careerRawText}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 레거시: 파싱된 사업보고서 주요경력 (source="disclosure") - 원문이 없을 때만 표시 */}
+                  {!careerRawText && career.filter(c => c.source === 'disclosure').length > 0 && (
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-xs font-medium text-amber-500">사업보고서 주요경력</span>

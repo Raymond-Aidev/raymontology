@@ -359,11 +359,16 @@ async def get_officer_career_fallback(
     officer_id: str,
     db: AsyncSession = Depends(get_db)
 ):
-    """임원 경력 조회 (PostgreSQL 폴백)"""
+    """임원 경력 조회 (PostgreSQL 폴백)
+
+    v2.4 개선:
+    - career_raw_text: 사업보고서 '주요경력' 원문 텍스트 추가
+    - 패턴 파싱 실패해도 원문은 항상 표시 가능
+    """
     try:
-        # 임원 정보 조회 (career_history JSON 포함)
+        # 임원 정보 조회 (career_history JSON + career_raw_text 원문 포함)
         officer_query = text("""
-            SELECT id::text, name, birth_date, position, career_history
+            SELECT id::text, name, birth_date, position, career_history, career_raw_text
             FROM officers WHERE id::text = :officer_id
         """)
         result = await db.execute(officer_query, {"officer_id": officer_id})
@@ -451,7 +456,8 @@ async def get_officer_career_fallback(
                     "position": officer.position
                 }
             },
-            "career_history": all_careers  # 통합된 경력 목록 (db + disclosure)
+            "career_history": all_careers,  # 통합된 경력 목록 (db + disclosure)
+            "career_raw_text": officer.career_raw_text  # 사업보고서 주요경력 원문 (v2.4)
         }
         
     except HTTPException:

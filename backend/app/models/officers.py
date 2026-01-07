@@ -33,6 +33,7 @@ class Officer(Base):
 
     # 경력 (JSONB)
     career_history = Column(JSONB, default=[])  # [{"company": "A사", "position": "임원", "from": "2020", "to": "2023"}]
+    career_raw_text = Column(String, nullable=True)  # 사업보고서 '주요경력' 원문 (□ → 줄바꿈 변환)
     education = Column(ARRAY(String), default=[])  # ["서울대 경영학과", "하버드 MBA"]
 
     # 네트워크 지표

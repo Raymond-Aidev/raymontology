@@ -154,6 +154,16 @@ class OfficerParser(BaseParser):
                 officer['career_text'] = career_text.strip()
                 officer['career_history'] = self._parse_career(officer['career_text'])
 
+                # 원문 텍스트 저장 (□ → • 변환, UI 표시용)
+                # v2.4: 패턴 파싱 실패해도 원문은 항상 표시 가능
+                raw_text = officer['career_text']
+                if raw_text:
+                    # □ 불릿을 줄바꿈 + 불릿으로 변환
+                    raw_text = re.sub(r'□\s*', '\n• ', raw_text)
+                    # 연속 줄바꿈 정리
+                    raw_text = re.sub(r'\n+', '\n', raw_text)
+                    officer['career_raw_text'] = raw_text.strip()
+
             # 재직기간 (SH5_PER)
             per_match = re.search(r'ACODE="SH5_PER"[^>]*>([^<]+)</TE>', row_xml)
             if per_match:
@@ -296,14 +306,15 @@ class OfficerParser(BaseParser):
         officer_id = str(uuid.uuid4())
         try:
             await conn.execute("""
-                INSERT INTO officers (id, name, birth_date, gender, career_history, position)
-                VALUES ($1, $2, $3, $4, $5, $6)
+                INSERT INTO officers (id, name, birth_date, gender, career_history, career_raw_text, position)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
             """,
                 uuid.UUID(officer_id),
                 name,
                 birth_date,
                 officer_data.get('gender'),
                 json.dumps(officer_data.get('career_history', []), ensure_ascii=False),
+                officer_data.get('career_raw_text'),  # 원문 텍스트
                 officer_data.get('position')
             )
             self.officer_cache[cache_key] = officer_id

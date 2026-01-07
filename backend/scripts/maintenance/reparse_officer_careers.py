@@ -95,11 +95,20 @@ def parse_career_v23(career_text: str) -> List[Dict]:
     return careers
 
 
-def extract_careers_from_zip(zip_path: Path) -> Dict[str, List[Dict]]:
+def format_raw_text(career_text: str) -> str:
+    """경력 원문 텍스트 포맷팅 (□ → • 변환)"""
+    if not career_text:
+        return ""
+    raw_text = re.sub(r'□\s*', '\n• ', career_text)
+    raw_text = re.sub(r'\n+', '\n', raw_text)
+    return raw_text.strip()
+
+
+def extract_careers_from_zip(zip_path: Path) -> Dict[str, Dict]:
     """ZIP에서 임원별 경력 데이터 추출
 
     Returns:
-        Dict[name_birthdate, career_history]
+        Dict[name_birthdate, {career_history, career_raw_text}]
     """
     officers_careers = {}
 
@@ -155,11 +164,17 @@ def extract_careers_from_zip(zip_path: Path) -> Dict[str, List[Dict]]:
                             else:
                                 career_text = re.sub(r'<[^>]+>', '', raw_career)
 
-                            career_history = parse_career_v23(career_text.strip())
+                            career_text = career_text.strip()
+                            career_history = parse_career_v23(career_text)
+                            career_raw_text = format_raw_text(career_text)
 
-                            if career_history:
+                            # 원문이 있으면 저장 (파싱 결과 없어도)
+                            if career_raw_text:
                                 key = f"{officer_name}_{birth_date}"
-                                officers_careers[key] = career_history
+                                officers_careers[key] = {
+                                    'career_history': career_history,
+                                    'career_raw_text': career_raw_text
+                                }
 
                 except Exception as e:
                     logger.debug(f"Error parsing {name}: {e}")
@@ -218,27 +233,29 @@ async def update_officer_career(
     conn,
     officer_name: str,
     birth_date: str,
-    career_history: List[Dict],
+    career_data: Dict,  # {career_history, career_raw_text}
     dry_run: bool
 ) -> bool:
-    """임원 경력 업데이트"""
+    """임원 경력 업데이트 (career_history + career_raw_text)"""
+    career_history = career_data.get('career_history', [])
+    career_raw_text = career_data.get('career_raw_text', '')
 
     if birth_date:
         query = '''
             UPDATE officers
-            SET career_history = $1, updated_at = NOW()
-            WHERE name = $2 AND birth_date = $3
+            SET career_history = $1, career_raw_text = $2, updated_at = NOW()
+            WHERE name = $3 AND birth_date = $4
             RETURNING id
         '''
-        args = [json.dumps(career_history, ensure_ascii=False), officer_name, birth_date]
+        args = [json.dumps(career_history, ensure_ascii=False), career_raw_text, officer_name, birth_date]
     else:
         query = '''
             UPDATE officers
-            SET career_history = $1, updated_at = NOW()
-            WHERE name = $2 AND birth_date IS NULL
+            SET career_history = $1, career_raw_text = $2, updated_at = NOW()
+            WHERE name = $3 AND birth_date IS NULL
             RETURNING id
         '''
-        args = [json.dumps(career_history, ensure_ascii=False), officer_name]
+        args = [json.dumps(career_history, ensure_ascii=False), career_raw_text, officer_name]
 
     if dry_run:
         return True
@@ -283,12 +300,12 @@ async def reparse_company(
 
     # DB 업데이트
     updated = 0
-    for key, career_history in officers_careers.items():
+    for key, career_data in officers_careers.items():
         parts = key.rsplit('_', 1)
         officer_name = parts[0]
         birth_date = parts[1] if len(parts) > 1 and parts[1] else None
 
-        if await update_officer_career(conn, officer_name, birth_date, career_history, dry_run):
+        if await update_officer_career(conn, officer_name, birth_date, career_data, dry_run):
             updated += 1
 
     result['officers_updated'] = updated

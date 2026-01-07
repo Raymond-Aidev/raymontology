@@ -351,6 +351,13 @@ interface ApiOfficerCareerResponse {
     properties: Record<string, unknown>
   }
   career_history: ApiOfficerCareerItem[]  // 상장사 DB (source=db) + 사업보고서 (source=disclosure) 통합
+  career_raw_text?: string | null  // 사업보고서 주요경력 원문 (v2.4)
+}
+
+// 임원 경력 조회 결과 타입 (원문 포함)
+export interface OfficerCareerResult {
+  careers: OfficerCareer[]
+  careerRawText?: string | null  // 사업보고서 주요경력 원문
 }
 
 /**
@@ -373,12 +380,16 @@ function transformOfficerCareerResponse(careerHistory: ApiOfficerCareerItem[]): 
 /**
  * 임원 경력 조회 API
  * @param officerId 임원 ID
+ * @returns OfficerCareerResult (경력 목록 + 원문 텍스트)
  */
-export async function fetchOfficerCareer(officerId: string): Promise<OfficerCareer[]> {
+export async function fetchOfficerCareer(officerId: string): Promise<OfficerCareerResult> {
   // 1차: Neo4j 기반 Graph API 시도
   try {
     const response = await apiClient.get<ApiOfficerCareerResponse>(`/api/graph/officer/${officerId}/career`)
-    return transformOfficerCareerResponse(response.data.career_history || [])
+    return {
+      careers: transformOfficerCareerResponse(response.data.career_history || []),
+      careerRawText: response.data.career_raw_text
+    }
   } catch (error) {
     console.warn('Neo4j Officer Career API 실패, PostgreSQL 폴백 시도:', error)
   }
@@ -386,10 +397,13 @@ export async function fetchOfficerCareer(officerId: string): Promise<OfficerCare
   // 2차: PostgreSQL 기반 폴백 API 시도
   try {
     const response = await apiClient.get<ApiOfficerCareerResponse>(`/api/graph-fallback/officer/${officerId}/career`)
-    return transformOfficerCareerResponse(response.data.career_history || [])
+    return {
+      careers: transformOfficerCareerResponse(response.data.career_history || []),
+      careerRawText: response.data.career_raw_text
+    }
   } catch (fallbackError) {
     console.warn('PostgreSQL 폴백 API도 실패:', fallbackError)
-    return []
+    return { careers: [], careerRawText: null }
   }
 }
 

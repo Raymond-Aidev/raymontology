@@ -70,7 +70,8 @@
 | resident_number_hash | varchar | YES | 주민번호 해시 |
 | position | varchar | YES | 현재 직책 |
 | current_company_id | uuid | YES | 현재 재직 회사 FK |
-| career_history | jsonb | YES | 경력 이력 |
+| career_history | jsonb | YES | 경력 이력 (구조화된 파싱 결과) |
+| **career_raw_text** | **text** | **YES** | **사업보고서 '주요경력' 원문 (v2.4 추가)** |
 | education | array | YES | 학력 |
 | board_count | integer | YES | 겸직 수 |
 | network_centrality | double | YES | 네트워크 중심성 |
@@ -82,7 +83,7 @@
 | created_at | timestamp(tz) | NO | 생성일시 |
 | updated_at | timestamp(tz) | NO | 수정일시 |
 
-**연관 스크립트**: `parse_officers_from_local.py`
+**연관 스크립트**: `parse_officers_from_local.py`, `reparse_officer_careers.py`
 **주의사항**: 동일인 판단 = name + birth_date 조합
 
 #### career_history 컬럼 상세
@@ -98,11 +99,31 @@
 ```
 
 **status 값**:
-- `current`: 현재 경력
-- `former`: 과거 경력
+- `current`: 현재 경력 (現/현 패턴)
+- `former`: 과거 경력 (前/전 패턴)
 - `unknown`: 상태 미확인
 
-**현황**: 44,679명 중 8,429명 (18.9%) 경력 데이터 보유
+**현황**: 44,679명 중 약 12,000명 (27%) 구조화된 경력 데이터 보유
+
+#### career_raw_text 컬럼 상세 (v2.4 추가, 2026-01-07)
+
+**목적**: 경력 패턴 파싱 실패 시에도 원문 표시 가능하도록 원문 텍스트 저장
+
+**데이터 출처**: DART XML > SH5_SKL (주요경력) 필드
+
+**변환 규칙**:
+- `□` 불릿 → `• ` (줄바꿈 + 불릿) 변환
+- 연속 줄바꿈 정리
+
+**표시 방식**:
+- 상장사 임원 DB 정보 (career_history) 아래에 표시
+- "사업보고서 주요경력 (원문)" 라벨로 구분
+
+**연관 파일**:
+- 파서: `scripts/parsers/officer.py`
+- 재파싱: `scripts/maintenance/reparse_officer_careers.py`
+- API: `app/api/endpoints/graph_fallback.py`
+- 프론트엔드: `frontend/src/components/graph/NodeDetailPanel.tsx`
 
 ---
 
