@@ -4,11 +4,11 @@
 
 ---
 
-## 상태: 최대주주 기본정보 파서 추가 (2026-01-05)
+## 상태: 임원 경력 파서 v2.3 업그레이드 (2026-01-07)
 전체 18개 테이블 데이터 적재 완료. **RaymondsIndex 계산 완료 (2,707건)**.
 **RaymondsIndex 독립 사이트**: https://raymondsindex.konnect-ai.net 배포 완료.
 **RaymondsRisk 앱인토스**: 토스 로그인 연동 완료, 샌드박스 테스트 진행 중.
-**최근 업데이트**: 최대주주 기본정보 파서 구현 및 4,599건 적재 (2026-01-05)
+**최근 업데이트**: 임원 경력 파서 v2.3 (한글 패턴 지원) - 2,538명 경력 데이터 복구 (2026-01-07)
 
 ---
 
@@ -28,17 +28,42 @@
 
 ---
 
-## 서비스 및 도메인 구분 (중요!)
+## 프로젝트 맵 (멀티 애플리케이션 구조) ⭐
 
-| 도메인 | 서비스 | 프로젝트 디렉토리 |
-|--------|--------|------------------|
-| **www.konnect-ai.net** | **RaymondsRisk** | `frontend/` |
-| **raymondsindex.konnect-ai.net** | **RaymondsIndex** | `raymondsindex-web/` |
+Raymontology는 **4개의 독립 애플리케이션**을 포함합니다.
 
-### 작업 시 주의사항
+| # | 프로젝트 | 경로 | 기술 스택 | 배포/용도 |
+|---|----------|------|-----------|-----------|
+| 1 | **RaymondsRisk (웹)** | `frontend/` | Vite + React 18 + Tailwind | www.konnect-ai.net |
+| 2 | **RaymondsIndex** | `raymondsindex-web/` | Next.js 16 + React 19 + shadcn | raymondsindex.konnect-ai.net |
+| 3 | **앱인토스 앱** | `raymondsrisk-app/` | Vite + React 18 + @apps-in-toss/web-framework | 토스 앱인앱 |
+| 4 | **Android 앱** | `android/` | Kotlin + WebView | 네이티브 앱 |
+
+### 프로젝트 식별 방법 (중요!)
+
+| 프로젝트 | 식별 파일 | 확인 명령어 |
+|----------|-----------|-------------|
+| 앱인토스 | `granite.config.ts` | `ls raymondsrisk-app/granite.config.ts` |
+| Next.js | `next.config.*` | `ls raymondsindex-web/next.config.*` |
+| Vite | `vite.config.*` | `ls frontend/vite.config.*` |
+| Android | `build.gradle.kts` | `ls android/app/build.gradle.kts` |
+
+### 작업 시 주의사항 (필수 준수!)
+- 앱인토스 작업 → **반드시** `raymondsrisk-app/` 디렉토리 확인
 - `www.konnect-ai.net` 관련 작업 → `frontend/` 디렉토리 수정
 - `raymondsindex.konnect-ai.net` 관련 작업 → `raymondsindex-web/` 디렉토리 수정
+- **외부 폴더 (`/Users/jaejoonpark/RaymondsRisk` 등) 혼동 금지!**
 - **두 서비스를 혼동하지 말 것!**
+
+### 프로젝트 경로 확인 체크리스트
+```bash
+# 앱인토스 프로젝트 확인
+ls /Users/jaejoonpark/raymontology/raymondsrisk-app/granite.config.ts
+ls /Users/jaejoonpark/raymontology/raymondsrisk-app/package.json
+
+# SDK 설치 확인
+grep "@apps-in-toss/web-framework" /Users/jaejoonpark/raymontology/raymondsrisk-app/package.json
+```
 
 ---
 
@@ -55,6 +80,7 @@
 
 - 앱 이름: `raymondsrisk`
 - 스킴: `intoss://raymondsrisk`
+- **프로젝트 경로**: `raymondsrisk-app/` (raymontology 하위)
 
 ### 앱인토스 관련 작업 시 필수 확인
 ```
@@ -69,6 +95,48 @@
 ### 공식 문서
 - 개발자 문서: https://developers-apps-in-toss.toss.im/
 - 홈페이지: https://apps-in-toss.toss.im/
+
+### ⚠️ TDS 컴포넌트 비필수 확인 (2026-01-06)
+
+**중요**: TDS(@toss/tds-mobile) 사용은 **필수 조건이 아님**을 확인받음.
+
+| 항목 | 상태 | 비고 |
+|------|:----:|------|
+| TDS 컴포넌트 사용 | ⚪ 선택 | 현재 Tailwind CSS 방식 승인됨 |
+| 현재 개발 방식 | ✅ 승인 | 인라인 스타일 + 커스텀 컴포넌트 |
+| 검수 통과 | ✅ 확인 | TDS 미사용 상태로 승인 |
+
+**현재 스타일링 방식:**
+- 인라인 스타일 (React style prop)
+- 커스텀 colors 상수 (`src/constants/colors.ts`)
+- 직접 구현한 컴포넌트 (ListItem, DebugPanel 등)
+
+**이 방식을 유지하며, TDS로 마이그레이션 불필요.**
+
+### 앱인토스 프로젝트 현황 (2026-01-06)
+
+| 항목 | 상태 |
+|------|:----:|
+| SDK 설치 (`@apps-in-toss/web-framework`) | ✅ v1.6.2 |
+| 설정 파일 (`granite.config.ts`) | ✅ |
+| 토스 로그인 연동 | ✅ |
+| mTLS 인증서 | ✅ 12/31 발급 |
+| .ait 빌드 | ✅ `raymondsrisk.ait` |
+| 샌드박스 테스트 | 🔄 진행 중 |
+
+### 실행 명령어
+```bash
+cd raymondsrisk-app
+
+# 개발 서버
+npm run dev
+
+# Granite 개발 서버 (샌드박스 테스트용)
+npm run granite:dev
+
+# .ait 빌드
+npm run granite:build
+```
 
 ---
 
@@ -155,6 +223,20 @@ query = (
 ```
 
 Neo4j 미설정 시 `graph.py`가 자동으로 PostgreSQL fallback 사용
+
+### 임원 경력 파서 v2.3 (2026-01-07)
+
+경력 데이터 파싱 패턴:
+- **한자 패턴**: `前)`, `現)` (기존)
+- **한글 패턴**: `전)`, `현)` (v2.3 추가)
+- **연속 패턴**: `현) A현) B` → 2개 경력으로 분리
+
+관련 파일: `scripts/parsers/officer.py:179-227`
+
+재파싱 스크립트:
+```bash
+DATABASE_URL="..." python scripts/maintenance/reparse_officer_careers.py --sample 10 --dry-run
+```
 
 ---
 

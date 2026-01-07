@@ -177,28 +177,52 @@ class OfficerParser(BaseParser):
             return None
 
     def _parse_career(self, career_text: str) -> List[Dict]:
-        """경력 파싱 (前/現 패턴)"""
+        """경력 파싱 (前/現/전/현 패턴)
+
+        v2.3 개선:
+        - 한자 패턴: 前), 現)
+        - 한글 패턴: 전), 현)
+        - 괄호 변형: ), ）, ) 공백 등 모두 지원
+        - 줄 내부 연속 패턴 지원 (예: "현) A현) B" → 2개 경력)
+        """
         careers = []
         if not career_text:
             return careers
 
-        lines = re.split(r'[\n\r]+|(?=[前現])', career_text)
+        # 줄바꿈으로 먼저 분할
+        lines = re.split(r'[\n\r]+', career_text)
 
         for line in lines:
             line = line.strip()
             if not line:
                 continue
 
-            # 前) 패턴
-            former_match = re.search(r'前[\)）\s]*(.+?)(?:\s*[\(（][\d\.\~\s]+[\)）])?$', line)
-            if former_match:
-                careers.append({'text': former_match.group(1).strip(), 'status': 'former'})
-                continue
+            # 줄 내부에서 前/現/전/현 패턴으로 분할 (lookahead 사용)
+            segments = re.split(r'(?=[前現전현]\s*[\)）])', line)
 
-            # 現) 패턴
-            current_match = re.search(r'現[\)）\s]*(.+?)(?:\s*[\(（][\d\.\~\s]+[\)）])?$', line)
-            if current_match:
-                careers.append({'text': current_match.group(1).strip(), 'status': 'current'})
+            for segment in segments:
+                segment = segment.strip()
+                if not segment:
+                    continue
+
+                # 前) 또는 전) 패턴 (이전 경력)
+                former_match = re.match(r'^[前전]\s*[\)）]\s*(.+)', segment)
+                if former_match:
+                    text = former_match.group(1).strip()
+                    # 다음 패턴이나 날짜 괄호 앞까지만 추출
+                    text = re.sub(r'\s*[\(（][\d\.\~\-\s]+[\)）]$', '', text)
+                    if text and len(text) >= 2:
+                        careers.append({'text': text, 'status': 'former'})
+                    continue
+
+                # 現) 또는 현) 패턴 (현재 경력)
+                current_match = re.match(r'^[現현]\s*[\)）]\s*(.+)', segment)
+                if current_match:
+                    text = current_match.group(1).strip()
+                    # 다음 패턴이나 날짜 괄호 앞까지만 추출
+                    text = re.sub(r'\s*[\(（][\d\.\~\-\s]+[\)）]$', '', text)
+                    if text and len(text) >= 2:
+                        careers.append({'text': text, 'status': 'current'})
 
         return careers
 
