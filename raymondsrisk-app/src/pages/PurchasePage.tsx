@@ -7,31 +7,31 @@ import * as creditService from '../services/creditService'
 import type { CreditProduct } from '../services/creditService'
 import { colors } from '../constants/colors'
 
-// 기본 상품 목록 (API 실패 시 폴백)
+// 기본 상품 목록 (API 실패 시 폴백) - 2026-01-07 가격 개편
 const DEFAULT_PRODUCTS: ProductDisplay[] = [
-  {
-    id: 'report_1',
-    name: '리포트 1건',
-    credits: 1,
-    price: 500,
-    pricePerCredit: 500,
-    badge: null,
-  },
   {
     id: 'report_10',
     name: '리포트 10건',
     credits: 10,
-    price: 3000,
-    pricePerCredit: 300,
-    badge: '추천',
+    price: 1000,
+    pricePerCredit: 100,
+    badge: null,
   },
   {
     id: 'report_30',
     name: '리포트 30건',
     credits: 30,
-    price: 7000,
-    pricePerCredit: 233,
-    badge: '최저가',
+    price: 2000,
+    pricePerCredit: 67,
+    badge: '추천',
+  },
+  {
+    id: 'report_unlimited',
+    name: '무제한 이용권',
+    credits: -1,  // -1 = 무제한
+    price: 10000,
+    pricePerCredit: 0,  // 무제한이므로 건당 가격 없음
+    badge: 'BEST',
   },
 ]
 
@@ -61,7 +61,8 @@ export default function PurchasePage() {
         const apiProducts = await creditService.getProducts()
         const displayProducts: ProductDisplay[] = apiProducts.map(p => ({
           ...p,
-          pricePerCredit: Math.round(p.price / p.credits),
+          // 무제한(-1)일 때는 건당 가격 0으로 설정
+          pricePerCredit: p.credits === -1 ? 0 : Math.round(p.price / p.credits),
         }))
         setProducts(displayProducts)
         // 추천 상품 기본 선택
@@ -198,7 +199,7 @@ export default function PurchasePage() {
                 보유 이용권
               </div>
               <div style={{ fontSize: '28px', fontWeight: '700', color: colors.gray900 }}>
-                {credits}건
+                {credits === -1 ? '무제한' : `${credits}건`}
               </div>
             </div>
             <div style={{
@@ -272,7 +273,7 @@ export default function PurchasePage() {
                     fontSize: '13px',
                     color: colors.gray500,
                   }}>
-                    건당 {product.pricePerCredit.toLocaleString()}원
+                    {product.credits === -1 ? '무제한 조회' : `건당 ${product.pricePerCredit.toLocaleString()}원`}
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>

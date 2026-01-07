@@ -87,8 +87,8 @@ export default function ReportPage() {
       return
     }
 
-    // 이용권 없으면 Paywall로 리다이렉트
-    if (credits <= 0) {
+    // 이용권 없으면 Paywall로 리다이렉트 (credits === -1은 무제한)
+    if (credits === 0) {
       debugLog(`이용권 없음 (${credits}건) - Paywall로 리다이렉트`)
       navigate('/paywall', {
         state: { returnTo: location.pathname, companyName },
@@ -104,7 +104,8 @@ export default function ReportPage() {
     if (authLoading) return
 
     // 인증 및 이용권 체크 (위의 useEffect에서 리다이렉트 처리)
-    if (!isAuthenticated || credits <= 0) return
+    // credits === -1은 무제한
+    if (!isAuthenticated || credits === 0) return
 
     if (!corpCode) {
       navigate('/', { replace: true })

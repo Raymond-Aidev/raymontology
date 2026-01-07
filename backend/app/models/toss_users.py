@@ -103,6 +103,7 @@ class ReportView(Base):
     """
     리포트 조회 기록 테이블
     동일 기업 재조회 시 이용권 중복 차감 방지
+    30일 보관 기간 적용 (2026-01-07)
     """
     __tablename__ = "report_views"
 
@@ -121,12 +122,18 @@ class ReportView(Base):
     last_viewed_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     view_count = Column(Integer, default=1, nullable=False)
 
+    # 만료일 (30일 보관) - 2026-01-07 추가
+    # first_viewed_at + 30일, NULL이면 무제한(레거시 데이터)
+    expires_at = Column(DateTime(timezone=True), nullable=True)
+
     # Relationship
     user = relationship("TossUser", back_populates="report_views")
 
     __table_args__ = (
         # 사용자-기업 조합 유니크 (중복 차감 방지)
         Index('ix_report_views_user_company', 'user_id', 'company_id', unique=True),
+        # 만료일 인덱스 (만료된 데이터 조회 최적화)
+        Index('ix_report_views_expires_at', 'expires_at'),
     )
 
     def __repr__(self):

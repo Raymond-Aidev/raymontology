@@ -22,7 +22,8 @@ export default function PaywallPage() {
       await login()
       forceUpdate(n => n + 1)
       // 로그인 성공 후 이용권 있으면 원래 페이지로, 없으면 구매 페이지로
-      if (credits > 0) {
+      // credits === -1은 무제한
+      if (credits > 0 || credits === -1) {
         navigate(returnTo, { replace: true })
       } else {
         navigate('/purchase', { state: { returnTo, companyName } })
@@ -136,7 +137,7 @@ export default function PaywallPage() {
           </ul>
         </div>
 
-        {/* 버튼 영역 */}
+        {/* 버튼 영역 - credits === -1은 무제한 */}
         {!isAuthenticated ? (
           <>
             <button
@@ -165,7 +166,7 @@ export default function PaywallPage() {
               토스 계정으로 간편하게 로그인하고 이용권을 구매하세요
             </p>
           </>
-        ) : credits > 0 ? (
+        ) : (credits > 0 || credits === -1) ? (
           <>
             <div style={{
               backgroundColor: colors.gray50,
@@ -177,7 +178,7 @@ export default function PaywallPage() {
                 보유 이용권
               </div>
               <div style={{ fontSize: '28px', fontWeight: '700', color: colors.blue500 }}>
-                {credits}건
+                {credits === -1 ? '무제한' : `${credits}건`}
               </div>
             </div>
             <button

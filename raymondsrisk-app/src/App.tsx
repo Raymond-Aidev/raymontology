@@ -6,6 +6,7 @@ import SearchPage from './pages/SearchPage'
 import ReportPage from './pages/ReportPage'
 import PaywallPage from './pages/PaywallPage'
 import PurchasePage from './pages/PurchasePage'
+import MyCompaniesPage from './pages/MyCompaniesPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,6 +31,9 @@ function App() {
             {/* 유료 전환 (Paywall) */}
             <Route path="/paywall" element={<PaywallPage />} />
             <Route path="/purchase" element={<PurchasePage />} />
+
+            {/* 내 조회 기업 (MY) */}
+            <Route path="/my" element={<MyCompaniesPage />} />
 
             {/* 유료 영역 (이용권 필요) */}
             <Route path="/report/:corpCode" element={<ReportPage />} />

@@ -112,6 +112,35 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* 내 메뉴 */}
+        <section aria-label="내 메뉴" style={{ marginBottom: '24px' }}>
+          <h2 style={{
+            fontSize: '13px',
+            fontWeight: '600',
+            color: colors.gray500,
+            margin: '0 0 12px 0',
+            textTransform: 'uppercase',
+            letterSpacing: '0.02em'
+          }}>
+            MY
+          </h2>
+          <nav
+            style={{
+              backgroundColor: colors.gray50,
+              borderRadius: '16px',
+              overflow: 'hidden',
+            }}
+            aria-label="내 메뉴"
+          >
+            <ListItem
+              title="내 조회 기업"
+              description="조회한 기업 30일간 무료 재열람"
+              onClick={() => navigate('/my')}
+              isLast
+            />
+          </nav>
+        </section>
+
         {/* 기능 목록 */}
         <section aria-label="주요 기능">
           <h2 style={{

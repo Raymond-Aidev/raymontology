@@ -5,11 +5,14 @@
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, or_
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, List
 import logging
+
+# 조회 기록 보관 기간 (일)
+REPORT_VIEW_RETENTION_DAYS = 30
 
 from app.database import get_db
 from app.models.toss_users import TossUser, CreditTransaction, CreditProduct, ReportView
@@ -172,30 +175,30 @@ async def get_products(
     )
     products = result.scalars().all()
 
-    # 상품이 없으면 기본 상품 반환
+    # 상품이 없으면 기본 상품 반환 (2026-01-07 가격 개편)
     if not products:
         return CreditProductListResponse(
             products=[
                 CreditProductResponse(
-                    id="report_1",
-                    name="리포트 1건",
-                    credits=1,
-                    price=500,
-                    badge=None,
-                ),
-                CreditProductResponse(
                     id="report_10",
                     name="리포트 10건",
                     credits=10,
-                    price=3000,
-                    badge="추천",
+                    price=1000,
+                    badge=None,
                 ),
                 CreditProductResponse(
                     id="report_30",
                     name="리포트 30건",
                     credits=30,
-                    price=7000,
-                    badge="최저가",
+                    price=2000,
+                    badge="추천",
+                ),
+                CreditProductResponse(
+                    id="report_unlimited",
+                    name="무제한 이용권",
+                    credits=-1,  # -1 = 무제한
+                    price=10000,
+                    badge="BEST",
                 ),
             ]
         )
@@ -227,11 +230,12 @@ async def purchase_credits(
     2. 검증 성공 시 이용권 충전
     3. 거래 내역 기록
     """
-    # 상품 정보 조회
+    # 상품 정보 조회 (2026-01-07 가격 개편)
+    # - 10건 1,000원, 30건 2,000원, 무제한(-1) 10,000원
     product_info = {
-        "report_1": {"name": "리포트 1건", "credits": 1, "price": 500},
-        "report_10": {"name": "리포트 10건", "credits": 10, "price": 3000},
-        "report_30": {"name": "리포트 30건", "credits": 30, "price": 7000},
+        "report_10": {"name": "리포트 10건", "credits": 10, "price": 1000},
+        "report_30": {"name": "리포트 30건", "credits": 30, "price": 2000},
+        "report_unlimited": {"name": "무제한 이용권", "credits": -1, "price": 10000},  # -1 = 무제한
     }
 
     # DB에서 상품 조회
@@ -311,8 +315,13 @@ async def purchase_credits(
 
     # 이용권 충전
     credits_to_add = product_data["credits"]
-    user.credits += credits_to_add
-    new_balance = user.credits
+    if credits_to_add == -1:
+        # 무제한 이용권: credits를 -1로 설정 (특수값)
+        user.credits = -1
+        new_balance = -1
+    else:
+        user.credits += credits_to_add
+        new_balance = user.credits
 
     # 거래 내역 기록
     transaction = CreditTransaction(
@@ -398,6 +407,7 @@ async def use_credit_for_report(
     - 이용권이 없으면 에러 반환
     """
     # 이미 조회한 기업인지 확인
+    now = datetime.utcnow()
     result = await db.execute(
         select(ReportView)
         .where(ReportView.user_id == user.id)
@@ -406,46 +416,62 @@ async def use_credit_for_report(
     existing_view = result.scalar_one_or_none()
 
     if existing_view:
-        # 재조회 - 차감 없음
-        existing_view.last_viewed_at = datetime.utcnow()
-        existing_view.view_count += 1
-        await db.commit()
+        # 만료 여부 확인 (expires_at이 NULL이면 무제한 - 레거시)
+        is_expired = existing_view.expires_at and existing_view.expires_at < now
 
-        return {
-            "success": True,
-            "credits": user.credits,
-            "deducted": False,
-            "message": "이미 조회한 기업입니다",
-        }
+        if not is_expired:
+            # 재조회 - 차감 없음
+            existing_view.last_viewed_at = now
+            existing_view.view_count += 1
+            await db.commit()
 
-    # 이용권 확인
-    if user.credits <= 0:
+            return {
+                "success": True,
+                "credits": user.credits,
+                "deducted": False,
+                "message": "이미 조회한 기업입니다",
+                "expiresAt": existing_view.expires_at.isoformat() if existing_view.expires_at else None,
+            }
+        else:
+            # 만료됨 - 새로 차감 필요, 기존 기록 삭제
+            await db.delete(existing_view)
+            await db.flush()
+            # 아래 로직에서 새로 차감 및 기록 생성
+
+    # 이용권 확인 (-1은 무제한)
+    if user.credits == 0:
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail="이용권이 부족합니다"
         )
 
-    # 이용권 차감
-    user.credits -= 1
-    new_balance = user.credits
+    # 이용권 차감 (무제한이면 차감 안 함)
+    if user.credits == -1:
+        # 무제한 이용권: 차감 없음
+        new_balance = -1
+    else:
+        user.credits -= 1
+        new_balance = user.credits
 
     # 거래 내역 기록
     transaction = CreditTransaction(
         user_id=user.id,
         transaction_type="use",
-        amount=-1,
+        amount=0 if new_balance == -1 else -1,  # 무제한이면 차감량 0
         balance_after=new_balance,
         company_id=company_id,
         company_name=company_name,
-        description=f"{company_name or company_id} 리포트 조회",
+        description=f"{company_name or company_id} 리포트 조회" + (" (무제한)" if new_balance == -1 else ""),
     )
     db.add(transaction)
 
-    # 조회 기록 저장
+    # 조회 기록 저장 (30일 보관)
+    expires_at = datetime.utcnow() + timedelta(days=REPORT_VIEW_RETENTION_DAYS)
     report_view = ReportView(
         user_id=user.id,
         company_id=company_id,
         company_name=company_name,
+        expires_at=expires_at,
     )
     db.add(report_view)
 
@@ -464,15 +490,31 @@ async def use_credit_for_report(
 @router.get("/viewed-companies")
 async def get_viewed_companies(
     limit: int = 50,
+    include_expired: bool = False,
     user: TossUser = Depends(get_current_toss_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
     조회한 기업 목록 (재조회 가능)
+
+    - 30일 보관 기간 적용
+    - include_expired=True 시 만료된 기업도 포함
     """
+    now = datetime.utcnow()
+
+    query = select(ReportView).where(ReportView.user_id == user.id)
+
+    if not include_expired:
+        # 만료되지 않은 기록만 (expires_at이 NULL이거나 미래)
+        query = query.where(
+            or_(
+                ReportView.expires_at.is_(None),  # 레거시 데이터 (무제한)
+                ReportView.expires_at > now
+            )
+        )
+
     result = await db.execute(
-        select(ReportView)
-        .where(ReportView.user_id == user.id)
+        query
         .order_by(desc(ReportView.last_viewed_at))
         .limit(limit)
     )
@@ -486,8 +528,12 @@ async def get_viewed_companies(
                 "firstViewedAt": v.first_viewed_at.isoformat(),
                 "lastViewedAt": v.last_viewed_at.isoformat(),
                 "viewCount": v.view_count,
+                "expiresAt": v.expires_at.isoformat() if v.expires_at else None,
+                "isExpired": v.expires_at and v.expires_at < now,
+                "daysRemaining": max(0, (v.expires_at - now).days) if v.expires_at else None,
             }
             for v in views
         ],
         "total": len(views),
+        "retentionDays": REPORT_VIEW_RETENTION_DAYS,
     }

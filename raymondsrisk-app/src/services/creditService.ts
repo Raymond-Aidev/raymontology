@@ -43,6 +43,9 @@ export interface ViewedCompany {
   firstViewedAt: string
   lastViewedAt: string
   viewCount: number
+  expiresAt: string | null
+  isExpired: boolean
+  daysRemaining: number | null
 }
 
 export interface UseCreditsResult {
@@ -88,12 +91,12 @@ export async function getProducts(): Promise<CreditProduct[]> {
     const response = await apiClient.get<{ products: CreditProduct[] }>('/api/credits/products')
     return response.data.products
   } catch {
-    // API 실패 시 기본 상품 반환
+    // API 실패 시 기본 상품 반환 (2026-01-07 가격 개편)
     console.warn('상품 목록 조회 실패, 기본 상품 사용')
     return [
-      { id: 'report_1', name: '리포트 1건', credits: 1, price: 500, badge: null },
-      { id: 'report_10', name: '리포트 10건', credits: 10, price: 3000, badge: '추천' },
-      { id: 'report_30', name: '리포트 30건', credits: 30, price: 7000, badge: '최저가' },
+      { id: 'report_10', name: '리포트 10건', credits: 10, price: 1000, badge: null },
+      { id: 'report_30', name: '리포트 30건', credits: 30, price: 2000, badge: '추천' },
+      { id: 'report_unlimited', name: '무제한 이용권', credits: -1, price: 10000, badge: 'BEST' },
     ]
   }
 }
@@ -160,15 +163,18 @@ export async function getTransactionHistory(
 
 /**
  * 조회한 기업 목록 (재조회 가능)
+ * - 30일 보관 기간 적용
+ * - includeExpired=true 시 만료된 기업도 포함
  */
 export async function getViewedCompanies(
-  limit: number = 50
-): Promise<{ companies: ViewedCompany[]; total: number }> {
-  const response = await apiClient.get<{ companies: ViewedCompany[]; total: number }>(
+  limit: number = 50,
+  includeExpired: boolean = false
+): Promise<{ companies: ViewedCompany[]; total: number; retentionDays: number }> {
+  const response = await apiClient.get<{ companies: ViewedCompany[]; total: number; retentionDays: number }>(
     '/api/credits/viewed-companies',
     {
       headers: getAuthHeaders(),
-      params: { limit },
+      params: { limit, include_expired: includeExpired },
     }
   )
   return response.data
