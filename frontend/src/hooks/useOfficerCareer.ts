@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { fetchOfficerCareer, getOfficerCareerNetwork, type OfficerCareer } from '../api/graph'
+import { fetchOfficerCareer, getOfficerCareerNetwork, type OfficerCareerResult } from '../api/graph'
 import type { GraphData } from '../types/graph'
 
 // Query Key 상수
@@ -17,7 +17,7 @@ export function useOfficerCareer(
     staleTime?: number
   }
 ) {
-  return useQuery<OfficerCareer[], Error>({
+  return useQuery<OfficerCareerResult, Error>({
     queryKey: officerCareerKeys.career(officerId || ''),
     queryFn: () => fetchOfficerCareer(officerId!),
     enabled: !!officerId && (options?.enabled !== false),
@@ -61,8 +61,8 @@ export function useOfficerCareerCache() {
       queryClient.invalidateQueries({ queryKey: officerCareerKeys.career(officerId) })
     },
     // 캐시에서 읽기
-    getFromCache: (officerId: string): OfficerCareer[] | undefined => {
-      return queryClient.getQueryData<OfficerCareer[]>(officerCareerKeys.career(officerId))
+    getFromCache: (officerId: string): OfficerCareerResult | undefined => {
+      return queryClient.getQueryData<OfficerCareerResult>(officerCareerKeys.career(officerId))
     },
   }
 }
