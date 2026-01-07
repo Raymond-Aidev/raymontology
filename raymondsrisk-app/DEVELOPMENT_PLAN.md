@@ -1,92 +1,162 @@
 # RaymondsRisk 앱인토스 개발계획
 
 > 작성일: 2025-12-30
-> 상태: Phase 1 완료 ✅
+> 최종 업데이트: 2026-01-06
+> 상태: 샌드박스 테스트 진행 중 (토스 로그인 연동 완료)
 
 ---
 
-## 1. 현황 분석 (Gap Analysis)
+## ⚠️ 중요: TDS 비필수 확인 (2026-01-06)
 
-### 검수 필수 요구사항 vs 현재 상태
+**TDS(@toss/tds-mobile) 컴포넌트 사용은 필수 조건이 아님을 확인받았습니다.**
 
-| 요구사항 | 현재 상태 | Gap |
-|----------|:--------:|:---:|
-| **TDS 컴포넌트 사용** | ✅ Top, Button, ListRow, Loader, Badge | Done |
-| **내비게이션 바 (Top)** | ✅ 모든 페이지 적용 | Done |
-| **토스 디자인 색상 시스템** | ⚠️ 일부 커스텀 색상 | Major |
-| **토스 타이포그래피** | ⚠️ 일부 적용 | Major |
-| **BottomCTA 레이아웃** | ❌ 미구현 | Major |
-| **로딩/에러 상태 처리** | ✅ Loader 적용 | Done |
-| **토스 로그인** | ❌ 미구현 | Optional |
-| **토스페이 결제** | ❌ 미구현 | Optional |
+| 항목 | 결정 |
+|------|:----:|
+| TDS 컴포넌트 필수 여부 | ❌ 아님 |
+| 현재 개발 방식 승인 | ✅ 승인됨 |
+| TDS 마이그레이션 필요 | ❌ 불필요 |
+
+**승인된 현재 개발 방식:**
+- 인라인 스타일 (React style prop)
+- 커스텀 colors 상수 (`src/constants/colors.ts`)
+- 직접 구현한 컴포넌트 (ListItem, DebugPanel 등)
+
+**따라서 Phase 2, 3의 TDS 관련 작업은 불필요합니다.**
 
 ---
 
-## 2. 개발 우선순위
+## 최근 변경 이력 (2026-01-06)
 
-### Phase 1: 검수 필수 (Critical) ✅ 완료
-> **목표: TDS 컴포넌트 기본 적용**
+### 커밋 내역
+| 커밋 | 설명 |
+|------|------|
+| `b71ffab` | feat: mTLS 인증서 환경변수 내용 방식 지원 |
+| `362619e` | fix: 샌드박스 환경에서 실제 토스 API 호출하도록 수정 |
+| `c86ad91` | fix: user_key 타입 불일치 수정 (정수 → 문자열) |
 
-| 작업 | 상태 | 설명 |
+### 주요 수정 사항
+
+1. **mTLS 인증서 환경변수 지원** (`toss_api_client.py`)
+   - `TOSS_MTLS_CERT_CONTENT`: 인증서 PEM 내용 (BEGIN/END 포함)
+   - `TOSS_MTLS_KEY_CONTENT`: 개인키 PEM 내용 (BEGIN/END 포함)
+   - Railway 환경변수에 직접 인증서 내용 저장 가능
+
+2. **샌드박스 Mock 모드 수정** (`toss_auth.py`)
+   - 기존: 샌드박스 환경에서 mock 응답 반환
+   - 수정: mTLS 인증서 미설정 시에만 mock 사용
+   - 샌드박스에서도 실제 토스 API 호출하여 인가코드 검증
+
+3. **user_key 타입 수정** (`toss_auth.py`)
+   - 토스 API는 `user_key`를 정수(823394295)로 반환
+   - DB 컬럼은 VARCHAR 타입
+   - `user_key = str(user_info.user_key)` 변환 추가
+
+### 딥링크 형식
+검토요청 시 screenName: `/home` 또는 `/`
+
+---
+
+## 1. 현재 구현 상태
+
+### 완료된 기능
+
+| 기능 | 상태 | 파일 |
 |------|:----:|------|
-| 1.1 TDS Provider 설정 | ✅ | @emotion/react, @emotion/styled 설치 |
-| 1.2 Top 컴포넌트 | ✅ | 모든 페이지에 내비게이션 바 적용 |
-| 1.3 Button → TDS Button | ✅ | primary, light 버튼 사용 |
-| 1.4 TextField → TDS TextField | ⚠️ | 기본 input 유지 (Phase 2에서 개선) |
-| 1.5 Card → TDS Card/ListRow | ✅ | ListRow.Texts 활용 |
-| 1.6 Loader 컴포넌트 | ✅ | 검색 로딩 상태 표시 |
-| 1.7 Badge 컴포넌트 | ✅ | 리스크 레벨 표시 |
+| 홈페이지 | ✅ | `pages/HomePage.tsx` |
+| 기업 검색 | ✅ | `pages/SearchPage.tsx` |
+| 기업 리포트 | ✅ | `pages/ReportPage.tsx` |
+| Paywall | ✅ | `pages/PaywallPage.tsx` |
+| 구매 페이지 | ✅ | `pages/PurchasePage.tsx` |
+| 토스 로그인 연동 | ✅ | `contexts/AuthContext.tsx` |
+| mTLS 인증서 연동 | ✅ | `backend/app/services/toss_api_client.py` |
+| API 클라이언트 | ✅ | `api/client.ts` |
+| 이용권 관리 | ✅ | `services/creditService.ts` |
 
-### Phase 2: 디자인 정합성 (Major)
-> **목표: TDS 디자인 시스템 완전 적용**
+### 기술 스택
 
-| 작업 | 상태 | 설명 |
-|------|:----:|------|
-| 2.1 색상 시스템 통일 | ⬜ | TDS Colors 사용 |
-| 2.2 타이포그래피 적용 | ⬜ | TDS 폰트 시스템 |
-| 2.3 BottomCTA | ⬜ | 하단 고정 버튼 영역 |
-| 2.4 Spinner/Toast | ⬜ | 로딩/알림 컴포넌트 |
+| 항목 | 버전 |
+|------|------|
+| `@apps-in-toss/web-framework` | v1.6.2 |
+| React | v18.2.0 |
+| TypeScript | ~5.9.3 |
+| Vite | v7.2.4 |
+| React Router | v6.28.0 |
+| TanStack Query | v5.90.15 |
+| Zustand | v5.0.9 |
+| Axios | v1.13.2 |
 
-### Phase 3: 기능 완성 (Minor)
-> **목표: UX 완성도 향상**
+---
 
-| 작업 | 상태 | 설명 |
-|------|:----:|------|
-| 3.1 에러 처리 UI | ⬜ | TDS Dialog 활용 |
-| 3.2 빈 상태 UI | ⬜ | 검색 결과 없음 등 |
-| 3.3 스켈레톤 로딩 | ⬜ | 데이터 로딩 중 UI |
+## 2. 개발 Phase (수정됨)
 
-### Phase 4: 선택 기능 (Optional)
-> **목표: 고급 기능 (필요시)**
+### Phase 1: 핵심 기능 ✅ 완료
+> **목표: 앱인토스 연동 및 핵심 기능 구현**
 
-| 작업 | 상태 | 설명 | 필요 조건 |
-|------|:----:|------|----------|
-| 4.1 토스 로그인 | ⬜ | 사용자 인증 | mTLS 인증서 |
-| 4.2 토스페이 결제 | ⬜ | 유료 서비스 | mTLS 인증서 |
+| 작업 | 상태 |
+|------|:----:|
+| SDK 설치 및 설정 | ✅ |
+| granite.config.ts 설정 | ✅ |
+| 토스 로그인 연동 | ✅ |
+| 홈/검색/리포트 페이지 | ✅ |
+| Paywall 흐름 | ✅ |
+| Railway API 연동 | ✅ |
+| .ait 빌드 | ✅ |
+| mTLS 환경변수 설정 (Railway) | ✅ |
+
+### ~~Phase 2: TDS 디자인 시스템~~ (불필요)
+> ~~TDS 비필수 확인으로 생략~~
+
+### ~~Phase 3: TDS 컴포넌트 교체~~ (불필요)
+> ~~TDS 비필수 확인으로 생략~~
+
+### Phase 4: 선택 기능 (필요시)
+> **목표: 결제 연동**
+
+| 작업 | 상태 | 필요 조건 |
+|------|:----:|----------|
+| 토스페이 결제 | ⬜ | mTLS 인증서 (✅ 보유) |
+| 인앱 결제 | ⬜ | 비즈니스 결정 |
 
 ---
 
 ## 3. 파일 구조
 
 ```
-src/
-├── components/
-│   ├── Layout.tsx          # 공통 레이아웃 (Top 포함)
-│   ├── StatCard.tsx        # TDS Card 기반 통계 카드
-│   ├── FeatureCard.tsx     # TDS ListRow 기반 기능 카드
-│   └── CompanyCard.tsx     # TDS ListRow 기반 기업 카드
-├── pages/
-│   ├── HomePage.tsx        # TDS 컴포넌트 적용
-│   ├── SearchPage.tsx      # TDS 컴포넌트 적용
-│   └── ReportPage.tsx      # TDS 컴포넌트 적용
-├── api/
-│   ├── client.ts           # API 클라이언트
-│   └── company.ts          # 기업 API
-├── types/
-│   ├── company.ts          # 기업 타입
-│   └── report.ts           # 리포트 타입
-├── App.tsx                 # TDSProvider 추가
-└── main.tsx                # 엔트리포인트
+raymondsrisk-app/
+├── granite.config.ts          # 앱인토스 설정
+├── package.json               # 의존성
+├── .env                       # API URL
+├── raymondsrisk.ait           # 빌드 결과물
+├── mTLS_인증서_20251231/       # mTLS 인증서
+├── src/
+│   ├── App.tsx                # 라우팅
+│   ├── main.tsx               # 엔트리포인트
+│   ├── contexts/
+│   │   └── AuthContext.tsx    # 토스 인증 Context
+│   ├── services/
+│   │   ├── authService.ts     # 인증 서비스
+│   │   └── creditService.ts   # 이용권 서비스
+│   ├── api/
+│   │   ├── client.ts          # Axios 인스턴스
+│   │   └── company.ts         # 기업 API
+│   ├── pages/
+│   │   ├── HomePage.tsx       # 홈
+│   │   ├── SearchPage.tsx     # 검색
+│   │   ├── ReportPage.tsx     # 리포트 (유료)
+│   │   ├── PaywallPage.tsx    # Paywall
+│   │   └── PurchasePage.tsx   # 구매
+│   ├── components/
+│   │   ├── ListItem.tsx       # 커스텀 리스트
+│   │   └── DebugPanel.tsx     # 디버그 패널
+│   ├── types/
+│   │   ├── auth.ts
+│   │   ├── company.ts
+│   │   └── report.ts
+│   └── constants/
+│       └── colors.ts          # 커스텀 색상
+└── docs/
+    ├── APPS_IN_TOSS_PROJECT.md
+    └── SANDBOX_TEST_GUIDE.md
 ```
 
 ---
@@ -94,29 +164,50 @@ src/
 ## 4. 검수 체크리스트
 
 ### 필수 (검수 통과 기준)
-- [x] TDS Provider 설정 완료
-- [x] 모든 페이지에 Top (내비게이션 바) 적용
-- [x] Button, ListRow, Badge 등 TDS 컴포넌트 사용
-- [ ] TDS 색상 시스템 완전 적용 (Phase 2)
-- [x] 로딩 상태 Loader 적용
-- [ ] 에러 상태 Dialog 적용 (Phase 3)
-- [x] HTTPS 통신 확인 (Railway API)
+- [x] SDK 설치 및 설정 완료
+- [x] granite.config.ts 올바른 설정
+- [x] 모든 페이지에 헤더/내비게이션 적용
+- [x] 로딩 상태 처리
+- [x] 에러 상태 처리
+- [x] HTTPS 통신 (Railway API)
+- [x] 토스 로그인 연동
+
+### TDS 관련 (비필수로 확인됨)
+- [x] ~~TDS Provider 설정~~ → 불필요
+- [x] ~~TDS 컴포넌트 사용~~ → 커스텀 컴포넌트 승인됨
+- [x] ~~TDS 색상 시스템~~ → 커스텀 색상 승인됨
 
 ### 권장
-- [ ] 다크패턴 없음 확인
-- [ ] 명확한 UX 라이팅
-- [ ] 접근성 고려 (색상 대비 등)
+- [x] 다크패턴 없음
+- [x] 명확한 UX 라이팅
+- [x] 접근성 고려 (aria-label 등)
 
 ---
 
-## 5. 참고 문서
+## 5. 실행 명령어
+
+```bash
+# 개발 서버
+npm run dev
+
+# Granite 개발 서버 (샌드박스 테스트용)
+npm run granite:dev
+
+# .ait 빌드
+npm run granite:build
+```
+
+---
+
+## 6. 참고 문서
 
 | 문서 | URL |
 |------|-----|
-| TDS Mobile 문서 | https://tossmini-docs.toss.im/tds-mobile/ |
 | 앱인토스 개발자 문서 | https://developers-apps-in-toss.toss.im/ |
 | 앱인토스 콘솔 | https://console.apps-in-toss.toss.im |
+| 프로젝트 가이드 | `docs/APPS_IN_TOSS_GUIDE.md` |
+| 샌드박스 테스트 | `SANDBOX_TEST_GUIDE.md` |
 
 ---
 
-*이 문서는 개발 진행에 따라 업데이트됩니다.*
+*최종 업데이트: 2026-01-06 - mTLS 연동 완료, 토스 로그인 버그 수정*

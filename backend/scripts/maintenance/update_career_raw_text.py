@@ -249,14 +249,25 @@ async def main(args):
         if args.corp_code:
             corps = [{'corp_code': args.corp_code}]
         else:
-            query = """
-                SELECT DISTINCT c.corp_code
-                FROM companies c
-                JOIN officer_positions op ON c.id = op.company_id
-                ORDER BY c.corp_code
-            """
             if args.sample:
-                query = query.replace('ORDER BY', f'ORDER BY RANDOM() LIMIT {args.sample} --')
+                query = f"""
+                    SELECT corp_code FROM (
+                        SELECT DISTINCT c.corp_code
+                        FROM companies c
+                        JOIN officer_positions op ON c.id = op.company_id
+                        WHERE c.corp_code IS NOT NULL
+                    ) sub
+                    ORDER BY RANDOM()
+                    LIMIT {args.sample}
+                """
+            else:
+                query = """
+                    SELECT DISTINCT c.corp_code
+                    FROM companies c
+                    JOIN officer_positions op ON c.id = op.company_id
+                    WHERE c.corp_code IS NOT NULL
+                    ORDER BY c.corp_code
+                """
             corps = await conn.fetch(query)
 
         total_updated = 0

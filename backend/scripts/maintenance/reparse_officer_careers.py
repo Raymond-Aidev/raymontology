@@ -189,7 +189,7 @@ def extract_careers_from_zip(zip_path: Path) -> Dict[str, Dict]:
 
 
 async def get_affected_companies(conn) -> List[Dict]:
-    """경력 데이터가 비어있는 임원이 있는 기업 조회"""
+    """career_raw_text가 NULL인 임원이 있는 기업 조회"""
     query = '''
         SELECT
             c.id,
@@ -199,11 +199,11 @@ async def get_affected_companies(conn) -> List[Dict]:
         FROM companies c
         JOIN officer_positions op ON c.id = op.company_id
         JOIN officers o ON op.officer_id = o.id
-        WHERE o.career_history = '[]'::jsonb
+        WHERE o.career_raw_text IS NULL
           AND op.is_current = true
           AND c.corp_code IS NOT NULL
         GROUP BY c.id, c.corp_code, c.name
-        HAVING COUNT(DISTINCT o.id) >= 5
+        HAVING COUNT(DISTINCT o.id) >= 3
         ORDER BY COUNT(DISTINCT o.id) DESC
     '''
     rows = await conn.fetch(query)
@@ -312,22 +312,37 @@ async def reparse_company(
     return result
 
 
-async def main(sample: int = 0, dry_run: bool = False):
+async def main(sample: int = 0, dry_run: bool = False, corp_code: str = None):
     """메인 실행"""
     logger.info("=" * 60)
     logger.info("임원 경력 데이터 재파싱 시작")
     logger.info(f"모드: {'DRY RUN (변경 없음)' if dry_run else '실제 실행'}")
+    if corp_code:
+        logger.info(f"대상: corp_code={corp_code}")
     logger.info("=" * 60)
 
     # DB 연결
     conn = await asyncpg.connect(DATABASE_URL)
 
     try:
-        # 영향받는 기업 조회
-        companies = await get_affected_companies(conn)
-        logger.info(f"영향받는 기업: {len(companies)}개")
+        # 특정 기업만 처리
+        if corp_code:
+            query = '''
+                SELECT c.id, c.corp_code, c.name, 0 as empty_career_count
+                FROM companies c
+                WHERE c.corp_code = $1
+            '''
+            rows = await conn.fetch(query, corp_code)
+            companies = [dict(r) for r in rows]
+            if not companies:
+                logger.error(f"기업을 찾을 수 없습니다: {corp_code}")
+                return
+        else:
+            # 영향받는 기업 조회
+            companies = await get_affected_companies(conn)
+            logger.info(f"영향받는 기업: {len(companies)}개")
 
-        if sample > 0:
+        if sample > 0 and not corp_code:
             companies = companies[:sample]
             logger.info(f"샘플 모드: {sample}개 기업만 처리")
 
@@ -376,6 +391,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='임원 경력 데이터 재파싱')
     parser.add_argument('--sample', type=int, default=0, help='샘플 기업 수 (0=전체)')
     parser.add_argument('--dry-run', action='store_true', help='테스트 모드 (DB 변경 없음)')
+    parser.add_argument('--corp-code', type=str, help='특정 기업만 처리 (corp_code)')
 
     args = parser.parse_args()
-    asyncio.run(main(sample=args.sample, dry_run=args.dry_run))
+    asyncio.run(main(sample=args.sample, dry_run=args.dry_run, corp_code=args.corp_code))
