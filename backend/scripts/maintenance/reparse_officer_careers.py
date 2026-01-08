@@ -50,6 +50,8 @@ if not DATABASE_URL:
 
 # DART 데이터 경로
 DART_DATA_PATH = Path(__file__).parent.parent.parent / 'data' / 'dart'
+# Q3 보고서 경로 (2025년 3분기 - 최신 데이터 우선)
+Q3_DATA_PATH = Path(__file__).parent.parent.parent / 'data' / 'q3_reports_2025'
 
 
 def parse_career_v23(career_text: str) -> List[Dict]:
@@ -210,6 +212,17 @@ async def get_affected_companies(conn) -> List[Dict]:
     return [dict(r) for r in rows]
 
 
+async def find_q3_zip(corp_code: str) -> Optional[Path]:
+    """corp_code에 해당하는 Q3 보고서 ZIP 찾기 (2025년 3분기)"""
+    q3_corp_dir = Q3_DATA_PATH / corp_code
+    if q3_corp_dir.exists():
+        zips = list(q3_corp_dir.glob('*.zip'))
+        if zips:
+            # 가장 최신 파일 선택
+            return max(zips, key=lambda p: p.stat().st_mtime)
+    return None
+
+
 async def find_dart_zip(corp_code: str) -> Optional[Path]:
     """corp_code에 해당하는 최신 사업보고서 ZIP 찾기"""
 
@@ -227,6 +240,22 @@ async def find_dart_zip(corp_code: str) -> Optional[Path]:
                         return largest
 
     return None
+
+
+async def find_latest_report(corp_code: str) -> Optional[Path]:
+    """최신 보고서 찾기 (Q3 우선, 없으면 사업보고서)
+
+    우선순위:
+    1. Q3 보고서 (2025년 3분기) - 가장 최신
+    2. 사업보고서 (연간)
+    """
+    # 1순위: Q3 보고서 (2025년 3분기)
+    q3_zip = await find_q3_zip(corp_code)
+    if q3_zip:
+        return q3_zip
+
+    # 2순위: 사업보고서
+    return await find_dart_zip(corp_code)
 
 
 async def update_officer_career(
@@ -282,7 +311,7 @@ async def reparse_company(
         'officers_updated': 0,
     }
 
-    zip_path = await find_dart_zip(company['corp_code'])
+    zip_path = await find_latest_report(company['corp_code'])
     if not zip_path:
         logger.warning(f"ZIP not found for {company['name']} ({company['corp_code']})")
         return result
