@@ -35,14 +35,31 @@ const AuthContext = createContext<AuthContextType | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>(defaultState)
 
-  // 초기화: 저장된 인증 정보 복원
+  // 초기화: 저장된 인증 정보 복원 + 서버 검증
   useEffect(() => {
     const initAuth = async () => {
       try {
         const { user, accessToken } = authService.restoreAuth()
 
         if (user && accessToken) {
-          // 이용권 조회
+          debugLog('저장된 토큰 발견 - 서버 검증 시작')
+
+          // 핵심: 서버에서 토큰 유효성 검증
+          // 토스 앱에서 연동 해제 시 서버 토큰이 무효화됨
+          const isValid = await authService.validateStoredToken()
+
+          if (!isValid) {
+            // 토큰 무효화됨 (연동 해제) - 재로그인 필요
+            debugLog('토큰 무효화됨 - 재로그인 필요')
+            setState({
+              ...defaultState,
+              isLoading: false,
+            })
+            return
+          }
+
+          debugLog('토큰 유효 - 이용권 조회')
+          // 토큰 유효 - 이용권 조회
           try {
             const creditInfo = await authService.fetchCredits()
             setState({
@@ -52,8 +69,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               credits: creditInfo.credits,
               error: null,
             })
+            debugLog(`인증 복원 완료: ${creditInfo.credits}건`)
           } catch {
-            // 토큰 만료 등의 경우
+            // 이용권 조회 실패해도 인증은 유지
             setState({
               isAuthenticated: true,
               isLoading: false,
@@ -61,14 +79,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               credits: 0,
               error: null,
             })
+            debugLog('인증 복원 완료 (이용권 조회 실패)')
           }
         } else {
+          debugLog('저장된 토큰 없음 - 미인증 상태')
           setState({
             ...defaultState,
             isLoading: false,
           })
         }
-      } catch {
+      } catch (error) {
+        debugLog(`initAuth 에러: ${error}`)
         setState({
           ...defaultState,
           isLoading: false,

@@ -617,6 +617,9 @@ export default function ReportPage() {
           <ListItem
             title="이해관계자 네트워크"
             description="임원, CB 투자자, 대주주 간의 연결 관계 분석"
+            onClick={() => navigate(`/graph/${companyData.corp_code}`, {
+              state: { companyName: companyData.name }
+            })}
           />
           <ListItem
             title="리스크 신호"

@@ -74,8 +74,8 @@ export default function PaywallPage() {
           margin: 0,
           letterSpacing: '-0.02em'
         }}>
-          <span style={{ color: colors.gray900 }}>Raymonds</span>
-          <span style={{ color: colors.red500 }}>Risk</span>
+          <span style={{ color: colors.gray900 }}>레이먼즈</span>
+          <span style={{ color: colors.red500 }}>리스크</span>
         </h1>
       </header>
 

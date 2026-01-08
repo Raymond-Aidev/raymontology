@@ -123,6 +123,51 @@ export function restoreAuth(): { user: TossUser | null; accessToken: string | nu
 }
 
 /**
+ * 저장된 토큰이 서버에서 유효한지 검증
+ * 토스 앱에서 연동 해제 시 서버 토큰이 무효화되므로 이를 감지
+ */
+export async function validateStoredToken(): Promise<boolean> {
+  const accessToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)
+
+  if (!accessToken) {
+    return false
+  }
+
+  try {
+    // /api/auth/toss/me 엔드포인트로 토큰 유효성 확인
+    // 토큰이 무효화되었으면 401 반환
+    await apiClient.get('/api/auth/toss/me', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    })
+    return true
+  } catch (error) {
+    // 401 Unauthorized = 토큰 무효화됨 (연동 해제)
+    // 네트워크 오류 등 다른 에러는 일단 유효한 것으로 처리 (오프라인 대응)
+    if (error && typeof error === 'object' && 'response' in error) {
+      const axiosError = error as { response?: { status: number } }
+      if (axiosError.response?.status === 401) {
+        // 토큰 무효화됨 - localStorage 정리
+        clearAuth()
+        return false
+      }
+    }
+    // 네트워크 오류 등은 일단 유효하다고 가정
+    return true
+  }
+}
+
+/**
+ * 로컬 인증 정보 정리 (서버 호출 없이)
+ */
+export function clearAuth(): void {
+  Object.values(STORAGE_KEYS).forEach(key => {
+    localStorage.removeItem(key)
+  })
+}
+
+/**
  * 인증 상태 확인
  */
 export function isAuthenticated(): boolean {
