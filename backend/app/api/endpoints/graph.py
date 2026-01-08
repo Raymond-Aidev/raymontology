@@ -97,6 +97,7 @@ class OfficerCareerResponse(BaseModel):
     """임원 경력 응답"""
     officer: GraphNode
     career_history: List[CareerHistory]
+    career_raw_text: Optional[str] = None  # 사업보고서 주요경력 원문 (v2.5)
 
 
 class InvestmentHistory(BaseModel):
@@ -158,9 +159,9 @@ async def _get_officer_career_from_postgres(officer_id: str, db: AsyncSession):
     """PostgreSQL에서 임원 경력 조회 (Neo4j fallback)"""
     from sqlalchemy import text
 
-    # 임원 정보 조회
+    # 임원 정보 조회 (career_raw_text 포함)
     officer_query = text("""
-        SELECT id::text, name, birth_date, position, career_history
+        SELECT id::text, name, birth_date, position, career_history, career_raw_text
         FROM officers WHERE id::text = :officer_id
     """)
     result = await db.execute(officer_query, {"officer_id": officer_id})
@@ -224,7 +225,8 @@ async def _get_officer_career_from_postgres(officer_id: str, db: AsyncSession):
                 "position": officer.position
             }
         ),
-        career_history=career_history
+        career_history=career_history,
+        career_raw_text=officer.career_raw_text  # 사업보고서 주요경력 원문 (v2.5)
     )
 
 
@@ -749,6 +751,7 @@ async def get_officer_career(
 
             # 2. PostgreSQL에서 파싱된 경력 조회 (source="disclosure")
             # Neo4j ID와 PostgreSQL ID가 다를 수 있으므로 이름+생년월일로 조회
+            career_raw_text = None  # 사업보고서 주요경력 원문 초기화 (v2.5)
             try:
                 from sqlalchemy import text
                 import re
@@ -772,12 +775,10 @@ async def get_officer_career(
                     # 생년월일이 있는 경우: 이름 + 생년월일 앞 6자리 비교
                     pg_result = await db.execute(
                         text("""
-                            SELECT career_history FROM officers
+                            SELECT career_history, career_raw_text FROM officers
                             WHERE name = :name
                             AND birth_date IS NOT NULL
                             AND REPLACE(REPLACE(REPLACE(birth_date, '년', ''), '월', ''), '.', '') LIKE :birth_prefix || '%'
-                            AND career_history IS NOT NULL
-                            AND jsonb_array_length(career_history) > 0
                             LIMIT 1
                         """),
                         {"name": officer_name, "birth_prefix": normalized_birth}
@@ -786,16 +787,17 @@ async def get_officer_career(
                     # 생년월일이 없는 경우: 이름만으로 조회 (fallback)
                     pg_result = await db.execute(
                         text("""
-                            SELECT career_history FROM officers
+                            SELECT career_history, career_raw_text FROM officers
                             WHERE name = :name
-                            AND career_history IS NOT NULL
-                            AND jsonb_array_length(career_history) > 0
                             LIMIT 1
                         """),
                         {"name": officer_name}
                     )
                 row = pg_result.fetchone()
                 logger.info(f"PostgreSQL career_history 결과: row={row is not None}, data={row[0] if row else None}")
+
+                # career_raw_text 추출 (v2.5)
+                career_raw_text = row[1] if row and len(row) > 1 else None
 
                 if row and row[0]:
                     career_history_json = row[0]
@@ -832,6 +834,7 @@ async def get_officer_career(
                                     ))
             except Exception as pg_error:
                 logger.warning(f"PostgreSQL career_history 조회 실패: {pg_error}")
+                career_raw_text = None  # 에러 시 None
 
             # 정렬: is_current=True 우선, source="db" 우선, start_date 최신순
             all_careers.sort(
@@ -849,7 +852,8 @@ async def get_officer_career(
                     type="Officer",
                     properties=serialize_node_properties(officer_node)
                 ),
-                career_history=all_careers
+                career_history=all_careers,
+                career_raw_text=career_raw_text  # 사업보고서 주요경력 원문 (v2.5)
             )
 
     except HTTPException:
