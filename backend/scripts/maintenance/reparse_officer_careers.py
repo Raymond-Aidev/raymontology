@@ -98,11 +98,33 @@ def parse_career_v23(career_text: str) -> List[Dict]:
 
 
 def format_raw_text(career_text: str) -> str:
-    """경력 원문 텍스트 포맷팅 (□ → • 변환)"""
+    """경력 원문 텍스트 포맷팅
+
+    처리 패턴:
+    1. □ → 줄바꿈 + • (기존)
+    2. "현." "전." 패턴 앞에 줄바꿈 (연속 경력 분리)
+    3. "[YYYY~" 패턴 앞에 줄바꿈 (기간 표기 경력 분리)
+    """
     if not career_text:
         return ""
-    raw_text = re.sub(r'□\s*', '\n• ', career_text)
+
+    raw_text = career_text
+
+    # 1. □ → 줄바꿈 + • (기존)
+    raw_text = re.sub(r'□\s*', '\n• ', raw_text)
+
+    # 2. "현." "전." 패턴 앞에 줄바꿈 (단, 줄 시작이 아닐 때)
+    # 예: "서울대학교현. A전. B" → "서울대학교\n현. A\n전. B"
+    raw_text = re.sub(r'(?<!\n)(?=현\.\s)', '\n', raw_text)
+    raw_text = re.sub(r'(?<!\n)(?=전\.\s)', '\n', raw_text)
+
+    # 3. "[YYYY~" 패턴 앞에 줄바꿈 (단, 줄 시작이 아닐 때)
+    # 예: "연세대 [2025~현재] A [2020~현재] B" → "연세대\n[2025~현재] A\n[2020~현재] B"
+    raw_text = re.sub(r'(?<!\n)(?=\[\d{4})', '\n', raw_text)
+
+    # 중복 줄바꿈 정리
     raw_text = re.sub(r'\n+', '\n', raw_text)
+
     return raw_text.strip()
 
 
