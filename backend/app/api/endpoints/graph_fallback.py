@@ -420,12 +420,12 @@ async def get_officer_career_fallback(
                 raw_careers = officer.career_history if isinstance(officer.career_history, list) else json.loads(officer.career_history)
                 for item in raw_careers:
                     if isinstance(item, dict):
-                        text = item.get("text", "")
+                        career_text = item.get("text", "")  # 변수명 변경: text → career_text (SQLAlchemy text() 충돌 방지)
                         status = item.get("status", "unknown")
                         # 주요경력 텍스트에서 회사명과 직책 분리 시도
                         # 예: "(주)이아이디 재무이사" -> company_name: "(주)이아이디", position: "재무이사"
-                        parts = text.rsplit(" ", 1) if text else ["", ""]
-                        company_name = parts[0] if len(parts) > 1 else text
+                        parts = career_text.rsplit(" ", 1) if career_text else ["", ""]
+                        company_name = parts[0] if len(parts) > 1 else career_text
                         position = parts[1] if len(parts) > 1 else ""
 
                         parsed_careers.append({
@@ -437,7 +437,7 @@ async def get_officer_career_fallback(
                             "is_current": status == "current",
                             "is_listed": False,  # 비상장사 경력
                             "source": "disclosure",  # 사업보고서 출처
-                            "raw_text": text  # 원본 텍스트 보존
+                            "raw_text": career_text  # 원본 텍스트 보존
                         })
             except (json.JSONDecodeError, TypeError, KeyError) as e:
                 logger.warning(f"Failed to parse career_history: {e}")
