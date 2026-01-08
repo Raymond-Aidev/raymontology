@@ -14,16 +14,29 @@ Toss Apps-in-Toss API Client (mTLS)
   방법 2 (로컬): 파일 경로 지정
     - TOSS_MTLS_CERT_PATH: 인증서 파일 경로
     - TOSS_MTLS_KEY_PATH: 키 파일 경로
+
+복호화 키 설정 (사용자 정보 복호화):
+    - TOSS_DECRYPT_KEY: AES-256 복호화 키 (Base64 인코딩)
+    - TOSS_DECRYPT_AAD: AAD (Additional Authenticated Data)
 """
 
 import os
 import logging
 import tempfile
+import base64
 from typing import Optional
 from dataclasses import dataclass
 from datetime import datetime
 
 import httpx
+
+# AES-256 GCM 복호화를 위한 cryptography 라이브러리
+try:
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    _crypto_available = True
+except ImportError:
+    _crypto_available = False
+    AESGCM = None
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +100,89 @@ class TossAPIError(Exception):
         self.reason = reason
         self.status_code = status_code
         super().__init__(f"[{error_code}] {reason}")
+
+
+# ============================================================================
+# 사용자 정보 복호화 (AES-256 GCM)
+# ============================================================================
+
+def decrypt_toss_user_info(encrypted_text: str) -> Optional[str]:
+    """
+    토스 API에서 받은 암호화된 사용자 정보를 복호화합니다.
+
+    암호화 알고리즘:
+    - AES-256 GCM
+    - IV (NONCE): 12바이트, 암호문 앞에 포함
+    - AAD: 토스에서 제공하는 값 (환경변수 TOSS_DECRYPT_AAD)
+
+    환경변수:
+    - TOSS_DECRYPT_KEY: Base64 인코딩된 256비트 AES 키
+    - TOSS_DECRYPT_AAD: AAD 값 (보통 "TOSS")
+
+    Args:
+        encrypted_text: Base64 인코딩된 암호문
+
+    Returns:
+        복호화된 평문, 실패 시 None
+    """
+    if not encrypted_text:
+        return None
+
+    if not _crypto_available:
+        logger.warning("cryptography 라이브러리가 설치되지 않아 복호화할 수 없습니다.")
+        return None
+
+    # 환경변수에서 복호화 키 로드
+    decrypt_key_b64 = os.getenv("TOSS_DECRYPT_KEY")
+    decrypt_aad = os.getenv("TOSS_DECRYPT_AAD", "TOSS")  # 기본값 "TOSS"
+
+    if not decrypt_key_b64:
+        logger.debug("TOSS_DECRYPT_KEY 환경변수가 설정되지 않아 복호화를 건너뜁니다.")
+        return None
+
+    try:
+        IV_LENGTH = 12
+
+        # Base64 디코딩
+        decoded = base64.b64decode(encrypted_text)
+        key = base64.b64decode(decrypt_key_b64)
+
+        # IV 추출 (처음 12바이트)
+        iv = decoded[:IV_LENGTH]
+        ciphertext = decoded[IV_LENGTH:]
+
+        # AES-256 GCM 복호화
+        aesgcm = AESGCM(key)
+        plaintext = aesgcm.decrypt(iv, ciphertext, decrypt_aad.encode())
+
+        return plaintext.decode("utf-8")
+
+    except Exception as e:
+        logger.warning(f"사용자 정보 복호화 실패: {e}")
+        return None
+
+
+def decrypt_user_info_fields(user_info: "TossUserInfo") -> dict:
+    """
+    TossUserInfo의 모든 암호화된 필드를 복호화합니다.
+
+    Returns:
+        복호화된 필드 딕셔너리:
+        {
+            "name": "홍길동" or None,
+            "phone": "01012345678" or None,
+            "email": "user@example.com" or None,
+            "birthday": "19900101" or None,
+            "gender": "MALE" or "FEMALE" or None,
+        }
+    """
+    return {
+        "name": decrypt_toss_user_info(user_info.encrypted_name),
+        "phone": decrypt_toss_user_info(user_info.encrypted_phone),
+        "email": decrypt_toss_user_info(user_info.encrypted_email),
+        "birthday": decrypt_toss_user_info(user_info.encrypted_birthday),
+        "gender": decrypt_toss_user_info(user_info.encrypted_gender),
+    }
 
 
 def _parse_response(response: httpx.Response) -> dict:
@@ -336,26 +432,32 @@ class TossAPIClient:
         """
         로그인 연결 해제 (로그아웃)
 
+        공식 API 문서 참조:
+        - accessToken: /api-partner/v1/apps-in-toss/user/oauth2/access/remove-by-access-token
+        - userKey: /api-partner/v1/apps-in-toss/user/oauth2/access/remove-by-user-key
+
         Args:
             access_token: 액세스 토큰 (방법 1)
-            user_key: 사용자 키 (방법 2)
+            user_key: 사용자 키 (방법 2) - int 또는 str
 
         Returns:
             bool: 성공 여부
         """
         if access_token:
-            url = f"{self.BASE_URL}/api-partner/v1/apps-in-toss/user/oauth2/disconnect"
+            url = f"{self.BASE_URL}/api-partner/v1/apps-in-toss/user/oauth2/access/remove-by-access-token"
             async with self._get_client() as client:
                 response = await client.post(
                     url,
                     headers={"Authorization": f"Bearer {access_token}"}
                 )
         elif user_key:
-            url = f"{self.BASE_URL}/api-partner/v1/apps-in-toss/user/oauth2/disconnect-by-user-key"
+            url = f"{self.BASE_URL}/api-partner/v1/apps-in-toss/user/oauth2/access/remove-by-user-key"
+            # userKey는 number 타입으로 전송 (가이드 참조)
+            user_key_int = int(user_key) if isinstance(user_key, str) else user_key
             async with self._get_client() as client:
                 response = await client.post(
                     url,
-                    json={"userKey": user_key}
+                    json={"userKey": user_key_int}
                 )
         else:
             raise ValueError("access_token 또는 user_key 중 하나는 필수입니다.")
@@ -364,7 +466,7 @@ class TossAPIClient:
         if success:
             logger.info("토스 로그인 연결 해제 성공")
         else:
-            logger.error(f"토스 로그인 연결 해제 실패: {response.status_code}")
+            logger.error(f"토스 로그인 연결 해제 실패: {response.status_code} - {response.text}")
 
         return success
 

@@ -1,13 +1,20 @@
 """
 토스 로그인 사용자 모델 (앱인토스용)
+
+ACID 원칙 준수를 위한 제약조건:
+- order_id UNIQUE 인덱스: 중복 구매 방지 (DB 레벨)
+- credits CHECK 제약조건: 잔액 >= -1 보장 (무제한 = -1)
 """
-from sqlalchemy import Column, String, Integer, DateTime, Boolean, Text, ForeignKey, Index
+from sqlalchemy import Column, String, Integer, DateTime, Boolean, Text, ForeignKey, Index, UniqueConstraint, CheckConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 import uuid
 
 from app.database import Base
+
+# 무제한 이용권 상수
+UNLIMITED_CREDITS = -1
 
 
 class TossUser(Base):
@@ -47,6 +54,12 @@ class TossUser(Base):
     # Relationships
     transactions = relationship("CreditTransaction", back_populates="user", lazy="dynamic")
     report_views = relationship("ReportView", back_populates="user", lazy="dynamic")
+
+    # ACID 원칙: Consistency 보장을 위한 CHECK 제약조건
+    __table_args__ = (
+        # credits는 -1(무제한) 이상이어야 함
+        CheckConstraint('credits >= -1', name='chk_toss_users_credits_valid'),
+    )
 
     def __repr__(self):
         return f"<TossUser(id={self.id}, toss_user_key='{self.toss_user_key}', credits={self.credits})>"
@@ -90,9 +103,13 @@ class CreditTransaction(Base):
     # Relationship
     user = relationship("TossUser", back_populates="transactions")
 
+    # ACID 원칙: Isolation 보장을 위한 UNIQUE 제약조건
     __table_args__ = (
         Index('ix_credit_transactions_user_type', 'user_id', 'transaction_type'),
         Index('ix_credit_transactions_created', 'created_at'),
+        # P1: order_id UNIQUE 제약조건 - 중복 구매 방지 (DB 레벨)
+        # NULL은 여러 개 허용 (use 타입 거래는 order_id가 NULL)
+        Index('ix_credit_transactions_order_id_unique', 'order_id', unique=True, postgresql_where="order_id IS NOT NULL"),
     )
 
     def __repr__(self):

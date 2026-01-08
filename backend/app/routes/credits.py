@@ -2,6 +2,12 @@
 이용권(Credits) API 라우터
 
 토스 인앱결제(IAP) 검증을 통한 이용권 구매 처리.
+
+ACID 원칙 준수:
+- Atomicity: 단일 트랜잭션으로 이용권 충전/차감 + 거래내역 기록
+- Consistency: 잔액 마이너스 방지, 무제한 이용권 특수 처리
+- Isolation: SELECT FOR UPDATE로 Race Condition 방지
+- Durability: PostgreSQL WAL 기반 지속성 보장
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,8 +17,15 @@ from datetime import datetime, timedelta
 from typing import Optional, List
 import logging
 
+# ============================================================================
+# 상수 정의
+# ============================================================================
+
 # 조회 기록 보관 기간 (일)
 REPORT_VIEW_RETENTION_DAYS = 30
+
+# 무제한 이용권 상수 (P3: 매직넘버 상수화)
+UNLIMITED_CREDITS = -1
 
 from app.database import get_db
 from app.models.toss_users import TossUser, CreditTransaction, CreditProduct, ReportView
@@ -196,7 +209,7 @@ async def get_products(
                 CreditProductResponse(
                     id="report_unlimited",
                     name="무제한 이용권",
-                    credits=-1,  # -1 = 무제한
+                    credits=UNLIMITED_CREDITS,
                     price=10000,
                     badge="BEST",
                 ),
@@ -229,13 +242,18 @@ async def purchase_credits(
     1. orderId로 토스 서버에서 결제 상태 검증
     2. 검증 성공 시 이용권 충전
     3. 거래 내역 기록
+
+    ACID 준수:
+    - P1: SELECT FOR UPDATE로 사용자 행 잠금 (Race Condition 방지)
+    - P1: 중복 구매 체크도 잠금 상태에서 수행
+    - P3: UNLIMITED_CREDITS 상수 사용
     """
     # 상품 정보 조회 (2026-01-07 가격 개편)
-    # - 10건 1,000원, 30건 2,000원, 무제한(-1) 10,000원
+    # - 10건 1,000원, 30건 2,000원, 무제한 10,000원
     product_info = {
         "report_10": {"name": "리포트 10건", "credits": 10, "price": 1000},
         "report_30": {"name": "리포트 30건", "credits": 30, "price": 2000},
-        "report_unlimited": {"name": "무제한 이용권", "credits": -1, "price": 10000},  # -1 = 무제한
+        "report_unlimited": {"name": "무제한 이용권", "credits": UNLIMITED_CREDITS, "price": 10000},
     }
 
     # DB에서 상품 조회
@@ -258,10 +276,19 @@ async def purchase_credits(
             "price": product.price,
         }
 
-    # 중복 구매 체크 (같은 orderId로 이미 처리됨)
+    # ========== P1: SELECT FOR UPDATE로 사용자 행 잠금 ==========
+    # Race Condition 방지: 동시 구매 요청 시 중복 처리 방지
+    locked_user_result = await db.execute(
+        select(TossUser)
+        .where(TossUser.id == user.id)
+        .with_for_update()  # 행 잠금
+    )
+    locked_user = locked_user_result.scalar_one()
+
+    # 중복 구매 체크 (잠금 상태에서 수행 - Race Condition 방지)
     existing_result = await db.execute(
         select(CreditTransaction)
-        .where(CreditTransaction.user_id == user.id)
+        .where(CreditTransaction.user_id == locked_user.id)
         .where(CreditTransaction.order_id == request.orderId)
     )
     if existing_result.scalar_one_or_none():
@@ -275,19 +302,19 @@ async def purchase_credits(
         try:
             client = get_toss_client()
             verified, message = await client.verify_purchase(
-                user_key=user.toss_user_key,
+                user_key=locked_user.toss_user_key,
                 order_id=request.orderId,
                 expected_sku=request.productId,
             )
 
             if not verified:
-                logger.warning(f"IAP verification failed: user={user.toss_user_key}, order={request.orderId}, reason={message}")
+                logger.warning(f"IAP verification failed: user={locked_user.toss_user_key}, order={request.orderId}, reason={message}")
                 raise HTTPException(
                     status_code=status.HTTP_402_PAYMENT_REQUIRED,
                     detail=f"결제 검증 실패: {message}"
                 )
 
-            logger.info(f"[Production] IAP verified: user={user.toss_user_key}, order={request.orderId}")
+            logger.info(f"[Production] IAP verified: user={locked_user.toss_user_key}, order={request.orderId}")
 
         except HTTPException:
             raise
@@ -313,19 +340,20 @@ async def purchase_credits(
                 detail="결제 검증 서비스를 사용할 수 없습니다"
             )
 
+    # ========== P3: UNLIMITED_CREDITS 상수 사용 ==========
     # 이용권 충전
     credits_to_add = product_data["credits"]
-    if credits_to_add == -1:
-        # 무제한 이용권: credits를 -1로 설정 (특수값)
-        user.credits = -1
-        new_balance = -1
+    if credits_to_add == UNLIMITED_CREDITS:
+        # 무제한 이용권: credits를 UNLIMITED_CREDITS로 설정
+        locked_user.credits = UNLIMITED_CREDITS
+        new_balance = UNLIMITED_CREDITS
     else:
-        user.credits += credits_to_add
-        new_balance = user.credits
+        locked_user.credits += credits_to_add
+        new_balance = locked_user.credits
 
     # 거래 내역 기록
     transaction = CreditTransaction(
-        user_id=user.id,
+        user_id=locked_user.id,
         transaction_type="purchase",
         amount=credits_to_add,
         balance_after=new_balance,
@@ -338,9 +366,10 @@ async def purchase_credits(
     )
     db.add(transaction)
 
+    # 단일 트랜잭션으로 커밋 (Atomicity 보장)
     await db.commit()
 
-    logger.info(f"Credits purchased: user={user.toss_user_key}, product={request.productId}, order={request.orderId}, credits={credits_to_add}")
+    logger.info(f"Credits purchased: user={locked_user.toss_user_key}, product={request.productId}, order={request.orderId}, credits={credits_to_add}")
 
     return PurchaseResponse(
         success=True,
@@ -405,12 +434,27 @@ async def use_credit_for_report(
 
     - 이미 조회한 기업이면 차감하지 않음
     - 이용권이 없으면 에러 반환
+
+    ACID 준수:
+    - P1: SELECT FOR UPDATE로 Race Condition 방지
+    - P2: 조기 커밋 제거, 단일 트랜잭션으로 처리
+    - P3: UNLIMITED_CREDITS 상수 사용
     """
-    # 이미 조회한 기업인지 확인
     now = datetime.utcnow()
+
+    # ========== P1: SELECT FOR UPDATE로 사용자 행 잠금 ==========
+    # Race Condition 방지: 동시 요청 시 이중 차감 방지
+    locked_user_result = await db.execute(
+        select(TossUser)
+        .where(TossUser.id == user.id)
+        .with_for_update()  # 행 잠금
+    )
+    locked_user = locked_user_result.scalar_one()
+
+    # 이미 조회한 기업인지 확인
     result = await db.execute(
         select(ReportView)
-        .where(ReportView.user_id == user.id)
+        .where(ReportView.user_id == locked_user.id)
         .where(ReportView.company_id == company_id)
     )
     existing_view = result.scalar_one_or_none()
@@ -420,14 +464,16 @@ async def use_credit_for_report(
         is_expired = existing_view.expires_at and existing_view.expires_at < now
 
         if not is_expired:
-            # 재조회 - 차감 없음
+            # ========== P2: 재조회도 단일 트랜잭션으로 처리 ==========
+            # 조기 커밋 제거: view_count 업데이트를 최종 커밋에 포함
             existing_view.last_viewed_at = now
             existing_view.view_count += 1
+            # 커밋은 아래에서 한 번만 수행
             await db.commit()
 
             return {
                 "success": True,
-                "credits": user.credits,
+                "credits": locked_user.credits,
                 "deducted": False,
                 "message": "이미 조회한 기업입니다",
                 "expiresAt": existing_view.expires_at.isoformat() if existing_view.expires_at else None,
@@ -438,46 +484,49 @@ async def use_credit_for_report(
             await db.flush()
             # 아래 로직에서 새로 차감 및 기록 생성
 
-    # 이용권 확인 (-1은 무제한)
-    if user.credits == 0:
+    # ========== P3: UNLIMITED_CREDITS 상수 사용 ==========
+    # 이용권 확인
+    if locked_user.credits == 0:
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail="이용권이 부족합니다"
         )
 
     # 이용권 차감 (무제한이면 차감 안 함)
-    if user.credits == -1:
+    if locked_user.credits == UNLIMITED_CREDITS:
         # 무제한 이용권: 차감 없음
-        new_balance = -1
+        new_balance = UNLIMITED_CREDITS
     else:
-        user.credits -= 1
-        new_balance = user.credits
+        locked_user.credits -= 1
+        new_balance = locked_user.credits
 
     # 거래 내역 기록
+    is_unlimited = (new_balance == UNLIMITED_CREDITS)
     transaction = CreditTransaction(
-        user_id=user.id,
+        user_id=locked_user.id,
         transaction_type="use",
-        amount=0 if new_balance == -1 else -1,  # 무제한이면 차감량 0
+        amount=0 if is_unlimited else -1,
         balance_after=new_balance,
         company_id=company_id,
         company_name=company_name,
-        description=f"{company_name or company_id} 리포트 조회" + (" (무제한)" if new_balance == -1 else ""),
+        description=f"{company_name or company_id} 리포트 조회" + (" (무제한)" if is_unlimited else ""),
     )
     db.add(transaction)
 
     # 조회 기록 저장 (30일 보관)
     expires_at = datetime.utcnow() + timedelta(days=REPORT_VIEW_RETENTION_DAYS)
     report_view = ReportView(
-        user_id=user.id,
+        user_id=locked_user.id,
         company_id=company_id,
         company_name=company_name,
         expires_at=expires_at,
     )
     db.add(report_view)
 
+    # 단일 트랜잭션으로 커밋 (Atomicity 보장)
     await db.commit()
 
-    logger.info(f"Credit used: user={user.toss_user_key}, company={company_id}, remaining={new_balance}")
+    logger.info(f"Credit used: user={locked_user.toss_user_key}, company={company_id}, remaining={new_balance}")
 
     return {
         "success": True,

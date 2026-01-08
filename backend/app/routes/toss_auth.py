@@ -393,3 +393,94 @@ async def get_toss_api_status():
         "debug_mode": settings.debug,
         "environment": "sandbox" if settings.debug else "production",
     }
+
+
+# ============================================================================
+# 로그인 끊기 콜백 (토스앱에서 연결 해제 시 호출)
+# ============================================================================
+
+
+class DisconnectCallbackRequest(BaseModel):
+    """토스 로그인 끊기 콜백 요청"""
+    userKey: int  # 토스 사용자 고유 키 (number 타입)
+    referrer: str  # UNLINK, WITHDRAWAL_TERMS, WITHDRAWAL_TOSS
+
+
+class DisconnectCallbackResponse(BaseModel):
+    """콜백 응답"""
+    status: str = "ok"
+    message: str = ""
+
+
+@router.post("/callback/disconnect", response_model=DisconnectCallbackResponse)
+async def toss_disconnect_callback(
+    request: DisconnectCallbackRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    토스 로그인 끊기 콜백 (POST 방식)
+
+    사용자가 토스앱에서 연결을 해제할 때 토스 서버가 호출합니다.
+    - 콘솔에서 콜백 URL 및 Basic Auth 헤더 설정 필요
+
+    referrer 값:
+    - UNLINK: 사용자가 토스앱에서 직접 연결 끊음
+    - WITHDRAWAL_TERMS: 사용자가 로그인 약관 동의 철회
+    - WITHDRAWAL_TOSS: 사용자가 토스 회원 탈퇴
+
+    Note:
+    - 서비스에서 직접 로그인 끊기 API를 호출한 경우에는 콜백이 호출되지 않음
+    """
+    user_key = str(request.userKey)
+    referrer = request.referrer
+
+    logger.info(f"Toss disconnect callback received: userKey={user_key}, referrer={referrer}")
+
+    # 사용자 조회
+    result = await db.execute(
+        select(TossUser).where(TossUser.toss_user_key == user_key)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        logger.warning(f"Disconnect callback: user not found: {user_key}")
+        return DisconnectCallbackResponse(
+            status="ok",
+            message="User not found (already disconnected or never connected)"
+        )
+
+    # 토큰 무효화
+    user.access_token = None
+    user.refresh_token = None
+    user.token_expires_at = None
+
+    # referrer에 따른 추가 처리
+    if referrer == "WITHDRAWAL_TOSS":
+        # 토스 회원 탈퇴: 계정 비활성화
+        user.is_active = False
+        logger.info(f"User deactivated due to Toss withdrawal: {user_key}")
+
+    await db.commit()
+
+    logger.info(f"Disconnect callback processed: userKey={user_key}, referrer={referrer}")
+
+    return DisconnectCallbackResponse(
+        status="ok",
+        message=f"User {user_key} disconnected successfully"
+    )
+
+
+@router.get("/callback/disconnect")
+async def toss_disconnect_callback_get(
+    userKey: int,
+    referrer: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    토스 로그인 끊기 콜백 (GET 방식)
+
+    토스 서버가 GET 방식으로 호출할 때 사용.
+    """
+    # POST 방식과 동일한 로직
+    request = DisconnectCallbackRequest(userKey=userKey, referrer=referrer)
+    return await toss_disconnect_callback(request, db)
