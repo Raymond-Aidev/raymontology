@@ -172,7 +172,7 @@ import { defineConfig } from '@apps-in-toss/web-framework/config';
 export default defineConfig({
   appName: 'raymondsrisk', // 앱인토스 콘솔에서 설정한 앱 이름
   brand: {
-    displayName: '레이몬즈리스크', // 화면에 노출될 앱의 한글 이름
+    displayName: '레이먼즈리스크', // 화면에 노출될 앱의 한글 이름
     primaryColor: '#3182F6', // 앱의 기본 색상 (RGB HEX)
     icon: '', // 앱 아이콘 이미지 주소 (빈 문자열로 테스트 가능)
   },
