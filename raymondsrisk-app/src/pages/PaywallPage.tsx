@@ -1,14 +1,12 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { useAuth, debugLogs } from '../contexts/AuthContext'
+import { useAuth } from '../contexts/AuthContext'
 import { colors } from '../constants/colors'
 
 export default function PaywallPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { isAuthenticated, isLoading, credits, login, error: authError } = useAuth()
-  const [showDebug, setShowDebug] = useState(false)
-  const [, forceUpdate] = useState(0)
   const [loginInProgress, setLoginInProgress] = useState(false)
 
   // 이전 페이지에서 전달된 기업 정보
@@ -17,12 +15,9 @@ export default function PaywallPage() {
 
   const handleLogin = async () => {
     setLoginInProgress(true)
-    forceUpdate(n => n + 1)
     try {
       await login()
-      forceUpdate(n => n + 1)
       // 로그인 성공 후 이용권 있으면 원래 페이지로, 없으면 구매 페이지로
-      // credits === -1은 무제한
       if (credits > 0 || credits === -1) {
         navigate(returnTo, { replace: true })
       } else {
@@ -30,10 +25,8 @@ export default function PaywallPage() {
       }
     } catch {
       // 에러는 AuthContext에서 처리
-      forceUpdate(n => n + 1)
     } finally {
       setLoginInProgress(false)
-      forceUpdate(n => n + 1)
     }
   }
 
@@ -267,77 +260,6 @@ export default function PaywallPage() {
           돌아가기
         </button>
 
-        {/* 디버그 패널 - 개발 환경에서만 표시 */}
-        {import.meta.env.DEV && (
-          <>
-            <div style={{ marginTop: '32px' }}>
-              <button
-                onClick={() => {
-                  setShowDebug(!showDebug)
-                  forceUpdate(n => n + 1)
-                }}
-                style={{
-                  padding: '8px 16px',
-                  fontSize: '12px',
-                  backgroundColor: colors.gray100,
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: colors.gray600,
-                }}
-              >
-                {showDebug ? '디버그 숨기기' : '디버그 보기'}
-              </button>
-            </div>
-
-            {showDebug && (
-              <div style={{
-                marginTop: '12px',
-                padding: '12px',
-                backgroundColor: '#1a1a2e',
-                borderRadius: '8px',
-                maxHeight: '400px',
-                overflowY: 'auto',
-                textAlign: 'left',
-              }}>
-                <div style={{
-                  fontFamily: 'monospace',
-                  fontSize: '11px',
-                  color: '#00ff00',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-all',
-                }}>
-                  <div style={{ marginBottom: '8px', color: '#ffff00' }}>
-                    === 환경 정보 ===
-                  </div>
-                  <div>DEV: {String(import.meta.env.DEV)}</div>
-                  <div>MODE: {import.meta.env.MODE}</div>
-                  <div>PROD: {String(import.meta.env.PROD)}</div>
-                  <div>isAuthenticated: {String(isAuthenticated)}</div>
-                  <div>isLoading: {String(isLoading)}</div>
-                  <div>loginInProgress: {String(loginInProgress)}</div>
-                  <div>authError: {authError || 'null'}</div>
-                  <div>credits: {credits}</div>
-                  <div style={{ marginTop: '8px', marginBottom: '8px', color: '#ffff00' }}>
-                    === window 객체 ===
-                  </div>
-                  <div>__CONSTANT_HANDLER_MAP: {typeof window !== 'undefined' ? JSON.stringify(window.__CONSTANT_HANDLER_MAP) : 'undefined'}</div>
-                  <div>ReactNativeWebView: {typeof window !== 'undefined' && window.ReactNativeWebView ? 'exists' : 'null'}</div>
-                  <div>__GRANITE_NATIVE_EMITTER: {typeof window !== 'undefined' && window.__GRANITE_NATIVE_EMITTER ? 'exists' : 'null'}</div>
-                  <div style={{ marginTop: '8px', marginBottom: '8px', color: '#ffff00' }}>
-                    === 디버그 로그 ({debugLogs.length}개) ===
-                  </div>
-                  {debugLogs.length === 0 ? (
-                    <div style={{ color: '#888' }}>(로그 없음 - 로그인 버튼을 누르면 로그가 표시됩니다)</div>
-                  ) : (
-                    debugLogs.map((log, i) => (
-                      <div key={i} style={{ marginBottom: '2px' }}>{log}</div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-          </>
-        )}
       </main>
     </div>
   )

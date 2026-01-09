@@ -149,27 +149,50 @@ const ForceGraph = forwardRef<ForceGraphRef, ForceGraphProps>(({
       })
       .attr('stroke-width', d => selectedNodeId === d.id ? 3 : 2)
 
-    // 노드 라벨
+    // 원 안에 이름 표시 (2글자까지)
     node.append('text')
       .text(d => {
-        const maxLen = d.type === 'company' ? 6 : 4
-        return d.name.length > maxLen ? d.name.slice(0, maxLen) + '..' : d.name
+        // 회사는 3글자, 나머지는 2글자
+        const maxLen = d.type === 'company' ? 3 : 2
+        return d.name.slice(0, maxLen)
       })
       .attr('text-anchor', 'middle')
-      .attr('dy', d => getNodeRadius(d.type) + 12)
-      .attr('font-size', '10px')
-      .attr('font-weight', d => d.type === 'company' ? '600' : '400')
-      .attr('fill', colors.gray900)
+      .attr('dy', 4)  // 원 중앙에 배치
+      .attr('font-size', d => d.type === 'company' ? '11px' : '9px')
+      .attr('font-weight', '600')
+      .attr('fill', '#FFFFFF')  // 흰색 글자
+      .style('pointer-events', 'none')  // 클릭 이벤트 투과
 
-    // 임원 주의 배지
+    // 원 아래에 구분자 표시 (임원, 대주주 등)
+    node.append('text')
+      .text(d => nodeTypeColors[d.type]?.label || '')
+      .attr('text-anchor', 'middle')
+      .attr('dy', d => getNodeRadius(d.type) + 12)
+      .attr('font-size', '9px')
+      .attr('font-weight', '500')
+      .attr('fill', colors.gray500)
+      .style('pointer-events', 'none')
+
+    // 임원 주의 배지 (적자기업 경력 있는 경우 - 원 우측 상단에 표시)
+    node.filter(d => d.type === 'officer' && (d.deficitCareerCount ?? 0) >= 1)
+      .append('circle')
+      .attr('cx', d => getNodeRadius(d.type) - 4)
+      .attr('cy', d => -getNodeRadius(d.type) + 4)
+      .attr('r', 6)
+      .attr('fill', '#F97316')
+      .attr('stroke', '#FFFFFF')
+      .attr('stroke-width', 1.5)
+
     node.filter(d => d.type === 'officer' && (d.deficitCareerCount ?? 0) >= 1)
       .append('text')
       .text('!')
+      .attr('x', d => getNodeRadius(d.type) - 4)
+      .attr('y', d => -getNodeRadius(d.type) + 8)
       .attr('text-anchor', 'middle')
-      .attr('dy', 4)
-      .attr('font-size', '12px')
+      .attr('font-size', '9px')
       .attr('font-weight', 'bold')
-      .attr('fill', '#F97316')
+      .attr('fill', '#FFFFFF')
+      .style('pointer-events', 'none')
 
     // 노드 클릭 이벤트
     node.on('click', (event, d) => {
@@ -194,7 +217,7 @@ const ForceGraph = forwardRef<ForceGraphRef, ForceGraphProps>(({
     })
 
     // 초기 줌 조정 (모바일에서 전체 보이도록)
-    setTimeout(() => {
+    const zoomTimer = setTimeout(() => {
       const bounds = container.node()?.getBBox()
       if (bounds) {
         const scale = Math.min(
@@ -212,8 +235,22 @@ const ForceGraph = forwardRef<ForceGraphRef, ForceGraphProps>(({
       }
     }, 500)
 
+    // 메모리 릭 방지: 모든 이벤트 리스너 및 타이머 정리
     return () => {
+      // 타이머 정리
+      clearTimeout(zoomTimer)
+
+      // 시뮬레이션 중지
       simulation.stop()
+
+      // 이벤트 리스너 정리
+      svg.on('.zoom', null)  // zoom 이벤트 제거
+      svg.on('click', null)  // click 이벤트 제거
+      node.on('click', null) // 노드 클릭 이벤트 제거
+
+      // DOM 정리 (selectAll('*').remove()는 다음 렌더에서 수행됨)
+      simulationRef.current = null
+      zoomRef.current = null
     }
   }, [data, width, height, onNodeClick, selectedNodeId])
 

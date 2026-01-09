@@ -196,8 +196,8 @@ export async function getCompanyNetwork(
       isLimited: originalCount > limit,
       originalCount,
     }
-  } catch (error) {
-    console.warn('Neo4j Graph API 실패, PostgreSQL 폴백 시도:', error)
+  } catch {
+    // Neo4j 실패 시 PostgreSQL 폴백 시도
   }
 
   // 2차: PostgreSQL 기반 폴백 API 시도
@@ -212,8 +212,7 @@ export async function getCompanyNetwork(
       isLimited: originalCount > limit,
       originalCount,
     }
-  } catch (fallbackError) {
-    console.warn('PostgreSQL 폴백 API도 실패:', fallbackError)
+  } catch {
     return {
       nodes: [],
       links: [],

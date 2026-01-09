@@ -193,7 +193,7 @@ export default function NodeDetailPanel({
           ) : officerCareer && officerCareer.careers.length > 0 ? (
             <div>
               <div style={{ fontSize: '13px', fontWeight: '600', color: colors.gray600, marginBottom: '8px' }}>
-                경력 ({officerCareer.careers.length}건)
+                상장사 임원 DB ({officerCareer.careers.length}건)
               </div>
               <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
                 {officerCareer.careers.slice(0, 5).map((career, idx) => (
@@ -221,6 +221,44 @@ export default function NodeDetailPanel({
               </div>
             </div>
           ) : null}
+
+          {/* 사업보고서 주요경력 원문 (v2.4) */}
+          {!isLoadingCareer && officerCareer?.careerRawText && (
+            <div style={{ marginTop: '16px' }}>
+              <div style={{
+                fontSize: '13px',
+                fontWeight: '600',
+                color: '#F59E0B',
+                marginBottom: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}>
+                사업보고서 주요경력
+                <span style={{ fontSize: '11px', color: colors.gray500, fontWeight: '400' }}>(원문)</span>
+              </div>
+              <div style={{
+                backgroundColor: colors.gray50,
+                borderRadius: '8px',
+                padding: '12px',
+                border: `1px solid ${colors.gray100}`,
+              }}>
+                <pre style={{
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  fontSize: '12px',
+                  color: colors.gray600,
+                  lineHeight: '1.6',
+                  margin: 0,
+                  fontFamily: 'inherit',
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                }}>
+                  {officerCareer.careerRawText}
+                </pre>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

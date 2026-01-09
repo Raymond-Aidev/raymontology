@@ -64,8 +64,7 @@ export default function GraphPage() {
         setGraphData(data)
         setIsNodeLimited(data.isLimited)
         setOriginalNodeCount(data.originalCount)
-      } catch (err) {
-        console.error('Graph load error:', err)
+      } catch {
         setError('관계도를 불러오는데 실패했습니다')
       } finally {
         setIsLoading(false)

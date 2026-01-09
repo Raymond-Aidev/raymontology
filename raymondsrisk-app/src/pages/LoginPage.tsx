@@ -1,11 +1,10 @@
 import { useState } from 'react'
-import { useAuth, debugLogs } from '../contexts/AuthContext'
+import { useAuth } from '../contexts/AuthContext'
 import { colors } from '../constants/colors'
 
 export default function LoginPage() {
   const { login, isLoading, error } = useAuth()
   const [loginInProgress, setLoginInProgress] = useState(false)
-  const [showDebug, setShowDebug] = useState(false)
 
   const handleLogin = async () => {
     setLoginInProgress(true)
@@ -162,63 +161,6 @@ export default function LoginPage() {
           </ul>
         </div>
 
-        {/* 디버그 패널 (개발용) */}
-        <div style={{ marginTop: '32px' }}>
-          <button
-            onClick={() => setShowDebug(!showDebug)}
-            style={{
-              padding: '8px 16px',
-              fontSize: '12px',
-              backgroundColor: colors.gray100,
-              border: 'none',
-              borderRadius: '8px',
-              color: colors.gray600,
-              cursor: 'pointer',
-            }}
-          >
-            {showDebug ? '디버그 숨기기' : '디버그 보기'}
-          </button>
-
-          {showDebug && (
-            <div style={{
-              marginTop: '12px',
-              padding: '12px',
-              backgroundColor: '#1a1a2e',
-              borderRadius: '8px',
-              maxHeight: '300px',
-              overflowY: 'auto',
-              textAlign: 'left',
-              width: '100%',
-              maxWidth: '320px',
-            }}>
-              <div style={{
-                fontFamily: 'monospace',
-                fontSize: '11px',
-                color: '#00ff00',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-all',
-              }}>
-                <div style={{ marginBottom: '8px', color: '#ffff00' }}>
-                  === 환경 정보 ===
-                </div>
-                <div>DEV: {String(import.meta.env.DEV)}</div>
-                <div>MODE: {import.meta.env.MODE}</div>
-                <div>PROD: {String(import.meta.env.PROD)}</div>
-
-                <div style={{ marginTop: '8px', marginBottom: '8px', color: '#ffff00' }}>
-                  === 디버그 로그 ({debugLogs.length}개) ===
-                </div>
-                {debugLogs.length === 0 ? (
-                  <div style={{ color: '#888' }}>(로그 없음)</div>
-                ) : (
-                  debugLogs.map((log, i) => (
-                    <div key={i} style={{ marginBottom: '2px' }}>{log}</div>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-        </div>
       </main>
     </div>
   )

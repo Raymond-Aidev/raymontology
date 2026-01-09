@@ -7,35 +7,49 @@ import { colors } from '../constants/colors'
 
 export default function MyCompaniesPage() {
   const navigate = useNavigate()
-  const { isAuthenticated, isLoading: authLoading, credits, login } = useAuth()
+  const { isAuthenticated, isLoading: authLoading, credits, login, refreshCredits } = useAuth()
 
   const [companies, setCompanies] = useState<ViewedCompany[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [retentionDays, setRetentionDays] = useState(30)
 
+  // 페이지 진입 시 이용권 잔액 새로고침 (캐시 동기화)
+  useEffect(() => {
+    if (isAuthenticated && !authLoading) {
+      refreshCredits()
+    }
+  }, [isAuthenticated, authLoading, refreshCredits])
+
   // 조회한 기업 목록 로드
   useEffect(() => {
+    let isMounted = true  // 메모리 릭 방지
+
     const loadCompanies = async () => {
       if (!isAuthenticated) {
-        setIsLoading(false)
+        if (isMounted) setIsLoading(false)
         return
       }
 
       try {
         const data = await creditService.getViewedCompanies(50, false)
+        if (!isMounted) return  // 언마운트 체크
         setCompanies(data.companies)
         setRetentionDays(data.retentionDays)
-      } catch (err) {
-        console.error('조회 기업 목록 로드 실패:', err)
+      } catch {
+        if (!isMounted) return  // 언마운트 체크
         setError('목록을 불러올 수 없습니다')
       } finally {
-        setIsLoading(false)
+        if (isMounted) setIsLoading(false)
       }
     }
 
     if (!authLoading) {
       loadCompanies()
+    }
+
+    return () => {
+      isMounted = false  // cleanup
     }
   }, [isAuthenticated, authLoading])
 

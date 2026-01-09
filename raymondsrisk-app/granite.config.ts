@@ -8,7 +8,7 @@ export default defineConfig({
     icon: 'https://static.toss.im/appsintoss/4657/5a80478b-dc5e-4b02-974e-67b68bd7ed71.png', // 앱인토스 콘솔에서 업로드한 아이콘
   },
   web: {
-    host: '192.168.35.235', // 실기기 테스트용 로컬 IP (ipconfig getifaddr en0로 확인)
+    host: '192.168.100.24', // 실기기 테스트용 로컬 IP (ipconfig getifaddr en0)
     port: 5173,
     commands: {
       dev: 'vite --host', // --host 옵션으로 외부 접속 허용
@@ -18,5 +18,5 @@ export default defineConfig({
   webViewProps: {
     type: 'partner', // 'partner'(기본) 또는 'game'(전체화면)
   },
-  permissions: [],
+  permissions: [], // 빈 배열 필수 (제거하면 RCTConvertArrayValue 크래시)
 });

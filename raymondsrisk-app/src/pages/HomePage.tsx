@@ -11,7 +11,15 @@ export default function HomePage() {
 
   // 통계 데이터 로드
   useEffect(() => {
-    getPlatformStats().then(setStats)
+    let isMounted = true  // 메모리 릭 방지
+
+    getPlatformStats().then(data => {
+      if (isMounted) setStats(data)
+    })
+
+    return () => {
+      isMounted = false  // cleanup
+    }
   }, [])
 
   const handleSearch = () => {

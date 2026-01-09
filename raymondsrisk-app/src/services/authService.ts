@@ -93,7 +93,6 @@ export async function logout(): Promise<void> {
       })
     } catch {
       // 서버 로그아웃 실패해도 로컬은 정리
-      console.warn('Server logout failed, clearing local storage')
     }
   }
 

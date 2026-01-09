@@ -72,8 +72,7 @@ export async function searchCompanies(
       params: { q: query, limit },
     })
     return response.data.items.map(mapApiResponseToFrontend)
-  } catch (error) {
-    console.error('회사 검색 API 호출 실패:', error)
+  } catch {
     return []
   }
 }
@@ -95,8 +94,7 @@ export async function getHighRiskCompanies(
       .sort((a, b) => b.cb_count - a.cb_count)
       .slice(0, limit)
       .map(mapApiResponseToFrontend)
-  } catch (error) {
-    console.error('고위험 회사 목록 API 호출 실패:', error)
+  } catch {
     return []
   }
 }
@@ -120,8 +118,7 @@ export async function getPlatformStats(): Promise<PlatformStats> {
   try {
     const response = await apiClient.get<PlatformStats>('/api/companies/stats')
     return response.data
-  } catch (error) {
-    console.error('플랫폼 통계 API 호출 실패:', error)
+  } catch {
     return {
       companies: 3922,
       convertible_bonds: 1463,
