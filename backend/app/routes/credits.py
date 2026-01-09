@@ -578,7 +578,7 @@ async def get_viewed_companies(
                 "lastViewedAt": v.last_viewed_at.isoformat(),
                 "viewCount": v.view_count,
                 "expiresAt": v.expires_at.isoformat() if v.expires_at else None,
-                "isExpired": v.expires_at and v.expires_at < now,
+                "isExpired": bool(v.expires_at and v.expires_at < now),
                 "daysRemaining": max(0, (v.expires_at - now).days) if v.expires_at else None,
             }
             for v in views
