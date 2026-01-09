@@ -3,8 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import HomePage from './pages/HomePage'
 import SearchPage from './pages/SearchPage'
-import ReportPage from './pages/ReportPage'
-import GraphPage from './pages/GraphPage'
+import AnalysisPage from './pages/AnalysisPage'
 import PaywallPage from './pages/PaywallPage'
 import PurchasePage from './pages/PurchasePage'
 import MyCompaniesPage from './pages/MyCompaniesPage'
@@ -53,9 +52,9 @@ function AppRoutes() {
           {/* 내 조회 기업 (MY) */}
           <Route path="/my" element={<MyCompaniesPage />} />
 
-          {/* 유료 영역 (이용권 필요) */}
-          <Route path="/report/:corpCode" element={<ReportPage />} />
-          <Route path="/graph/:corpCode" element={<GraphPage />} />
+          {/* 유료 영역 (이용권 필요) - 통합 분석 페이지 */}
+          <Route path="/report/:corpCode" element={<AnalysisPage />} />
+          <Route path="/analysis/:corpCode" element={<AnalysisPage />} />
         </Routes>
       </RequireAuth>
     </BrowserRouter>

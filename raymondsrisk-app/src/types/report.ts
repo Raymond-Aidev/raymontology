@@ -92,3 +92,48 @@ export function getRiskLevel(score: number): 'low' | 'medium' | 'high' {
   if (score <= 60) return 'medium'
   return 'high'
 }
+
+// 주주 유형
+export type ShareholderType = 'major' | 'executive' | 'institution' | 'general'
+
+// 주주 데이터
+export interface Shareholder {
+  id: string
+  name: string
+  shares: number
+  percentage: number
+  type: ShareholderType
+}
+
+// 계열회사 관계 유형
+export type AffiliateRelation = 'subsidiary' | 'grandchild' | 'associate'
+
+// 계열회사 데이터
+export interface Affiliate {
+  id: string
+  name: string
+  company_id?: string
+  relation: AffiliateRelation
+  percentage: number
+  industry: string
+  founded_date?: string
+}
+
+// 전체 리포트 데이터
+export interface CompanyReportData {
+  companyId: string      // UUID
+  corpCode: string       // DART 기업코드 (8자리)
+  ticker: string         // 종목코드 (6자리)
+  companyName: string
+  riskScore: RiskScore
+  investmentGrade: InvestmentGrade
+  cbIssuances: CBIssuance[]
+  cbSubscribers: CBSubscriber[]
+  officers: Officer[]
+  financials: FinancialStatement[]
+  shareholders: Shareholder[]
+  affiliates: Affiliate[]
+  riskSignals: RiskSignal[]
+  warnings: string[]
+  calculatedAt: string
+}

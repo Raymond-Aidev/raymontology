@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react'
 import { appLogin as tossAppLogin, getOperationalEnvironment } from '@apps-in-toss/web-framework'
-import type { AuthState, TossUser } from '../types/auth'
+import type { AuthState } from '../types/auth'
 import '../types/auth' // 전역 타입 선언 import
 import * as authService from '../services/authService'
 
@@ -19,85 +19,106 @@ const defaultState: AuthState = {
   error: null,
 }
 
-// 디버그 로그를 저장하는 전역 배열 (화면에 표시용)
-export const debugLogs: string[] = []
-function debugLog(message: string) {
-  const timestamp = new Date().toLocaleTimeString()
-  const log = `[${timestamp}] ${message}`
-  debugLogs.push(log)
-  console.log(log)
-  // 최대 50개 로그 유지
-  if (debugLogs.length > 50) debugLogs.shift()
-}
-
 const AuthContext = createContext<AuthContextType | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>(defaultState)
 
-  // 초기화: 저장된 인증 정보 복원 + 서버 검증
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        const { user, accessToken } = authService.restoreAuth()
+  // 토큰 검증 및 인증 상태 업데이트 함수 (재사용)
+  const validateAndRestoreAuth = useCallback(async (isMountedRef: { current: boolean }) => {
+    try {
+      const { user, accessToken } = authService.restoreAuth()
 
-        if (user && accessToken) {
-          debugLog('저장된 토큰 발견 - 서버 검증 시작')
+      if (user && accessToken) {
+        // 서버에서 토큰 유효성 검증 (토스 앱에서 연동 해제 시 무효화됨)
+        const isValid = await authService.validateStoredToken()
+        if (!isMountedRef.current) return
 
-          // 핵심: 서버에서 토큰 유효성 검증
-          // 토스 앱에서 연동 해제 시 서버 토큰이 무효화됨
-          const isValid = await authService.validateStoredToken()
+        if (!isValid) {
+          setState({ ...defaultState, isLoading: false })
+          return
+        }
 
-          if (!isValid) {
-            // 토큰 무효화됨 (연동 해제) - 재로그인 필요
-            debugLog('토큰 무효화됨 - 재로그인 필요')
-            setState({
-              ...defaultState,
-              isLoading: false,
-            })
-            return
-          }
-
-          debugLog('토큰 유효 - 이용권 조회')
-          // 토큰 유효 - 이용권 조회
-          try {
-            const creditInfo = await authService.fetchCredits()
-            setState({
-              isAuthenticated: true,
-              isLoading: false,
-              user,
-              credits: creditInfo.credits,
-              error: null,
-            })
-            debugLog(`인증 복원 완료: ${creditInfo.credits}건`)
-          } catch {
-            // 이용권 조회 실패해도 인증은 유지
-            setState({
-              isAuthenticated: true,
-              isLoading: false,
-              user,
-              credits: 0,
-              error: null,
-            })
-            debugLog('인증 복원 완료 (이용권 조회 실패)')
-          }
-        } else {
-          debugLog('저장된 토큰 없음 - 미인증 상태')
+        // 토큰 유효 - 이용권 조회
+        try {
+          const creditInfo = await authService.fetchCredits()
+          if (!isMountedRef.current) return
           setState({
-            ...defaultState,
+            isAuthenticated: true,
             isLoading: false,
+            user,
+            credits: creditInfo.credits,
+            error: null,
+          })
+        } catch {
+          if (!isMountedRef.current) return
+          setState({
+            isAuthenticated: true,
+            isLoading: false,
+            user,
+            credits: 0,
+            error: null,
           })
         }
-      } catch (error) {
-        debugLog(`initAuth 에러: ${error}`)
-        setState({
-          ...defaultState,
-          isLoading: false,
-        })
+      } else {
+        if (!isMountedRef.current) return
+        setState({ ...defaultState, isLoading: false })
+      }
+    } catch {
+      if (!isMountedRef.current) return
+      setState({
+        ...defaultState,
+        isLoading: false,
+      })
+    }
+  }, [])
+
+  // 초기화: 저장된 인증 정보 복원 + 서버 검증
+  useEffect(() => {
+    const isMountedRef = { current: true }  // 메모리 릭 방지: 마운트 상태 추적
+
+    validateAndRestoreAuth(isMountedRef)
+
+    return () => {
+      isMountedRef.current = false  // cleanup: 언마운트 표시
+    }
+  }, [validateAndRestoreAuth])
+
+  // 포그라운드 복귀 시 토큰 재검증 (토스 앱에서 연동 해제 감지)
+  useEffect(() => {
+    const isMountedRef = { current: true }
+
+    const handleVisibilityChange = async () => {
+      // 포그라운드로 돌아왔고, 현재 인증된 상태인 경우에만 재검증
+      if (document.visibilityState === 'visible' && state.isAuthenticated) {
+        const isValid = await authService.validateStoredToken()
+        if (!isMountedRef.current) return
+
+        if (!isValid) {
+          setState({ ...defaultState, isLoading: false })
+        }
       }
     }
 
-    initAuth()
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      isMountedRef.current = false
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [state.isAuthenticated])
+
+  // 401 Unauthorized 전역 이벤트 구독 (API 호출 시 토큰 무효화 감지)
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      setState({ ...defaultState, isLoading: false })
+    }
+
+    window.addEventListener('auth:unauthorized', handleUnauthorized)
+
+    return () => {
+      window.removeEventListener('auth:unauthorized', handleUnauthorized)
+    }
   }, [])
 
   // 토스 로그인
@@ -105,47 +126,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState(prev => ({ ...prev, isLoading: true, error: null }))
 
     try {
-      debugLog('login() 시작')
-      debugLog(`import.meta.env.DEV = ${import.meta.env.DEV}`)
-      debugLog(`import.meta.env.MODE = ${import.meta.env.MODE}`)
-      debugLog(`import.meta.env.PROD = ${import.meta.env.PROD}`)
-
-      // 개발 환경(granite dev)에서는 모의 로그인
-      if (import.meta.env.DEV) {
-        debugLog('DEV 환경 - 모의 로그인 실행')
-        const mockUserKey = 'dev_user_' + Date.now()
-        const mockUser: TossUser = {
-          userKey: mockUserKey,
-          name: '테스트 사용자',
-        }
-        const mockToken = `dev_token_${mockUserKey}`
-        localStorage.setItem('raymondsrisk_access_token', mockToken)
-        localStorage.setItem('raymondsrisk_refresh_token', mockToken)
-        localStorage.setItem('raymondsrisk_user_key', mockUserKey)
-        localStorage.setItem('raymondsrisk_user_info', JSON.stringify(mockUser))
-
-        setState({
-          isAuthenticated: true,
-          isLoading: false,
-          user: mockUser,
-          credits: 10,
-          error: null,
-        })
-        debugLog('DEV 모의 로그인 완료')
-        return
-      }
-
-      // 프로덕션 빌드(.ait 파일): 환경 감지
-      debugLog('PROD 환경 - SDK 브릿지 확인 시작')
-
-      // window 객체 상태 덤프
-      debugLog(`typeof window = ${typeof window}`)
-      if (typeof window !== 'undefined') {
-        debugLog(`window.__CONSTANT_HANDLER_MAP = ${JSON.stringify(window.__CONSTANT_HANDLER_MAP)}`)
-        debugLog(`window.ReactNativeWebView 존재 = ${!!window.ReactNativeWebView}`)
-        debugLog(`window.__GRANITE_NATIVE_EMITTER 존재 = ${!!window.__GRANITE_NATIVE_EMITTER}`)
-      }
-
       // SDK 브릿지 초기화 상태 확인 (최대 3초 대기)
       const checkBridge = () => {
         const hasConstantMap = typeof window !== 'undefined' &&
@@ -159,66 +139,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       let bridgeCheck = checkBridge()
-      debugLog(`초기 브릿지 상태: hasConstantMap=${bridgeCheck.hasConstantMap}, hasWebView=${bridgeCheck.hasWebView}`)
 
       // 브릿지가 초기화되지 않은 경우 최대 3초간 대기 (100ms 간격)
       if (!bridgeCheck.hasConstantMap || !bridgeCheck.hasWebView) {
-        debugLog('브릿지 미초기화 - 초기화 대기 시작 (최대 3초)')
         for (let i = 0; i < 30; i++) {
           await new Promise(resolve => setTimeout(resolve, 100))
           bridgeCheck = checkBridge()
           if (bridgeCheck.hasConstantMap && bridgeCheck.hasWebView) {
-            debugLog(`브릿지 초기화 완료 (${(i + 1) * 100}ms 후)`)
             break
           }
         }
       }
 
-      debugLog(`최종 브릿지 상태: hasConstantMap=${bridgeCheck.hasConstantMap}, hasWebView=${bridgeCheck.hasWebView}`)
-
       // 대기 후에도 브릿지가 초기화되지 않은 경우 에러 반환
       if (!bridgeCheck.hasConstantMap || !bridgeCheck.hasWebView) {
-        debugLog('브릿지 초기화 실패 - 토스앱/샌드박스앱 환경 필요')
-        throw new Error('토스 앱 또는 샌드박스 앱에서 실행해주세요. 앱을 다시 시작해보세요.')
+        throw new Error('토스 앱 또는 샌드박스 앱에서 실행해주세요.')
       }
 
-      // SDK 브릿지 초기화됨 - 환경 확인
-      debugLog('브릿지 초기화됨 - getOperationalEnvironment 호출')
-      let environment: 'toss' | 'sandbox' = 'sandbox'
+      // 환경 확인
       try {
-        environment = getOperationalEnvironment()
-        debugLog(`getOperationalEnvironment() = ${environment}`)
-      } catch (e) {
-        debugLog(`getOperationalEnvironment() 에러: ${e}`)
-        environment = 'sandbox'
+        getOperationalEnvironment()
+      } catch {
+        // 환경 확인 실패해도 계속 진행
       }
-
-      // 실제 토스 로그인 연동
-      debugLog(`환경: ${environment} - appLogin 호출`)
 
       // 토스앱/샌드박스: appLogin으로 인가 코드 받기
       const { authorizationCode, referrer } = await tossAppLogin()
-      debugLog(`appLogin 성공: referrer=${referrer}, authCode=${authorizationCode.substring(0, 10)}...`)
 
       // 서버에 인가 코드 전송하여 토큰 발급
-      debugLog('서버에 토큰 요청 중...')
       await authService.exchangeCodeForToken(authorizationCode, referrer)
-      debugLog('토큰 발급 완료')
 
       // 사용자 정보 조회
-      debugLog('사용자 정보 조회 중...')
       const user = await authService.fetchUserInfo()
-      debugLog(`사용자 정보: ${user.userKey}`)
 
       // 이용권 조회
       let credits = 0
       try {
-        debugLog('이용권 조회 중...')
         const creditInfo = await authService.fetchCredits()
         credits = creditInfo.credits
-        debugLog(`이용권: ${credits}건`)
-      } catch (e) {
-        debugLog(`이용권 조회 실패: ${e}`)
+      } catch {
         // 이용권 조회 실패해도 로그인은 성공
       }
 
@@ -229,11 +188,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         credits,
         error: null,
       })
-      debugLog('로그인 완료')
     } catch (error) {
       const message = error instanceof Error ? error.message : '로그인에 실패했습니다.'
-      debugLog(`login() 에러: ${message}`)
-      debugLog(`에러 상세: ${JSON.stringify(error)}`)
       setState(prev => ({
         ...prev,
         isLoading: false,

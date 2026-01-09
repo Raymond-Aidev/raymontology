@@ -92,7 +92,6 @@ export async function getProducts(): Promise<CreditProduct[]> {
     return response.data.products
   } catch {
     // API 실패 시 기본 상품 반환 (2026-01-07 가격 개편)
-    console.warn('상품 목록 조회 실패, 기본 상품 사용')
     return [
       { id: 'report_10', name: '리포트 10건', credits: 10, price: 1000, badge: null },
       { id: 'report_30', name: '리포트 30건', credits: 30, price: 2000, badge: '추천' },
@@ -129,19 +128,36 @@ export async function useCreditsForReport(
   companyId: string,
   companyName?: string
 ): Promise<UseCreditsResult> {
+  console.log('[creditService] useCreditsForReport called:', { companyId, companyName })
 
-  const response = await apiClient.post<UseCreditsResult>(
-    '/api/credits/use',
-    null,
-    {
-      headers: getAuthHeaders(),
-      params: {
-        company_id: companyId,
-        company_name: companyName,
-      },
-    }
-  )
-  return response.data
+  // 토큰 확인 (디버깅용)
+  const accessToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)
+  console.log('[creditService] accessToken exists:', !!accessToken, accessToken ? `${accessToken.substring(0, 20)}...` : 'null')
+
+  if (!accessToken) {
+    console.error('[creditService] No access token - throwing error')
+    throw new Error('인증이 필요합니다')
+  }
+
+  try {
+    console.log('[creditService] Calling POST /api/credits/use')
+    const response = await apiClient.post<UseCreditsResult>(
+      '/api/credits/use',
+      null,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        params: {
+          company_id: companyId,
+          company_name: companyName,
+        },
+      }
+    )
+    console.log('[creditService] API response:', response.data)
+    return response.data
+  } catch (error) {
+    console.error('[creditService] API call failed:', error)
+    throw error
+  }
 }
 
 /**
