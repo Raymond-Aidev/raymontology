@@ -569,20 +569,48 @@ async def get_viewed_companies(
     )
     views = result.scalars().all()
 
-    return {
-        "companies": [
-            {
+    # 응답 데이터 구성 (예외 방지를 위해 개별 처리)
+    companies_data = []
+    for v in views:
+        try:
+            # expires_at이 timezone-aware인 경우 처리
+            expires_at_dt = v.expires_at
+            if expires_at_dt:
+                # timezone-aware datetime을 naive로 변환 (UTC 기준)
+                if hasattr(expires_at_dt, 'tzinfo') and expires_at_dt.tzinfo is not None:
+                    expires_at_dt = expires_at_dt.replace(tzinfo=None)
+                is_expired = expires_at_dt < now
+                days_remaining = max(0, (expires_at_dt - now).days)
+            else:
+                is_expired = False
+                days_remaining = None
+
+            companies_data.append({
                 "companyId": v.company_id,
                 "companyName": v.company_name,
-                "firstViewedAt": v.first_viewed_at.isoformat(),
-                "lastViewedAt": v.last_viewed_at.isoformat(),
-                "viewCount": v.view_count,
+                "firstViewedAt": v.first_viewed_at.isoformat() if v.first_viewed_at else None,
+                "lastViewedAt": v.last_viewed_at.isoformat() if v.last_viewed_at else None,
+                "viewCount": v.view_count or 1,
                 "expiresAt": v.expires_at.isoformat() if v.expires_at else None,
-                "isExpired": bool(v.expires_at and v.expires_at < now),
-                "daysRemaining": max(0, (v.expires_at - now).days) if v.expires_at else None,
-            }
-            for v in views
-        ],
-        "total": len(views),
+                "isExpired": is_expired,
+                "daysRemaining": days_remaining,
+            })
+        except Exception as e:
+            logger.error(f"Error processing view {v.id}: {e}")
+            # 에러 발생 시에도 기본 데이터 포함
+            companies_data.append({
+                "companyId": v.company_id,
+                "companyName": v.company_name,
+                "firstViewedAt": None,
+                "lastViewedAt": None,
+                "viewCount": 1,
+                "expiresAt": None,
+                "isExpired": False,
+                "daysRemaining": None,
+            })
+
+    return {
+        "companies": companies_data,
+        "total": len(companies_data),
         "retentionDays": REPORT_VIEW_RETENTION_DAYS,
     }
