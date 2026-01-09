@@ -94,7 +94,7 @@ export async function getProducts(): Promise<CreditProduct[]> {
     // API 실패 시 기본 상품 반환 (2026-01-07 가격 개편)
     return [
       { id: 'report_10', name: '리포트 10건', credits: 10, price: 1000, badge: null },
-      { id: 'report_30', name: '리포트 30건', credits: 30, price: 2000, badge: '추천' },
+      { id: 'report_30', name: '리포트 30건', credits: 30, price: 3000, badge: '추천' },
       { id: 'report_unlimited', name: '무제한 이용권', credits: -1, price: 10000, badge: 'BEST' },
     ]
   }
@@ -186,14 +186,30 @@ export async function getViewedCompanies(
   limit: number = 50,
   includeExpired: boolean = false
 ): Promise<{ companies: ViewedCompany[]; total: number; retentionDays: number }> {
-  const response = await apiClient.get<{ companies: ViewedCompany[]; total: number; retentionDays: number }>(
-    '/api/credits/viewed-companies',
-    {
-      headers: getAuthHeaders(),
-      params: { limit, include_expired: includeExpired },
-    }
-  )
-  return response.data
+  console.log('[creditService] getViewedCompanies called:', { limit, includeExpired })
+
+  const accessToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)
+  console.log('[creditService] accessToken exists:', !!accessToken)
+
+  if (!accessToken) {
+    console.error('[creditService] No access token for getViewedCompanies')
+    throw new Error('인증이 필요합니다')
+  }
+
+  try {
+    const response = await apiClient.get<{ companies: ViewedCompany[]; total: number; retentionDays: number }>(
+      '/api/credits/viewed-companies',
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        params: { limit, include_expired: includeExpired },
+      }
+    )
+    console.log('[creditService] getViewedCompanies response:', response.data)
+    return response.data
+  } catch (error) {
+    console.error('[creditService] getViewedCompanies failed:', error)
+    throw error
+  }
 }
 
 /**

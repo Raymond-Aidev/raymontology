@@ -203,7 +203,7 @@ async def get_products(
                     id="report_30",
                     name="리포트 30건",
                     credits=30,
-                    price=2000,
+                    price=3000,
                     badge="추천",
                 ),
                 CreditProductResponse(
@@ -248,11 +248,11 @@ async def purchase_credits(
     - P1: 중복 구매 체크도 잠금 상태에서 수행
     - P3: UNLIMITED_CREDITS 상수 사용
     """
-    # 상품 정보 조회 (2026-01-07 가격 개편)
-    # - 10건 1,000원, 30건 2,000원, 무제한 10,000원
+    # 상품 정보 조회 (2026-01-09 가격 개편)
+    # - 10건 1,000원, 30건 3,000원, 무제한 10,000원
     product_info = {
         "report_10": {"name": "리포트 10건", "credits": 10, "price": 1000},
-        "report_30": {"name": "리포트 30건", "credits": 30, "price": 2000},
+        "report_30": {"name": "리포트 30건", "credits": 30, "price": 3000},
         "report_unlimited": {"name": "무제한 이용권", "credits": UNLIMITED_CREDITS, "price": 10000},
     }
 

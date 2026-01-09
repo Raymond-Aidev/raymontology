@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { IAP } from '@apps-in-toss/web-framework'
-import { useAuth, debugLogs } from '../contexts/AuthContext'
+import { useAuth } from '../contexts/AuthContext'
 import '../types/auth' // 전역 타입 선언 import
 import * as creditService from '../services/creditService'
 import type { CreditProduct } from '../services/creditService'
 import { colors } from '../constants/colors'
 
-// 기본 상품 목록 (API 실패 시 폴백) - 2026-01-07 가격 개편
+// 기본 상품 목록 (API 실패 시 폴백) - 2026-01-09 가격 개편
 const DEFAULT_PRODUCTS: ProductDisplay[] = [
   {
     id: 'report_10',
@@ -21,8 +21,8 @@ const DEFAULT_PRODUCTS: ProductDisplay[] = [
     id: 'report_30',
     name: '리포트 30건',
     credits: 30,
-    price: 2000,
-    pricePerCredit: 67,
+    price: 3000,
+    pricePerCredit: 100,
     badge: '추천',
   },
   {
@@ -45,8 +45,6 @@ export default function PurchasePage() {
   const { isAuthenticated, credits, refreshCredits, login, isLoading: authLoading, error: authError } = useAuth()
 
   const [products, setProducts] = useState<ProductDisplay[]>(DEFAULT_PRODUCTS)
-  const [showDebug, setShowDebug] = useState(false)
-  const [, forceUpdate] = useState(0) // 디버그 로그 리렌더용
   const [selectedProduct, setSelectedProduct] = useState(DEFAULT_PRODUCTS[1].id)
   const [isPurchasing, setIsPurchasing] = useState(false)
   const [isLoggingIn, setIsLoggingIn] = useState(false)
@@ -70,8 +68,7 @@ export default function PurchasePage() {
         if (recommended) {
           setSelectedProduct(recommended.id)
         }
-      } catch (err) {
-        console.error('상품 목록 로드 실패:', err)
+      } catch {
         // 폴백 상품 사용
       }
     }
@@ -358,9 +355,8 @@ export default function PurchasePage() {
               setError(null)
               try {
                 await login()
-              } catch (err) {
+              } catch {
                 // 에러는 AuthContext에서 처리됨
-                console.error('로그인 실패:', err)
               } finally {
                 setIsLoggingIn(false)
               }
@@ -421,69 +417,6 @@ export default function PurchasePage() {
           </p>
         </div>
 
-        {/* 디버그 패널 - 개발 환경에서만 표시 */}
-        {import.meta.env.DEV && (
-          <>
-            <div style={{ marginTop: '20px', textAlign: 'center' }}>
-              <button
-                onClick={() => {
-                  setShowDebug(!showDebug)
-                  forceUpdate(n => n + 1)
-                }}
-                style={{
-                  padding: '8px 16px',
-                  fontSize: '12px',
-                  backgroundColor: colors.gray100,
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: colors.gray600,
-                }}
-              >
-                {showDebug ? '디버그 숨기기' : '디버그 보기'}
-              </button>
-            </div>
-
-            {showDebug && (
-              <div style={{
-                marginTop: '12px',
-                padding: '12px',
-                backgroundColor: '#1a1a2e',
-                borderRadius: '8px',
-                maxHeight: '300px',
-                overflowY: 'auto',
-              }}>
-                <div style={{
-                  fontFamily: 'monospace',
-                  fontSize: '11px',
-                  color: '#00ff00',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-all',
-                }}>
-                  <div style={{ marginBottom: '8px', color: '#ffff00' }}>
-                    === 환경 정보 ===
-                  </div>
-                  <div>DEV: {String(import.meta.env.DEV)}</div>
-                  <div>MODE: {import.meta.env.MODE}</div>
-                  <div>PROD: {String(import.meta.env.PROD)}</div>
-                  <div>isAuthenticated: {String(isAuthenticated)}</div>
-                  <div>authLoading: {String(authLoading)}</div>
-                  <div>authError: {authError || 'null'}</div>
-                  <div>credits: {credits}</div>
-                  <div style={{ marginTop: '8px', marginBottom: '8px', color: '#ffff00' }}>
-                    === 디버그 로그 ===
-                  </div>
-                  {debugLogs.length === 0 ? (
-                    <div style={{ color: '#888' }}>(로그 없음 - 로그인 버튼을 누르면 로그가 표시됩니다)</div>
-                  ) : (
-                    debugLogs.map((log, i) => (
-                      <div key={i} style={{ marginBottom: '2px' }}>{log}</div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-          </>
-        )}
       </main>
     </div>
   )
