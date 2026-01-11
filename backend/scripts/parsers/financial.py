@@ -291,8 +291,33 @@ class FinancialParser(BaseParser):
         'capex': [
             '유형자산의취득', '유형자산의 취득', '유형자산취득',
             '유형자산의 증가', '설비투자', '시설투자',
-            '토지의취득', '건물의취득', '기계장치의취득',
-            '유형자산 취득으로 인한 현금유출', '유형자산의취득(자본적지출)'
+            '유형자산 취득으로 인한 현금유출', '유형자산의취득(자본적지출)',
+            '유형자산및투자부동산의취득', '유형자산 및 투자부동산의 취득'
+        ],
+        # v3.1: 개별 유형자산 취득 (합산 대상)
+        'capex_land': [
+            '토지의취득', '토지의 취득', '토지취득', '토지 취득'
+        ],
+        'capex_building': [
+            '건물의취득', '건물의 취득', '건물취득', '건물 취득'
+        ],
+        'capex_machinery': [
+            '기계장치의취득', '기계장치의 취득', '기계장치취득', '기계장치 취득'
+        ],
+        'capex_equipment': [
+            '시설장치의취득', '시설장치의 취득', '시설장치취득', '시설장치 취득',
+            '설비의취득', '설비의 취득'
+        ],
+        'capex_vehicle': [
+            '차량운반구의취득', '차량운반구의 취득', '차량운반구취득', '차량 취득'
+        ],
+        'capex_tools': [
+            '공구와기구의취득', '공구와기구의 취득', '공구기구의취득',
+            '비품의취득', '비품의 취득', '비품취득', '집기비품의취득'
+        ],
+        'capex_construction': [
+            '건설중인자산의증가', '건설중인자산 증가', '건설중인자산의취득',
+            '건설중인자산취득', 'CIP의증가'
         ],
         'intangible_acquisition': [
             '무형자산의취득', '무형자산의 취득', '무형자산취득',
@@ -352,7 +377,10 @@ class FinancialParser(BaseParser):
             'fields': [
                 'operating_cash_flow', 'investing_cash_flow', 'financing_cash_flow',
                 'capex', 'intangible_acquisition', 'dividend_paid',
-                'treasury_stock_acquisition', 'stock_issuance', 'bond_issuance'
+                'treasury_stock_acquisition', 'stock_issuance', 'bond_issuance',
+                # v3.1: 개별 CAPEX 항목 (합산용)
+                'capex_land', 'capex_building', 'capex_machinery',
+                'capex_equipment', 'capex_vehicle', 'capex_tools', 'capex_construction'
             ]
         }
     ]
@@ -442,6 +470,8 @@ class FinancialParser(BaseParser):
                 parsed = enhanced
 
             if parsed:
+                # v3.1: 개별 CAPEX 합산
+                parsed = self._aggregate_capex(parsed)
                 result['data'] = parsed
                 result['fs_type'] = fs_type
                 result['success'] = True
@@ -477,6 +507,45 @@ class FinancialParser(BaseParser):
                 pass
 
         return None
+
+    def _aggregate_capex(self, parsed: Dict[str, int]) -> Dict[str, int]:
+        """v3.1: 개별 유형자산 취득 항목을 합산하여 capex 계산
+
+        DART 현금흐름표에서 CAPEX가 '유형자산의취득'이 아닌
+        개별 자산(토지, 건물, 기계장치 등)으로 분리된 경우 합산
+        """
+        # capex가 이미 있으면 그대로 반환
+        if parsed.get('capex') is not None:
+            return parsed
+
+        # 개별 CAPEX 항목 합산
+        capex_fields = [
+            'capex_land', 'capex_building', 'capex_machinery',
+            'capex_equipment', 'capex_vehicle', 'capex_tools', 'capex_construction'
+        ]
+
+        total_capex = 0
+        has_any_capex = False
+
+        for field in capex_fields:
+            value = parsed.get(field)
+            if value is not None:
+                # 현금유출은 보통 양수로 기록되지만, 현금흐름표에서는 (유출) = 양수
+                total_capex += abs(value)
+                has_any_capex = True
+                logger.debug(f"CAPEX component: {field} = {value:,}")
+
+        if has_any_capex:
+            # 투자활동 현금유출이므로 음수로 표시할 수도 있지만,
+            # 기존 CAPEX 필드와 일관성을 위해 양수 유지
+            parsed['capex'] = total_capex
+            logger.info(f"Aggregated CAPEX from {sum(1 for f in capex_fields if parsed.get(f))} components: {total_capex:,}")
+
+        # 개별 필드 제거 (DB에 저장하지 않음)
+        for field in capex_fields:
+            parsed.pop(field, None)
+
+        return parsed
 
     def _extract_values_from_all_statements(self, xml_content: str, fs_type: str = 'OFS') -> Dict[str, int]:
         """v2.0: 각 재무제표 섹션에서 독립적으로 값 추출"""

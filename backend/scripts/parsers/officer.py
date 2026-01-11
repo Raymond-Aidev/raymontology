@@ -187,54 +187,110 @@ class OfficerParser(BaseParser):
             return None
 
     def _parse_career(self, career_text: str) -> List[Dict]:
-        """경력 파싱 (前/現/전/현 패턴)
+        """경력 파싱 (v2.4 - 다양한 패턴 지원)
 
-        v2.3 개선:
-        - 한자 패턴: 前), 現)
-        - 한글 패턴: 전), 현)
-        - 괄호 변형: ), ）, ) 공백 등 모두 지원
-        - 줄 내부 연속 패턴 지원 (예: "현) A현) B" → 2개 경력)
+        지원 패턴:
+        1. 괄호 패턴: 前), 現), 전), 현)
+        2. 공백 패턴: 전 OO회사, 현 OO회사
+        3. 연도 범위 패턴: 2008 ~ 현재 OO, YYYY ~ YYYY OO
+        4. 기간 패턴: 2008.01 ~ 2020.12 OO
+        5. 단순 구분: 줄바꿈/• 구분
         """
         careers = []
         if not career_text:
             return careers
 
-        # 줄바꿈으로 먼저 분할
-        lines = re.split(r'[\n\r]+', career_text)
+        # 줄바꿈 또는 • 구분으로 분할
+        lines = re.split(r'[\n\r]+|[•·]', career_text)
 
         for line in lines:
             line = line.strip()
-            if not line:
+            if not line or line == '-' or len(line) < 3:
                 continue
 
-            # 줄 내부에서 前/現/전/현 패턴으로 분할 (lookahead 사용)
-            segments = re.split(r'(?=[前現전현]\s*[\)）])', line)
+            # 1. 괄호 패턴: 前), 現), 전), 현)
+            bracket_match = re.match(r'^[前전]\s*[\)）]\s*(.+)', line)
+            if bracket_match:
+                text = self._clean_career_text(bracket_match.group(1))
+                if text:
+                    careers.append({'text': text, 'status': 'former'})
+                continue
 
-            for segment in segments:
-                segment = segment.strip()
-                if not segment:
-                    continue
+            bracket_match = re.match(r'^[現현]\s*[\)）]\s*(.+)', line)
+            if bracket_match:
+                text = self._clean_career_text(bracket_match.group(1))
+                if text:
+                    careers.append({'text': text, 'status': 'current'})
+                continue
 
-                # 前) 또는 전) 패턴 (이전 경력)
-                former_match = re.match(r'^[前전]\s*[\)）]\s*(.+)', segment)
-                if former_match:
-                    text = former_match.group(1).strip()
-                    # 다음 패턴이나 날짜 괄호 앞까지만 추출
-                    text = re.sub(r'\s*[\(（][\d\.\~\-\s]+[\)）]$', '', text)
-                    if text and len(text) >= 2:
-                        careers.append({'text': text, 'status': 'former'})
-                    continue
+            # 2. 공백 패턴: 전 OO, 현 OO (단어 시작)
+            space_match = re.match(r'^전\s+(.{2,})', line)
+            if space_match:
+                text = self._clean_career_text(space_match.group(1))
+                if text:
+                    careers.append({'text': text, 'status': 'former'})
+                continue
 
-                # 現) 또는 현) 패턴 (현재 경력)
-                current_match = re.match(r'^[現현]\s*[\)）]\s*(.+)', segment)
-                if current_match:
-                    text = current_match.group(1).strip()
-                    # 다음 패턴이나 날짜 괄호 앞까지만 추출
-                    text = re.sub(r'\s*[\(（][\d\.\~\-\s]+[\)）]$', '', text)
-                    if text and len(text) >= 2:
-                        careers.append({'text': text, 'status': 'current'})
+            space_match = re.match(r'^현\s+(.{2,})', line)
+            if space_match:
+                text = self._clean_career_text(space_match.group(1))
+                if text:
+                    careers.append({'text': text, 'status': 'current'})
+                continue
+
+            # 3. 연도 범위 + 현재: YYYY ~ 현재 OO
+            year_current_match = re.match(r'^(\d{4})\s*[~\-]\s*현재\s+(.+)', line)
+            if year_current_match:
+                text = self._clean_career_text(year_current_match.group(2))
+                if text:
+                    careers.append({'text': text, 'status': 'current'})
+                continue
+
+            # 4. 연도 범위 (종료): YYYY ~ YYYY OO
+            year_range_match = re.match(r'^(\d{4})\s*[~\-]\s*(\d{4})\s+(.+)', line)
+            if year_range_match:
+                text = self._clean_career_text(year_range_match.group(3))
+                if text:
+                    careers.append({'text': text, 'status': 'former'})
+                continue
+
+            # 5. 기간 패턴: YYYY.MM ~ YYYY.MM OO 또는 YYYY.MM ~ OO
+            period_match = re.match(r'^(\d{4})[\.\/](\d{1,2})\s*[~\-]\s*(\d{4})?[\.\/]?(\d{1,2})?\s+(.+)', line)
+            if period_match:
+                text = self._clean_career_text(period_match.group(5))
+                end_year = period_match.group(3)
+                if text:
+                    status = 'former' if end_year else 'unknown'
+                    careers.append({'text': text, 'status': status})
+                continue
+
+            # 6. 줄 내부 연속 패턴: "현 A현 B전 C"
+            inline_matches = re.findall(r'([現현])\s*([^\s前전現현]{2,}?)(?=[前전現현]|$)', line)
+            for prefix, text in inline_matches:
+                text = self._clean_career_text(text)
+                if text:
+                    careers.append({'text': text, 'status': 'current'})
+
+            inline_matches = re.findall(r'([前전])\s*([^\s前전現현]{2,}?)(?=[前전現현]|$)', line)
+            for prefix, text in inline_matches:
+                text = self._clean_career_text(text)
+                if text:
+                    careers.append({'text': text, 'status': 'former'})
 
         return careers
+
+    def _clean_career_text(self, text: str) -> Optional[str]:
+        """경력 텍스트 정리"""
+        if not text:
+            return None
+        # 날짜 괄호 제거: (2020.01~)
+        text = re.sub(r'\s*[\(（][\d\.\~\-\s]+[\)）]$', '', text.strip())
+        # 앞뒤 공백/특수문자 정리
+        text = text.strip(' \t-–—')
+        # 최소 길이 확인
+        if len(text) < 2:
+            return None
+        return text
 
     def _parse_tenure(self, tenure_text: str) -> Optional[Tuple[date, Optional[date]]]:
         """재직기간 파싱"""
