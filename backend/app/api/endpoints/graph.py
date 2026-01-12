@@ -678,6 +678,7 @@ async def get_officer_career(
     # Neo4j 없으면 PostgreSQL fallback 사용
     if driver is None:
         return await _get_officer_career_from_postgres(officer_id, db)
+    # v2.5: 동일 회사는 1개 레코드만 반환 (Cypher 레벨에서 중복 제거)
     cypher = """
     // 먼저 해당 임원의 이름과 생년월일을 가져옴
     MATCH (target:Officer {id: $officer_id})
@@ -695,17 +696,19 @@ async def get_officer_career(
         OR (o.birth_date IS NULL AND target.birth_date IS NULL)
       )
 
-    WITH target, r, c
+    // v2.5: 회사별로 그룹화하여 최신 레코드만 선택
+    WITH target, c, r
     ORDER BY r.is_current DESC, r.start_date DESC
+    WITH target, c, collect(r)[0] as best_rel
 
     RETURN target as o,
-           collect(DISTINCT {
+           collect({
                company_id: c.id,
                company_name: c.name,
-               position: r.position,
-               start_date: r.start_date,
-               end_date: r.end_date,
-               is_current: COALESCE(r.is_current, false)
+               position: best_rel.position,
+               start_date: best_rel.start_date,
+               end_date: best_rel.end_date,
+               is_current: COALESCE(best_rel.is_current, false)
            }) as career_history
     """
 
