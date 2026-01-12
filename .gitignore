@@ -65,3 +65,13 @@ certs/
 # Backup files
 *.backup
 *.bak
+
+# One-time parsing scripts output (local only)
+backend/scripts/parsed_officers_426.json
+backend/scripts/parse_426_progress.json
+backend/scripts/corp_dir_map.json
+backend/scripts/target_corps_*.txt
+
+# Claude sessions (local only)
+.claude/sessions/
+.claude/settings.local.json.save
