@@ -427,10 +427,10 @@ function GraphPage() {
               />
               <span className="text-dark-border">|</span>
             </div>
-            <h1 className="text-base md:text-lg font-semibold text-text-primary truncate max-w-[150px] md:max-w-none">
-              {centerCompany?.name || '회사'}
-              {centerCompany?.ticker && <span className="ml-2 text-yellow-400 font-mono">{centerCompany.ticker}</span>}
-              <span className="hidden md:inline text-text-muted font-normal ml-2">관계도</span>
+            <h1 className="text-base md:text-lg font-semibold text-text-primary flex items-center gap-1">
+              <span className="truncate max-w-[120px] md:max-w-[200px]">{centerCompany?.name || '회사'}</span>
+              {centerCompany?.ticker && <span className="text-yellow-400 font-mono flex-shrink-0">{centerCompany.ticker}</span>}
+              <span className="hidden md:inline text-text-muted font-normal flex-shrink-0">관계도</span>
             </h1>
           </div>
           {/* 모바일: 보고서 버튼 아이콘만 */}
