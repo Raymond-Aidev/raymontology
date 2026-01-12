@@ -665,16 +665,23 @@ async def get_raymonds_index_by_name(
 ):
     """
     회사명으로 RaymondsIndex 조회 (프론트엔드 편의용)
+
+    정확한 매칭 우선, 부분 매칭 시 첫 번째 결과 반환
     """
     try:
-        # 회사 조회
+        # 1. 정확한 매칭 먼저 시도
         company_query = select(Company).where(Company.name == company_name)
         company_result = await db.execute(company_query)
         company = company_result.scalar_one_or_none()
 
         if not company:
-            # 부분 매칭 시도
-            company_query = select(Company).where(Company.name.ilike(f"%{company_name}%"))
+            # 2. 부분 매칭 시도 - 첫 번째 결과만 반환 (여러 결과 에러 방지)
+            company_query = (
+                select(Company)
+                .where(Company.name.ilike(f"%{company_name}%"))
+                .order_by(Company.name)  # 일관된 결과를 위해 정렬
+                .limit(1)
+            )
             company_result = await db.execute(company_query)
             company = company_result.scalar_one_or_none()
 
