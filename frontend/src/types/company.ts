@@ -6,6 +6,9 @@ export interface CompanySearchResult {
   cb_count: number
   risk_level: string | null
   investment_grade: string | null
+  market?: string  // 시장 구분 (KOSPI, KOSDAQ, KONEX, ETF)
+  company_type?: string  // 기업 유형 (NORMAL, SPAC, REIT, ETF)
+  trading_status?: string  // 거래 상태 (NORMAL, SUSPENDED, TRADING_HALT)
 }
 
 // 리스크 레벨 타입

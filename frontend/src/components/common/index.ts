@@ -50,3 +50,6 @@ export {
 
 // 모바일 컴포넌트
 export { default as BottomSheet } from './BottomSheet'
+
+// 시장 배지 컴포넌트
+export { MarketBadge, TradingStatusBadge } from './MarketBadge'

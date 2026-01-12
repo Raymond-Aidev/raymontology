@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { SearchInput } from '../components/common'
+import { SearchInput, MarketBadge } from '../components/common'
 import { getHighRiskCompanies, getPlatformStats, type PlatformStats } from '../api/company'
 import { useAuthStore } from '../store/authStore'
 import type { CompanySearchResult } from '../types/company'
@@ -278,9 +278,18 @@ function MainSearchPage() {
                     {/* Header */}
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-text-primary truncate group-hover:text-accent-primary transition-colors">
-                          {company.name}
-                        </h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-text-primary truncate group-hover:text-accent-primary transition-colors">
+                            {company.name}
+                          </h3>
+                          {company.market && (
+                            <MarketBadge
+                              market={company.market}
+                              tradingStatus={company.trading_status}
+                              size="sm"
+                            />
+                          )}
+                        </div>
                         <p className="text-xs font-mono text-text-muted mt-0.5">{company.corp_code}</p>
                       </div>
                       {company.investment_grade && (

@@ -5,6 +5,7 @@ import { getCompanyReport, type CompanyReportData } from '../api/report'
 import { getRaymondsIndexByName } from '../api/raymondsIndex'
 import type { RaymondsIndexData } from '../types/raymondsIndex'
 import { RaymondsIndexCard, SubIndexRadar, InvestmentGapMeter, RiskFlagsPanel } from '../components/RaymondsIndex'
+import { MarketBadge } from '../components/common'
 
 function ReportPage() {
   const { companyId } = useParams<{ companyId: string }>()
@@ -157,7 +158,16 @@ function ReportPage() {
 
       {/* 타이틀 - 모바일 최적화 */}
       <div className="mb-4 md:mb-8">
-        <h1 className="text-xl md:text-3xl font-bold text-text-primary truncate">{reportData.companyName}</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl md:text-3xl font-bold text-text-primary truncate">{reportData.companyName}</h1>
+          {reportData.market && (
+            <MarketBadge
+              market={reportData.market}
+              tradingStatus={reportData.tradingStatus}
+              size="md"
+            />
+          )}
+        </div>
         <p className="text-sm md:text-base text-text-secondary mt-1">RaymondsRisk 분석보고서</p>
       </div>
 

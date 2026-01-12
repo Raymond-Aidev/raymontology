@@ -28,6 +28,9 @@ interface ApiCompanyItem {
   market_cap: number | null
   cb_count: number
   officer_count: number
+  listing_status?: string | null  // LISTED, DELISTED, ETF 등
+  company_type?: string | null  // NORMAL, SPAC, REIT, ETF
+  trading_status?: string | null  // NORMAL, SUSPENDED, TRADING_HALT
 }
 
 // CB 발행 횟수 기반 리스크 레벨 추정
@@ -57,6 +60,9 @@ function mapApiResponseToFrontend(item: ApiCompanyItem): CompanySearchResult {
     cb_count: item.cb_count,
     risk_level: estimateRiskLevel(item.cb_count),
     investment_grade: estimateInvestmentGrade(item.cb_count),
+    market: item.market || undefined,
+    company_type: item.company_type || undefined,
+    trading_status: item.trading_status || undefined,
   }
 }
 

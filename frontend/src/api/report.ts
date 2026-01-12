@@ -19,6 +19,9 @@ interface ApiCompanyBasicInfo {
   id: string
   corp_code: string
   name: string
+  market?: string | null  // KOSPI, KOSDAQ, KONEX, ETF
+  company_type?: string | null  // NORMAL, SPAC, REIT, ETF
+  trading_status?: string | null  // NORMAL, SUSPENDED, TRADING_HALT
 }
 
 interface ApiRiskScoreInfo {
@@ -108,6 +111,9 @@ interface ApiCompanyFullReport {
 export interface CompanyReportData {
   companyId: string
   companyName: string
+  market?: string  // KOSPI, KOSDAQ, KONEX, ETF
+  companyType?: string  // NORMAL, SPAC, REIT, ETF
+  tradingStatus?: string  // NORMAL, SUSPENDED, TRADING_HALT
   riskScore: RiskScore
   investmentGrade: InvestmentGrade
   cbIssuances: CBIssuance[]
@@ -436,6 +442,9 @@ export async function getCompanyReportByName(companyName: string): Promise<Compa
     return {
       companyId: report.basic_info.id,
       companyName: report.basic_info.name,
+      market: report.basic_info.market || undefined,
+      companyType: report.basic_info.company_type || undefined,
+      tradingStatus: report.basic_info.trading_status || undefined,
       riskScore: report.risk_score ? mapRiskScoreToFrontend(report.risk_score) : defaultRiskScore,
       investmentGrade: report.risk_score ? mapInvestmentGrade(report.risk_score.investment_grade) : 'BB',
       cbIssuances: aggregateCBIssuances(report.convertible_bonds.map(mapCBIssuanceToFrontend)),

@@ -25,6 +25,9 @@ class CompanyBasicInfo(BaseModel):
     id: str
     corp_code: str
     name: str
+    market: Optional[str] = None  # KOSPI, KOSDAQ, KONEX, ETF
+    company_type: Optional[str] = None  # NORMAL, SPAC, REIT, ETF
+    trading_status: Optional[str] = None  # NORMAL, SUSPENDED, TRADING_HALT
 
 
 class RiskScoreInfo(BaseModel):
@@ -192,11 +195,13 @@ async def get_company_full_report(
             # 1. 회사 찾기
             if exact_match:
                 company = await conn.fetchrow("""
-                    SELECT id, corp_code, name FROM companies WHERE name = $1
+                    SELECT id, corp_code, name, market, company_type, trading_status
+                    FROM companies WHERE name = $1
                 """, company_name)
             else:
                 company = await conn.fetchrow("""
-                    SELECT id, corp_code, name FROM companies
+                    SELECT id, corp_code, name, market, company_type, trading_status
+                    FROM companies
                     WHERE name ILIKE $1
                     ORDER BY
                         CASE WHEN name = $2 THEN 0 ELSE 1 END,
@@ -440,7 +445,10 @@ async def get_company_full_report(
                 basic_info=CompanyBasicInfo(
                     id=str(company_id),
                     corp_code=corp_code or '',
-                    name=company['name']
+                    name=company['name'],
+                    market=company.get('market'),
+                    company_type=company.get('company_type'),
+                    trading_status=company.get('trading_status')
                 ),
                 disclosure_count=disclosure_count,
                 risk_score=risk_score,

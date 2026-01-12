@@ -6,6 +6,7 @@ import {
   type RaymondsIndexRankingItem,
   type RaymondsIndexStatistics
 } from '../api/raymondsIndex'
+import { MarketBadge } from '../components/common'
 
 // 등급 설정
 const gradeConfig = {
@@ -246,8 +247,10 @@ function RaymondsIndexRankingPage() {
                         </td>
                         <td className="px-4 py-4">
                           <div>
-                            <p className="text-sm font-medium text-text-primary">{item.company_name}</p>
-                            <p className="text-xs text-text-secondary">{item.market}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium text-text-primary">{item.company_name}</p>
+                              {item.market && <MarketBadge market={item.market} size="sm" />}
+                            </div>
                           </div>
                         </td>
                         <td className="px-4 py-4 text-center">
