@@ -407,13 +407,24 @@ export default function AnalysisPage() {
           )}
         </div>
 
-        {/* 회사명 */}
+        {/* 회사명 + ticker */}
         <div style={{
           marginTop: '8px',
           fontSize: '14px',
           color: colors.gray600,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
         }}>
-          {centerCompany?.name || companyName}
+          <span>{centerCompany?.name || reportData?.companyName || companyName}</span>
+          {(centerCompany?.ticker || reportData?.ticker) && (
+            <span style={{
+              color: '#F59E0B',
+              fontWeight: '600',
+            }}>
+              {centerCompany?.ticker || reportData?.ticker}
+            </span>
+          )}
         </div>
 
         {/* 노드 제한 경고 */}

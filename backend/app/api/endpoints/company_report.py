@@ -25,6 +25,7 @@ class CompanyBasicInfo(BaseModel):
     id: str
     corp_code: str
     name: str
+    ticker: Optional[str] = None  # 종목코드 (6자리)
     market: Optional[str] = None  # KOSPI, KOSDAQ, KONEX, ETF
     company_type: Optional[str] = None  # NORMAL, SPAC, REIT, ETF
     trading_status: Optional[str] = None  # NORMAL, SUSPENDED, TRADING_HALT
@@ -195,12 +196,12 @@ async def get_company_full_report(
             # 1. 회사 찾기
             if exact_match:
                 company = await conn.fetchrow("""
-                    SELECT id, corp_code, name, market, company_type, trading_status
+                    SELECT id, corp_code, name, ticker, market, company_type, trading_status
                     FROM companies WHERE name = $1
                 """, company_name)
             else:
                 company = await conn.fetchrow("""
-                    SELECT id, corp_code, name, market, company_type, trading_status
+                    SELECT id, corp_code, name, ticker, market, company_type, trading_status
                     FROM companies
                     WHERE name ILIKE $1
                     ORDER BY
@@ -446,6 +447,7 @@ async def get_company_full_report(
                     id=str(company_id),
                     corp_code=corp_code or '',
                     name=company['name'],
+                    ticker=company.get('ticker'),
                     market=company.get('market'),
                     company_type=company.get('company_type'),
                     trading_status=company.get('trading_status')

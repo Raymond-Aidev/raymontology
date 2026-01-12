@@ -206,12 +206,28 @@ export default function GraphPage() {
               fontWeight: '600',
               color: colors.gray900,
               margin: 0,
-              maxWidth: '150px',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
             }}>
-              {centerCompany?.name || companyName} 관계도
+              <span style={{
+                maxWidth: '120px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}>
+                {centerCompany?.name || companyName}
+              </span>
+              <span>관계도</span>
+              {centerCompany?.ticker && (
+                <span style={{
+                  color: '#F59E0B',
+                  fontWeight: '600',
+                  fontSize: '14px',
+                }}>
+                  {centerCompany.ticker}
+                </span>
+              )}
             </h1>
           </div>
 
