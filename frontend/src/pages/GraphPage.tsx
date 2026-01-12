@@ -5,7 +5,7 @@ import { ForceGraph, NodeDetailPanel, GraphControls, NavigationButtons, Breadcru
 import type { ForceGraphRef } from '../components/graph'
 import type { GraphNode, GraphData, NodeType } from '../types/graph'
 import { NODE_LIMIT, DEFAULT_DEPTH, type DateRangeParams } from '../api/graph'
-import { DateRangePicker, type DateRange, BottomSheet } from '../components/common'
+import { DateRangePicker, type DateRange, BottomSheet, MarketBadge } from '../components/common'
 import { useGraphQuery } from '../hooks/useGraphQuery'
 import { useGraphStore, selectCanGoBack, selectCanGoForward } from '../store'
 import { getRaymondsIndexById } from '../api/raymondsIndex'
@@ -427,9 +427,17 @@ function GraphPage() {
               />
               <span className="text-dark-border">|</span>
             </div>
-            <h1 className="text-base md:text-lg font-semibold text-text-primary flex items-center gap-1">
+            <h1 className="text-base md:text-lg font-semibold text-text-primary flex items-center gap-1.5">
               <span className="truncate max-w-[120px] md:max-w-[200px]">{centerCompany?.name || '회사'}</span>
-              {centerCompany?.ticker && <span className="text-yellow-400 font-mono flex-shrink-0">{centerCompany.ticker}</span>}
+              {centerCompany?.ticker && <span className="text-yellow-400 font-mono text-sm flex-shrink-0">{centerCompany.ticker}</span>}
+              {centerCompany?.market && (
+                <MarketBadge
+                  market={centerCompany.market}
+                  tradingStatus={centerCompany.tradingStatus}
+                  size="sm"
+                  className="flex-shrink-0"
+                />
+              )}
               <span className="hidden md:inline text-text-muted font-normal flex-shrink-0">관계도</span>
             </h1>
           </div>

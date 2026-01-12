@@ -9,6 +9,8 @@ export interface GraphNode {
   // 회사 노드 추가 정보
   corp_code?: string
   ticker?: string  // 기업 구분자 (종목코드, 6자리)
+  market?: string  // 시장 구분 (KOSPI, KOSDAQ, KONEX, ETF)
+  tradingStatus?: string  // 거래 상태 (NORMAL, SUSPENDED, TRADING_HALT)
   risk_level?: string | null
   investment_grade?: string | null
   // 임원 노드 추가 정보

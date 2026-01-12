@@ -108,6 +108,8 @@ function transformApiResponse(response: ApiGraphResponse): GraphData {
       type: mapNodeType(node.type),
       corp_code: node.properties.corp_code as string | undefined,
       ticker: node.properties.ticker as string | undefined,
+      market: node.properties.market as string | undefined,
+      tradingStatus: node.properties.trading_status as string | undefined,
       risk_level: node.properties.risk_level as string | undefined,
       investment_grade: node.properties.investment_grade as string | undefined,
       position: node.properties.position as string | undefined,
