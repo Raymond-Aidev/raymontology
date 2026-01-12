@@ -428,7 +428,9 @@ function GraphPage() {
               <span className="text-dark-border">|</span>
             </div>
             <h1 className="text-base md:text-lg font-semibold text-text-primary truncate max-w-[150px] md:max-w-none">
-              {centerCompany?.name || '회사'} <span className="hidden md:inline text-text-muted font-normal">관계도</span>
+              {centerCompany?.name || '회사'}
+              {centerCompany?.ticker && <span className="ml-2 text-yellow-400 font-mono">{centerCompany.ticker}</span>}
+              <span className="hidden md:inline text-text-muted font-normal ml-2">관계도</span>
             </h1>
           </div>
           {/* 모바일: 보고서 버튼 아이콘만 */}

@@ -18,6 +18,7 @@ import type {
 interface ApiCompanyBasicInfo {
   id: string
   corp_code: string
+  ticker?: string | null  // 기업 구분자 (종목코드, 6자리)
   name: string
   market?: string | null  // KOSPI, KOSDAQ, KONEX, ETF
   company_type?: string | null  // NORMAL, SPAC, REIT, ETF
@@ -111,6 +112,7 @@ interface ApiCompanyFullReport {
 export interface CompanyReportData {
   companyId: string
   companyName: string
+  ticker?: string  // 기업 구분자 (종목코드, 6자리)
   market?: string  // KOSPI, KOSDAQ, KONEX, ETF
   companyType?: string  // NORMAL, SPAC, REIT, ETF
   tradingStatus?: string  // NORMAL, SUSPENDED, TRADING_HALT
@@ -442,6 +444,7 @@ export async function getCompanyReportByName(companyName: string): Promise<Compa
     return {
       companyId: report.basic_info.id,
       companyName: report.basic_info.name,
+      ticker: report.basic_info.ticker || undefined,
       market: report.basic_info.market || undefined,
       companyType: report.basic_info.company_type || undefined,
       tradingStatus: report.basic_info.trading_status || undefined,

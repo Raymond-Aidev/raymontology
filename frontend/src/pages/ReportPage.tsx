@@ -159,7 +159,10 @@ function ReportPage() {
       {/* 타이틀 - 모바일 최적화 */}
       <div className="mb-4 md:mb-8">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl md:text-3xl font-bold text-text-primary truncate">{reportData.companyName}</h1>
+          <h1 className="text-xl md:text-3xl font-bold text-text-primary truncate">
+            {reportData.companyName}
+            {reportData.ticker && <span className="ml-2 text-yellow-400 font-mono">{reportData.ticker}</span>}
+          </h1>
           {reportData.market && (
             <MarketBadge
               market={reportData.market}
