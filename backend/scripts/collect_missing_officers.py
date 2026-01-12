@@ -31,6 +31,7 @@ import asyncpg
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from scripts.parsers.officer import OfficerParser
+from scripts.utils.company_filter import should_parse_officers, get_excluded_reason, filter_companies
 
 logging.basicConfig(
     level=logging.INFO,
@@ -43,9 +44,10 @@ async def get_missing_companies(conn: asyncpg.Connection) -> List[Dict]:
     """임원 데이터 없는 기업 조회"""
     query = """
         SELECT
-            c.id, c.corp_code, c.name, c.ticker, c.market
+            c.id, c.corp_code, c.name, c.ticker, c.market, c.company_type
         FROM companies c
         WHERE c.listing_status = 'LISTED'
+          AND c.company_type NOT IN ('SPAC', 'REIT', 'ETF')
           AND NOT EXISTS (SELECT 1 FROM officer_positions op WHERE op.company_id = c.id)
         ORDER BY c.market, c.name
     """
@@ -124,13 +126,14 @@ async def collect_missing_officers(
             missing = [{'corp_code': corp_code}]
         else:
             missing = await get_missing_companies(conn)
-            # SPAC, 리츠, 증권사 제외 (일반 기업만)
-            missing = [c for c in missing
-                      if '스팩' not in c.get('name', '')
-                      and 'SPAC' not in c.get('name', '').upper()
-                      and '리츠' not in c.get('name', '')
-                      and '인프라' not in c.get('name', '')
-                      and '증권' not in c.get('name', '')]
+            # company_type 기반 필터링 (DB 쿼리에서 이미 필터링됨, 추가 안전장치)
+            included, excluded = filter_companies(missing, should_parse_officers)
+            if excluded:
+                logger.info(f"제외된 기업: {len(excluded)}개")
+                for c in excluded[:5]:  # 최대 5개만 로깅
+                    reason = get_excluded_reason(c)
+                    logger.debug(f"  - {c.get('name')}: {reason}")
+            missing = included
 
         logger.info(f"수집 대상: {len(missing)}개 기업")
 

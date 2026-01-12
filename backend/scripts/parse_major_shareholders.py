@@ -10,12 +10,17 @@ import asyncpg
 import logging
 import os
 import re
+import sys
 import zipfile
 import glob
+from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from xml.etree import ElementTree as ET
 import unicodedata
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from scripts.utils.company_filter import should_parse_shareholders
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -117,10 +122,17 @@ class ShareholderParser:
         self.company_cache = {}
 
     async def load_company_cache(self):
-        """회사 정보 캐시 로드"""
-        rows = await self.conn.fetch("SELECT id, corp_code FROM companies WHERE corp_code IS NOT NULL")
-        self.company_cache = {r['corp_code']: r['id'] for r in rows}
-        logger.info(f"회사 캐시 로드: {len(self.company_cache)}개")
+        """회사 정보 캐시 로드 (ETF 제외)"""
+        rows = await self.conn.fetch("""
+            SELECT id, corp_code, company_type, name
+            FROM companies
+            WHERE corp_code IS NOT NULL
+        """)
+        # ETF 제외 (대주주 파싱 대상 아님)
+        parseable = [r for r in rows if should_parse_shareholders({'company_type': r['company_type'], 'name': r['name']})]
+        self.company_cache = {r['corp_code']: r['id'] for r in parseable}
+        excluded = len(rows) - len(parseable)
+        logger.info(f"회사 캐시 로드: {len(self.company_cache)}개 (파싱제외: {excluded}개)")
 
     def parse_xml_content(self, xml_content: bytes) -> Dict[str, Any]:
         """XML에서 메타정보 및 주주 정보 추출"""

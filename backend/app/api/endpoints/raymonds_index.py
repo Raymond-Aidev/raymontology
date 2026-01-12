@@ -31,7 +31,11 @@ def format_index_response(index: RaymondsIndex, company: Optional[Company] = Non
     if company:
         response["company_name"] = company.name
         response["company_ticker"] = company.ticker
+        response["stock_code"] = company.ticker  # 프론트엔드 호환
         response["company_market"] = company.market
+        response["market"] = company.market  # 프론트엔드 호환
+        response["company_type"] = company.company_type
+        response["trading_status"] = company.trading_status
     return response
 
 

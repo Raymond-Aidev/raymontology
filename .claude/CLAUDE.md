@@ -4,11 +4,11 @@
 
 ---
 
-## 상태: 임원 경력 원문 파싱 완료 v2.5 (2026-01-07)
+## 상태: 기업 유형 분류 시스템 구현 v2.7 (2026-01-12)
 전체 18개 테이블 데이터 적재 완료. **RaymondsIndex 계산 완료 (5,257건)**.
 **RaymondsIndex 독립 사이트**: https://raymondsindex.konnect-ai.net 배포 완료.
 **RaymondsRisk 앱인토스**: 토스 로그인 연동 완료, 샌드박스 테스트 진행 중.
-**최근 업데이트**: 임원 경력 원문 파싱 완료 - `career_raw_text` 커버리지 64.3% (28,710/44,679명) (2026-01-07)
+**최근 업데이트**: company_type/trading_status 컬럼 추가, SPAC/REIT/ETF 필터링 구현 (2026-01-12)
 
 ---
 
@@ -25,6 +25,8 @@
 | **RaymondsIndex 화면기획** | **독립 사이트 UI/UX 설계** | **`docs/RAYMONDSINDEX_UI_SPEC_v2.md`** |
 | **RaymondsIndex 개발계획** | **독립 사이트 개발 일정** | **`docs/RAYMONDSINDEX_DEVELOPMENT_PLAN.md`** |
 | **파이프라인 개선 계획** | **데이터 수집/파싱 자동화** | **`docs/DATA_PIPELINE_IMPROVEMENT_PLAN.md`** |
+| 시장 표시 계획 | KOSPI/KOSDAQ/KONEX 표시 | `docs/MARKET_DISPLAY_PLAN.md` |
+| 기업 유형 필터 계획 | SPAC/REIT/ETF 필터링 | `docs/COMPANY_TYPE_FILTER_PLAN.md` |
 
 ---
 
@@ -69,73 +71,21 @@ grep "@apps-in-toss/web-framework" /Users/jaejoonpark/raymontology/raymondsrisk-
 
 ## 앱인토스(Apps in Toss) 개발 규칙
 
-### 서비스 범위 (중요!)
-**앱인토스는 RaymondsRisk 서비스 전용입니다.**
+**앱인토스는 RaymondsRisk 서비스 전용** (`raymondsrisk-app/` 디렉토리)
 
-| 서비스 | 앱인토스 포함 |
-|--------|-------------|
-| **RaymondsRisk** | ✅ 포함 |
-| Raymontology | ❌ 미포함 |
-| RaymondsIndex | ❌ 미포함 |
+| 항목 | 값 |
+|------|-----|
+| 앱 이름 | `raymondsrisk` |
+| 스킴 | `intoss://raymondsrisk` |
+| 현재 상태 | 샌드박스 테스트 진행 중 |
 
-- 앱 이름: `raymondsrisk`
-- 스킴: `intoss://raymondsrisk`
-- **프로젝트 경로**: `raymondsrisk-app/` (raymontology 하위)
+**⚠️ 앱인토스 작업 전 반드시 `docs/APPS_IN_TOSS_GUIDE.md` 참조**
 
-### 앱인토스 관련 작업 시 필수 확인
-```
-앱인토스 관련 개발/수정 작업 전 반드시 docs/APPS_IN_TOSS_GUIDE.md 참조
-```
+TDS 컴포넌트는 **비필수** (현재 인라인 스타일 방식 승인됨)
 
-### 앱인토스란?
-- 토스 앱 내에서 서비스를 앱인앱 형태로 제공하는 플랫폼
-- 3,000만 토스 유저에게 서비스 노출 가능
-- WebView/React Native 기반 SDK 제공
-
-### 공식 문서
-- 개발자 문서: https://developers-apps-in-toss.toss.im/
-- 홈페이지: https://apps-in-toss.toss.im/
-
-### ⚠️ TDS 컴포넌트 비필수 확인 (2026-01-06)
-
-**중요**: TDS(@toss/tds-mobile) 사용은 **필수 조건이 아님**을 확인받음.
-
-| 항목 | 상태 | 비고 |
-|------|:----:|------|
-| TDS 컴포넌트 사용 | ⚪ 선택 | 현재 Tailwind CSS 방식 승인됨 |
-| 현재 개발 방식 | ✅ 승인 | 인라인 스타일 + 커스텀 컴포넌트 |
-| 검수 통과 | ✅ 확인 | TDS 미사용 상태로 승인 |
-
-**현재 스타일링 방식:**
-- 인라인 스타일 (React style prop)
-- 커스텀 colors 상수 (`src/constants/colors.ts`)
-- 직접 구현한 컴포넌트 (ListItem, DebugPanel 등)
-
-**이 방식을 유지하며, TDS로 마이그레이션 불필요.**
-
-### 앱인토스 프로젝트 현황 (2026-01-06)
-
-| 항목 | 상태 |
-|------|:----:|
-| SDK 설치 (`@apps-in-toss/web-framework`) | ✅ v1.6.2 |
-| 설정 파일 (`granite.config.ts`) | ✅ |
-| 토스 로그인 연동 | ✅ |
-| mTLS 인증서 | ✅ 12/31 발급 |
-| .ait 빌드 | ✅ `raymondsrisk.ait` |
-| 샌드박스 테스트 | 🔄 진행 중 |
-
-### 실행 명령어
 ```bash
-cd raymondsrisk-app
-
-# 개발 서버
-npm run dev
-
-# Granite 개발 서버 (샌드박스 테스트용)
-npm run granite:dev
-
-# .ait 빌드
-npm run granite:build
+cd raymondsrisk-app && npm run dev        # 개발 서버
+cd raymondsrisk-app && npm run granite:build  # .ait 빌드
 ```
 
 ---
@@ -184,25 +134,25 @@ npm run granite:build
 
 ---
 
-## 현재 DB 상태 (2026-01-05 기준)
+## 현재 DB 상태 (2026-01-11 기준)
 
 | 테이블 | 레코드 수 | 상태 |
 |--------|----------|------|
 | companies | 3,922 | ✅ |
-| officers | 44,679 | ✅ |
-| officer_positions | 48,862 | ✅ (중복 정리 완료, position_history JSONB 추가) |
-| disclosures | 213,304 | ✅ |
-| convertible_bonds | 1,133 | ✅ (중복 정리 완료, 330건 제거) |
-| cb_subscribers | 7,026 | ✅ (CB 정리에 따른 연쇄 정리) |
-| financial_statements | 9,432 | ✅ |
+| officers | 47,444 | ✅ (+2,423 from 426개 기업 보완) |
+| officer_positions | 62,141 | ✅ (+8,670 from 426개 기업 보완) |
+| disclosures | 279,258 | ✅ (+65,954 from 426개 기업 보완) |
+| convertible_bonds | 1,133 | ✅ |
+| cb_subscribers | 7,026 | ✅ |
+| financial_statements | 9,820 | ✅ (+386 from 426개 기업 보완) |
 | risk_signals | 1,412 | ✅ |
 | risk_scores | 3,912 | ✅ |
-| major_shareholders | 44,574 | ✅ (비정상 키워드 194건 정리) |
+| major_shareholders | 44,574 | ✅ |
 | affiliates | 973 | ✅ |
 | financial_details | 10,288 | ✅ (XBRL v3.0 파서 적용) |
-| **raymonds_index** | **2,707** | ✅ 계산 완료 |
+| **raymonds_index** | **5,257** | ✅ 계산 완료 |
 | **stock_prices** | **127,324** | ✅ |
-| **largest_shareholder_info** | **4,599** | ✅ 신규 (2026-01-05) |
+| **largest_shareholder_info** | **4,599** | ✅ |
 | user_query_usage | - | ✅ |
 | page_contents | - | ✅ |
 
@@ -308,7 +258,7 @@ GET /api/companies/high-risk
 
 ## RaymondsIndex 시스템
 
-자본 배분 효율성 지수. 2,698개 기업 평가 완료 (v2.1).
+자본 배분 효율성 지수. 5,257개 기업 평가 완료 (v2.1).
 
 | 등급 | 점수 범위 | 기업 수 |
 |------|----------|--------|
@@ -541,44 +491,6 @@ python -m scripts.pipeline.run_quarterly_pipeline --quarter Q1 --year 2025
 
 ---
 
-## 파서 v2.0 (parse_local_financial_details.py)
-
-### 핵심 개선 (2026-01-02)
-기존 파서가 재무상태표 섹션만 추출하여 손익계산서/현금흐름표 데이터가 누락되거나 단위가 잘못 적용되는 문제 해결
-
-| 항목 | v1.0 (기존) | v2.0 (개선) |
-|------|------------|------------|
-| 섹션 추출 | 재무상태표만 | 재무상태표 + 손익계산서 + 현금흐름표 |
-| 단위 감지 | 문서 전체에서 첫 번째 | 각 섹션별 독립 감지 |
-| XML 선택 | 첫 번째 XML | 사업보고서(11011) 우선 |
-| 기본 단위 | 천원 | 원 |
-
-### 주요 함수
-- `extract_xml_content()`: ZIP에서 사업보고서(11011) 우선 추출
-- `_extract_values_from_all_statements()`: 각 재무제표 섹션 독립 파싱
-- `_detect_unit_from_content()`: 섹션 내용에서 단위 감지
-
-### 재파싱 스크립트 (`reparse_financial_details_v2.py`)
-```bash
-# 2024년 데이터 재파싱
-python scripts/reparse_financial_details_v2.py --year 2024
-
-# 샘플 테스트
-python scripts/reparse_financial_details_v2.py --sample 10 --dry-run
-
-# 옵션
---year 2024    # 특정 연도만
---sample 50    # 샘플 개수
---dry-run      # 실제 DB 업데이트 없이 테스트
-```
-
-### data_source 구분
-- `LOCAL_DART`: 기존 파서로 파싱된 데이터
-- `LOCAL_DART_V2`: v2.0 파서로 재파싱된 데이터
-- `LOCAL_Q3_2025`: Q3 보고서에서 파싱된 데이터
-
----
-
 ## 실행 금지 스크립트
 
 | 스크립트 | 위험 |
@@ -591,45 +503,80 @@ python scripts/reparse_financial_details_v2.py --sample 10 --dry-run
 
 ---
 
-## Railway 배포 트러블슈팅
+## 최대주주 기본정보 테이블 (`largest_shareholder_info`)
 
-### 캐시 문제로 새 코드가 반영되지 않을 때
-1. Railway Variables 탭에서 `NO_CACHE=1` 환경 변수 추가
-2. 배포 완료 후 해당 변수 **제거** (빌드 속도 복원)
+최대주주가 법인인 경우, 그 법인의 기본정보와 재무현황 저장 (4,599건).
 
-### FastAPI 라우트 순서 주의
-- 동적 라우트 (`/{company_id}`) **앞에** 정적 라우트 (`/high-risk`) 배치
-- 순서 잘못되면 404 오류 발생 (동적 라우트가 먼저 매칭됨)
+**주요 컬럼**: `shareholder_name`, `investor_count`, `largest_investor_name`, `fin_total_assets` 등
+
+**활용**: 실질 지배구조 파악, 연쇄 리스크 분석, 지배구조 복잡도 측정
 
 ---
 
-## 최대주주 기본정보 테이블 (2026-01-05 신규)
+## 기업 유형 분류 시스템 (2026-01-12 구현) ⭐
 
-### 테이블명: `largest_shareholder_info`
+### companies 테이블 신규 컬럼
 
-최대주주가 법인인 경우, 그 법인의 기본정보와 재무현황을 저장합니다.
+| 컬럼 | 타입 | 기본값 | 설명 |
+|------|------|--------|------|
+| `company_type` | VARCHAR(20) | 'NORMAL' | 기업 유형 (NORMAL, SPAC, REIT, ETF, HOLDING, FINANCIAL) |
+| `trading_status` | VARCHAR(20) | 'NORMAL' | 거래 상태 (NORMAL, SUSPENDED, TRADING_HALT) |
+| `is_managed` | VARCHAR(1) | 'N' | 관리종목 여부 (Y/N) |
 
-| 컬럼 | 설명 | 채움률 |
-|------|------|--------|
-| `shareholder_name` | 최대주주 법인명 | 100% |
-| `investor_count` | 출자자수 | 91.5% |
-| `largest_investor_name` | 최대출자자 성명 | 94.5% |
-| `largest_investor_share_ratio` | 최대출자자 지분율 | 94.5% |
-| `fin_total_assets` | 자산총계 | 96.1% |
-| `fin_total_liabilities` | 부채총계 | 96.1% |
-| `fin_total_equity` | 자본총계 | 96.1% |
-| `fin_revenue` | 매출액 | 96.1% |
-| `fin_operating_income` | 영업이익 | 96.1% |
-| `fin_net_income` | 당기순이익 | 96.1% |
+### 기업 유형별 현황
 
-### 파서 실행
-```bash
-cd backend
-source .venv/bin/activate
-DATABASE_URL="postgresql://..." python scripts/parsers/largest_shareholder.py
+| company_type | 설명 | 기업 수 |
+|--------------|------|--------|
+| NORMAL | 일반 상장사 | ~2,600 |
+| SPAC | 기업인수목적회사 | 80 |
+| REIT | 부동산투자회사 | 42 |
+| ETF | 상장지수펀드 | 1,149 |
+
+### company_filter 유틸리티 모듈
+
+**경로**: `scripts/utils/company_filter.py`
+
+SPAC/ETF/REIT 기업은 임원, 대주주, 재무 데이터 구조가 일반 기업과 다르므로 파싱 대상에서 제외해야 합니다.
+
+```python
+from scripts.utils.company_filter import (
+    should_parse_officers,      # SPAC, REIT, ETF 제외
+    should_parse_shareholders,  # ETF만 제외
+    should_parse_financials,    # ETF만 제외
+    should_calculate_index,     # SPAC, REIT, ETF 제외
+    get_excluded_reason,        # 제외 사유 반환
+    get_filter_sql_clause,      # SQL WHERE 절 생성
+)
+
+# 사용 예시
+if should_parse_officers({'company_type': 'SPAC', 'name': '스팩회사'}):
+    parse_officers(company)  # 실행 안 됨
+
+# SQL 쿼리에서 사용
+sql_clause = get_filter_sql_clause('officer')  # "company_type NOT IN ('SPAC', 'REIT', 'ETF')"
 ```
 
-### 활용 가치
-1. **실질 지배구조 파악**: 최대주주 법인의 최대출자자까지 추적
-2. **연쇄 리스크 분석**: 최대주주 법인의 재무건전성 평가
-3. **지배구조 복잡도**: 출자자수로 복잡도 측정
+### 적용된 파싱 스크립트
+
+| 스크립트 | 적용 필터 |
+|---------|----------|
+| `parse_officers_from_local.py` | SPAC, REIT, ETF 제외 |
+| `parse_major_shareholders.py` | ETF 제외 |
+| `pipeline/calculate_index.py` | SPAC, REIT, ETF 제외 |
+| `collect_missing_officers.py` | SPAC, REIT, ETF 제외 |
+
+### 프론트엔드 시장 표시
+
+**MarketBadge 컴포넌트**: `raymondsindex-web/components/market-badge.tsx`
+
+| 시장 | 배지 색상 | 비고 |
+|------|----------|------|
+| KOSPI | 파란색 (#3B82F6) | |
+| KOSDAQ | 초록색 (#22C55E) | |
+| KONEX | 회색 (#6B7280) | |
+| ETF | 보라색 (#8B5CF6) | |
+| 거래정지 | 빨간 테두리 | trading_status='SUSPENDED' |
+
+**스크리너 필터**: `raymondsindex-web/app/screener/page.tsx`
+- KOSPI / KOSDAQ / KONEX 시장 필터 추가
+- 여러 시장 다중 선택 가능

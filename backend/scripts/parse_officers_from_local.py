@@ -32,6 +32,8 @@ from dateutil.relativedelta import relativedelta
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from scripts.utils.company_filter import should_parse_officers, get_excluded_reason
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
@@ -58,12 +60,23 @@ class OfficerParser:
         self.officer_cache = {}  # name_birthdate -> officer_id
 
     async def load_companies(self, conn: asyncpg.Connection):
-        """회사 정보 로드 (market 정보 포함)"""
-        rows = await conn.fetch("SELECT id, corp_code, market FROM companies WHERE corp_code IS NOT NULL")
+        """회사 정보 로드 (market, company_type 정보 포함)"""
+        rows = await conn.fetch("""
+            SELECT id, corp_code, market, company_type, name
+            FROM companies
+            WHERE corp_code IS NOT NULL
+        """)
         self.company_cache = {r['corp_code']: str(r['id']) for r in rows}
         self.company_market = {r['corp_code']: r['market'] for r in rows}
+        self.company_type = {r['corp_code']: r['company_type'] for r in rows}
+        self.company_name = {r['corp_code']: r['name'] for r in rows}
+
+        # 파싱 대상/제외 분류
+        parseable = [r for r in rows if should_parse_officers({'company_type': r['company_type'], 'name': r['name']})]
+        excluded = len(rows) - len(parseable)
+
         listed_count = sum(1 for m in self.company_market.values() if m in ('KOSPI', 'KOSDAQ', 'KONEX'))
-        logger.info(f"회사 캐시 로드: {len(self.company_cache)}개 (상장사: {listed_count}개)")
+        logger.info(f"회사 캐시 로드: {len(self.company_cache)}개 (상장사: {listed_count}개, 파싱제외: {excluded}개)")
 
     def extract_xml_from_zip(self, zip_path: Path) -> Optional[str]:
         """ZIP에서 모든 XML 추출하고 합침"""
@@ -423,7 +436,7 @@ class OfficerParser:
                     birth_date, gender, appointment_number
                 )
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-                ON CONFLICT (officer_id, company_id, term_start_date, source_disclosure_id)
+                ON CONFLICT (officer_id, company_id, term_start_date)
                 DO UPDATE SET
                     term_end_date = COALESCE(EXCLUDED.term_end_date, officer_positions.term_end_date),
                     is_current = EXCLUDED.is_current,
@@ -466,6 +479,12 @@ class OfficerParser:
         if not company_id:
             return
 
+        # SPAC/ETF/REIT 제외
+        company_type = self.company_type.get(corp_code, 'NORMAL')
+        company_name = self.company_name.get(corp_code, '')
+        if not should_parse_officers({'company_type': company_type, 'name': company_name}):
+            return
+
         xml_content = self.extract_xml_from_zip(zip_path)
         if not xml_content:
             return
@@ -505,11 +524,13 @@ class OfficerParser:
                     rcept_no, report_date
                 )
 
-    async def run(self, years: List[str], limit: int = None):
+    async def run(self, years: List[str], limit: int = None, target_corps: set = None):
         """메인 실행"""
         logger.info("=" * 80)
         logger.info("임원 파싱 시작 (로컬 ZIP 파일)")
         logger.info(f"대상 연도: {years}")
+        if target_corps:
+            logger.info(f"대상 기업: {len(target_corps)}개")
         logger.info("=" * 80)
 
         conn = await asyncpg.connect(DB_URL)
@@ -520,12 +541,18 @@ class OfficerParser:
 
             # ZIP 파일 탐색
             count = 0
+            processed_corps = 0
             for batch_dir in sorted(DART_DATA_DIR.glob("batch_*")):
                 for corp_dir in batch_dir.iterdir():
                     if not corp_dir.is_dir():
                         continue
                     corp_code = corp_dir.name
 
+                    # 대상 기업 필터링
+                    if target_corps and corp_code not in target_corps:
+                        continue
+
+                    corp_processed = False
                     for year_dir in corp_dir.iterdir():
                         if not year_dir.is_dir():
                             continue
@@ -535,10 +562,11 @@ class OfficerParser:
                         for zip_file in year_dir.glob("*.zip"):
                             await self.process_zip_file(conn, zip_file, corp_code, year_dir.name)
                             count += 1
+                            corp_processed = True
 
-                            if count % 1000 == 0:
+                            if count % 500 == 0:
                                 logger.info(
-                                    f"진행: {count}개 파일 처리 - "
+                                    f"진행: {count}개 파일 처리 ({processed_corps}개 기업) - "
                                     f"임원: {self.stats['officers_inserted']}, "
                                     f"포지션: {self.stats['positions_inserted']}"
                                 )
@@ -547,6 +575,10 @@ class OfficerParser:
                                 break
                         if limit and count >= limit:
                             break
+
+                    if corp_processed:
+                        processed_corps += 1
+
                     if limit and count >= limit:
                         break
                 if limit and count >= limit:
@@ -576,12 +608,24 @@ async def main():
     parser = argparse.ArgumentParser(description="로컬 ZIP에서 임원 파싱")
     parser.add_argument("--years", default="2022,2023,2024", help="파싱할 연도 (쉼표 구분)")
     parser.add_argument("--limit", type=int, help="처리할 파일 수 제한")
+    parser.add_argument("--corp-list", type=str, help="대상 기업 목록 파일 (corp_code\\tname 형식)")
 
     args = parser.parse_args()
     years = args.years.split(',')
 
+    # 대상 기업 필터 로드
+    target_corps = None
+    if args.corp_list:
+        target_corps = set()
+        with open(args.corp_list, 'r') as f:
+            for line in f:
+                parts = line.strip().split('\t')
+                if parts:
+                    target_corps.add(parts[0])
+        logger.info(f"대상 기업 필터 로드: {len(target_corps)}개")
+
     parser_obj = OfficerParser()
-    await parser_obj.run(years, args.limit)
+    await parser_obj.run(years, args.limit, target_corps)
 
 
 if __name__ == "__main__":

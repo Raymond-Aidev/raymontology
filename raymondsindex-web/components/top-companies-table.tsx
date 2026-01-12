@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { GradeBadge } from './grade-badge';
+import { MarketBadge } from './market-badge';
 import {
   Table,
   TableBody,
@@ -72,12 +73,21 @@ export function TopCompaniesTable({ companies, isLoading }: TopCompaniesTablePro
                   {index + 1}
                 </TableCell>
                 <TableCell>
-                  <Link
-                    href={`/company/${company.company_id}`}
-                    className="font-medium text-gray-900 hover:text-blue-600"
-                  >
-                    {company.company_name}
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/company/${company.company_id}`}
+                      className="font-medium text-gray-900 hover:text-blue-600"
+                    >
+                      {company.company_name}
+                    </Link>
+                    {company.market && (
+                      <MarketBadge
+                        market={company.market}
+                        tradingStatus={company.trading_status}
+                        size="sm"
+                      />
+                    )}
+                  </div>
                   <p className="text-xs text-gray-500">{company.stock_code}</p>
                 </TableCell>
                 <TableCell className="text-center">

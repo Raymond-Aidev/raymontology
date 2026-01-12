@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRanking } from '@/hooks/use-ranking';
 import { GradeBadge } from '@/components/grade-badge';
+import { MarketBadge } from '@/components/market-badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +31,7 @@ import { GRADE_ORDER, type Grade } from '@/lib/constants';
 import type { RankingParams } from '@/lib/types';
 
 const PAGE_SIZE = 20;
+const MARKETS = ['KOSPI', 'KOSDAQ', 'KONEX'] as const;
 
 export default function ScreenerPage() {
   const [params, setParams] = useState<RankingParams>({
@@ -38,6 +40,7 @@ export default function ScreenerPage() {
     sort: 'score_desc',
   });
   const [selectedGrades, setSelectedGrades] = useState<string[]>([]);
+  const [selectedMarkets, setSelectedMarkets] = useState<string[]>([]);
   const [scoreRange, setScoreRange] = useState<[number, number]>([0, 100]);
 
   const { data, isLoading } = useRanking({
@@ -56,8 +59,18 @@ export default function ScreenerPage() {
     setParams((prev) => ({ ...prev, page: 1 }));
   };
 
+  const handleMarketToggle = (market: string) => {
+    setSelectedMarkets((prev) =>
+      prev.includes(market)
+        ? prev.filter((m) => m !== market)
+        : [...prev, market]
+    );
+    setParams((prev) => ({ ...prev, page: 1 }));
+  };
+
   const handleReset = () => {
     setSelectedGrades([]);
+    setSelectedMarkets([]);
     setScoreRange([0, 100]);
     setParams({ page: 1, size: PAGE_SIZE, sort: 'score_desc' });
   };
@@ -68,6 +81,9 @@ export default function ScreenerPage() {
 
   const filteredItems = data?.items.filter((item) => {
     if (selectedGrades.length > 0 && !selectedGrades.includes(item.grade)) {
+      return false;
+    }
+    if (selectedMarkets.length > 0 && item.market && !selectedMarkets.includes(item.market)) {
       return false;
     }
     return true;
@@ -95,6 +111,26 @@ export default function ScreenerPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Market Filter */}
+            <div>
+              <h4 className="font-medium text-gray-900 mb-3">거래소 필터</h4>
+              <div className="flex gap-2">
+                {MARKETS.map((market) => (
+                  <button
+                    key={market}
+                    onClick={() => handleMarketToggle(market)}
+                    className={`px-3 py-1.5 text-sm font-medium rounded border transition-colors ${
+                      selectedMarkets.includes(market)
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white text-gray-700 border-gray-200 hover:border-blue-400'
+                    }`}
+                  >
+                    {market}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Grade Filter */}
             <div>
               <h4 className="font-medium text-gray-900 mb-3">등급 필터</h4>
@@ -212,10 +248,17 @@ export default function ScreenerPage() {
                       {filteredItems.map((company) => (
                         <TableRow key={company.id}>
                           <TableCell>
-                            <div>
+                            <div className="flex items-center gap-2">
                               <p className="font-medium">{company.company_name}</p>
-                              <p className="text-xs text-gray-500">{company.stock_code}</p>
+                              {company.market && (
+                                <MarketBadge
+                                  market={company.market}
+                                  tradingStatus={company.trading_status}
+                                  size="sm"
+                                />
+                              )}
                             </div>
+                            <p className="text-xs text-gray-500">{company.stock_code}</p>
                           </TableCell>
                           <TableCell className="text-center">
                             <div className="flex justify-center">

@@ -60,12 +60,13 @@ class RaymondsIndexCalculator:
         conn = await asyncpg.connect(self.database_url)
 
         try:
-            # 계산 대상 회사 조회
+            # 계산 대상 회사 조회 (SPAC/REIT/ETF 제외)
             query = """
                 SELECT DISTINCT c.id, c.name, c.ticker
                 FROM companies c
                 JOIN financial_details fd ON c.id = fd.company_id
                 WHERE c.listing_status = 'LISTED'
+                  AND (c.company_type IS NULL OR c.company_type NOT IN ('SPAC', 'REIT', 'ETF'))
             """
             params = []
 

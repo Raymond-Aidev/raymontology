@@ -6,6 +6,9 @@ export interface RaymondsIndexResponse {
   company_name: string;
   stock_code: string;
   sector?: string;
+  market?: string;                    // KOSPI, KOSDAQ, KONEX
+  company_type?: string;              // NORMAL, SPAC, REIT, ETF
+  trading_status?: string;            // NORMAL, SUSPENDED, TRADING_HALT
   fiscal_year: number;
   total_score: number;
   grade: string;
@@ -94,6 +97,8 @@ export interface RankingParams {
   size?: number;
   grade?: string;
   sector?: string;
+  market?: string;                    // KOSPI, KOSDAQ, KONEX 필터
+  company_type?: string;              // NORMAL, SPAC, REIT, ETF 필터
   min_score?: number;
   max_score?: number;
   sort?: 'score_desc' | 'score_asc' | 'name_asc' | 'name_desc';

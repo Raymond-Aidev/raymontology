@@ -1,7 +1,7 @@
 """
 Company 모델
 """
-from sqlalchemy import Column, String, Float, DateTime, Index
+from sqlalchemy import Column, String, Float, DateTime, Index, Boolean
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -33,6 +33,9 @@ class Company(Base):
     industry = Column(String(100), nullable=True)
     market = Column(String(20), nullable=True, index=True)  # KOSPI, KOSDAQ, KONEX
     listing_status = Column(String(20), nullable=True, default='LISTED')  # LISTED, UNLISTED, ETF
+    company_type = Column(String(20), nullable=True, default='NORMAL', index=True)  # NORMAL, SPAC, REIT, ETF, HOLDING, FINANCIAL
+    trading_status = Column(String(20), nullable=True, default='NORMAL')  # NORMAL, SUSPENDED, TRADING_HALT
+    is_managed = Column(String(1), nullable=True, default='N')  # Y: 관리종목, N: 정상
 
     # 재무 지표
     market_cap = Column(Float, nullable=True)  # 시가총액
