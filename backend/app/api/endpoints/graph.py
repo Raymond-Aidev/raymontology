@@ -721,33 +721,39 @@ async def get_officer_career(
             career_data = record["career_history"]
 
             # 1. Neo4j에서 가져온 상장사 경력 (source="db")
+            # v2.5: 동일 회사는 1개만 표시 (company_id 기준 중복 제거)
             seen_companies = set()  # 회사명 기준 중복 체크 (disclosure 데이터와 비교용)
+            seen_company_ids = set()  # 회사 ID 기준 중복 체크 (동일 회사 1개만)
             all_careers = []
 
             for career in career_data:
                 if career.get("company_id"):
-                    # 중복 체크 (회사+직책 조합)
-                    key = (career["company_id"], career.get("position", ""))
+                    company_id = career["company_id"]
                     company_name_raw = career.get("company_name", "").strip()
                     # 회사명 정규화 (중복 체크용)
                     company_name_normalized = company_name_raw.replace("(주)", "").replace("주식회사", "").replace("㈜", "").strip()
-                    if key not in seen_companies:
-                        seen_companies.add(key)
-                        seen_companies.add(company_name_raw)  # 원본 회사명 추가
-                        seen_companies.add(company_name_normalized)  # 정규화된 회사명도 추가
-                        # Neo4j Date 객체를 문자열로 변환
-                        start_date = serialize_neo4j_value(career.get("start_date"))
-                        end_date = serialize_neo4j_value(career.get("end_date"))
-                        all_careers.append(CareerHistory(
-                            company_id=career["company_id"],
-                            company_name=career["company_name"],
-                            position=career["position"],
-                            start_date=start_date,
-                            end_date=end_date,
-                            is_current=career.get("is_current", False),
-                            is_listed=True,
-                            source="db"
-                        ))
+
+                    # v2.5: 동일 회사는 첫 번째 레코드만 사용 (is_current=True 우선 정렬되어 있음)
+                    if company_id in seen_company_ids:
+                        continue  # 이미 추가된 회사는 스킵
+
+                    seen_company_ids.add(company_id)
+                    seen_companies.add(company_name_raw)  # 원본 회사명 추가
+                    seen_companies.add(company_name_normalized)  # 정규화된 회사명도 추가
+
+                    # Neo4j Date 객체를 문자열로 변환
+                    start_date = serialize_neo4j_value(career.get("start_date"))
+                    end_date = serialize_neo4j_value(career.get("end_date"))
+                    all_careers.append(CareerHistory(
+                        company_id=company_id,
+                        company_name=career["company_name"],
+                        position=career["position"],
+                        start_date=start_date,
+                        end_date=end_date,
+                        is_current=career.get("is_current", False),
+                        is_listed=True,
+                        source="db"
+                    ))
 
             # 2. PostgreSQL에서 파싱된 경력 조회 (source="disclosure")
             # Neo4j ID와 PostgreSQL ID가 다를 수 있으므로 이름+생년월일로 조회
