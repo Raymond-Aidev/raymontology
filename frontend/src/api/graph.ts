@@ -12,6 +12,7 @@ export interface OfficerCareer {
   is_listed?: boolean  // 상장회사 여부
   source: 'db' | 'disclosure'  // "db": 상장사 임원 DB, "disclosure": 사업보고서 주요경력
   raw_text?: string  // 사업보고서 원본 텍스트 (source=disclosure인 경우)
+  source_report_date?: string | null  // v2.5: 보고서 기준일
 }
 
 // 인수인 투자 이력 타입
@@ -345,6 +346,7 @@ interface ApiOfficerCareerItem {
   is_listed?: boolean
   source?: 'db' | 'disclosure'  // db: 상장사 임원 DB, disclosure: 사업보고서 주요경력
   raw_text?: string  // 사업보고서 원본 텍스트 (source=disclosure인 경우)
+  source_report_date?: string | null  // v2.5: 보고서 기준일
 }
 
 interface ApiOfficerCareerResponse {
@@ -377,6 +379,7 @@ function transformOfficerCareerResponse(careerHistory: ApiOfficerCareerItem[]): 
     is_listed: career.is_listed ?? (career.source === 'db'),
     source: career.source || 'db',
     raw_text: career.raw_text,
+    source_report_date: career.source_report_date,  // v2.5: 보고서 기준일
   }))
 }
 

@@ -304,11 +304,21 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
                                   ) : null}
                                 </div>
                                 <p className="text-xs text-text-secondary mt-0.5">{item.position}</p>
-                                {(item.start_date || item.end_date) && (
+                                {/* 재임기간 표시 (v2.5 개선) */}
+                                {item.end_date ? (
                                   <p className="text-xs text-text-muted font-mono mt-0.5">
-                                    {item.start_date || '?'} ~ {item.is_current ? '현재' : (item.end_date || '?')}
+                                    {item.start_date ? `${item.start_date} ~ ` : ''}
+                                    {item.is_current ? (
+                                      <span className="text-accent-success">임기 {item.end_date}까지</span>
+                                    ) : (
+                                      <span>{item.end_date} 만료</span>
+                                    )}
                                   </p>
-                                )}
+                                ) : item.start_date ? (
+                                  <p className="text-xs text-text-muted font-mono mt-0.5">
+                                    {item.start_date} ~ {item.is_current ? '현재' : '?'}
+                                  </p>
+                                ) : null}
                               </div>
                             </div>
                           ))}
