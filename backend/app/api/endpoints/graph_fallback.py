@@ -377,15 +377,17 @@ async def get_officer_career_fallback(
         if not officer:
             raise HTTPException(status_code=404, detail="Officer not found")
 
-        # 경력 조회 (officer_positions 테이블) - 중복 제거: 동일 회사+직책은 최신 레코드만
+        # 경력 조회 (officer_positions 테이블) - 중복 제거: 동일 회사는 최신 레코드만 반환
+        # v2.5: 동일 회사 내 직책이 다르더라도 가장 최근 보고서 기준 1개만 표시
         career_query = text("""
-            SELECT DISTINCT ON (c.id, op.position)
+            SELECT DISTINCT ON (c.id)
                    c.id::text as company_id, c.name as company_name,
-                   op.position, op.term_start_date::text, op.term_end_date::text, op.is_current
+                   op.position, op.term_start_date::text, op.term_end_date::text, op.is_current,
+                   op.source_report_date::text
             FROM officer_positions op
             JOIN companies c ON op.company_id = c.id
             WHERE op.officer_id::text = :officer_id
-            ORDER BY c.id, op.position, op.source_report_date DESC NULLS LAST, op.is_current DESC
+            ORDER BY c.id, op.source_report_date DESC NULLS LAST, op.is_current DESC
         """)
         result = await db.execute(career_query, {"officer_id": officer_id})
         careers = result.fetchall()
@@ -403,7 +405,8 @@ async def get_officer_career_fallback(
                 "end_date": c.term_end_date,
                 "is_current": c.is_current,
                 "is_listed": True,
-                "source": "db"
+                "source": "db",
+                "source_report_date": c.source_report_date  # v2.5: 보고서 기준일 추가
             }
             if c.is_current:
                 current_careers.append(career_item)
