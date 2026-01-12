@@ -367,34 +367,20 @@ export interface OfficerCareerResult {
 
 /**
  * API 응답을 OfficerCareer[] 형태로 변환
- * v2.5: 동일 회사는 1개만 표시 (company_id 기준 중복 제거)
  */
 function transformOfficerCareerResponse(careerHistory: ApiOfficerCareerItem[]): OfficerCareer[] {
-  const seenCompanyIds = new Set<string>()
-
-  return careerHistory
-    .map(career => ({
-      company_name: career.company_name,
-      company_id: career.company_id,
-      position: career.position,
-      start_date: career.start_date || undefined,
-      end_date: career.end_date || undefined,
-      is_current: career.is_current ?? !career.end_date,
-      is_listed: career.is_listed ?? (career.source === 'db'),
-      source: career.source || 'db',
-      raw_text: career.raw_text,
-      source_report_date: career.source_report_date,
-    }))
-    .filter(career => {
-      // v2.5: 동일 회사는 첫 번째 레코드만 유지 (is_current=true 우선 정렬되어 있음)
-      if (career.company_id) {
-        if (seenCompanyIds.has(career.company_id)) {
-          return false  // 이미 추가된 회사는 제외
-        }
-        seenCompanyIds.add(career.company_id)
-      }
-      return true
-    })
+  return careerHistory.map(career => ({
+    company_name: career.company_name,
+    company_id: career.company_id,
+    position: career.position,
+    start_date: career.start_date || undefined,
+    end_date: career.end_date || undefined,
+    is_current: career.is_current ?? !career.end_date,
+    is_listed: career.is_listed ?? (career.source === 'db'),
+    source: career.source || 'db',
+    raw_text: career.raw_text,
+    source_report_date: career.source_report_date,  // v2.5: 보고서 기준일
+  }))
 }
 
 /**
