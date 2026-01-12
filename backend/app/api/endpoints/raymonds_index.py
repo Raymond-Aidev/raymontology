@@ -688,11 +688,12 @@ async def get_raymonds_index_by_name(
         if not company:
             raise HTTPException(status_code=404, detail=f"Company not found: {company_name}")
 
-        # RaymondsIndex 조회
+        # RaymondsIndex 조회 (최신 연도 기준)
         index_query = (
             select(RaymondsIndex)
             .where(RaymondsIndex.company_id == company.id)
             .order_by(desc(RaymondsIndex.fiscal_year))
+            .limit(1)
         )
 
         index_result = await db.execute(index_query)
