@@ -12,7 +12,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = '20260113_pipeline_runs'
-down_revision = None
+down_revision = 'stock_prices_001'  # 기존 체인에 연결
 branch_labels = None
 depends_on = None
 

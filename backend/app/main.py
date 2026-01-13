@@ -25,7 +25,8 @@ from app.api.endpoints import (
     cb_subscribers,
     company_report,
     raymonds_index,
-    stock_prices
+    stock_prices,
+    news
 )
 from app.routes import auth, oauth, admin, subscription, content, service_application
 from app.routes import toss_auth, credits
@@ -97,6 +98,7 @@ app.include_router(cb_subscribers.router, prefix="/api")
 app.include_router(company_report.router, prefix="/api")
 app.include_router(raymonds_index.router, prefix="/api")
 app.include_router(stock_prices.router, prefix="/api")
+app.include_router(news.router, prefix="/api")
 
 @app.get("/")
 async def root():

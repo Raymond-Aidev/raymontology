@@ -26,6 +26,10 @@ from app.models.risk_scores import RiskScore
 from app.models.toss_users import TossUser, CreditTransaction, ReportView, CreditProduct
 from app.models.stock_prices import StockPrice
 from app.models.service_application import ServiceApplication, ApplicationStatus, PlanType, ENTERPRISE_PLANS
+from app.models.news import (
+    NewsArticle, NewsEntity, NewsRelation, NewsRisk, NewsCompanyComplexity,
+    RISK_WEIGHTS, COMPLEXITY_GRADES
+)
 
 __all__ = [
     "Base",
@@ -58,4 +62,12 @@ __all__ = [
     "ApplicationStatus",
     "PlanType",
     "ENTERPRISE_PLANS",
+    # News models
+    "NewsArticle",
+    "NewsEntity",
+    "NewsRelation",
+    "NewsRisk",
+    "NewsCompanyComplexity",
+    "RISK_WEIGHTS",
+    "COMPLEXITY_GRADES",
 ]
