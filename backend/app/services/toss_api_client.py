@@ -490,9 +490,10 @@ class TossAPIClient:
         url = f"{self.BASE_URL}/api-partner/v1/apps-in-toss/order/get-order-status"
 
         async with self._get_client() as client:
-            response = await client.get(
+            # POST 메서드로 요청, orderId는 body에 포함 (토스 API 스펙)
+            response = await client.post(
                 url,
-                params={"orderId": order_id},
+                json={"orderId": order_id},
                 headers={"x-toss-user-key": user_key}
             )
 
