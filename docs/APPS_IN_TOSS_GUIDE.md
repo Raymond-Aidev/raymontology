@@ -592,29 +592,67 @@ import { IAP } from '@apps-in-toss/web-framework'
 // 일회성 결제
 const cleanup = IAP.createOneTimePurchaseOrder({
   options: {
-    sku: 'report_30',  // 앱인토스 콘솔에 등록된 SKU와 정확히 일치해야 함
-    processProductGrant: async ({ orderId }) => {
-      // 백엔드에 결제 검증 및 상품 지급 요청
-      const result = await api.purchaseCredits(sku, orderId)
-      return result.success
+    sku: 'ait.0000016607.xxx',  // 앱인토스 콘솔에서 자동 생성된 SKU
+    // 중요: processProductGrant는 반드시 동기 함수로 구현
+    // async/await 사용 시 SDK가 타임아웃되어 환불 페이지로 이동함
+    processProductGrant: ({ orderId }) => {
+      // 백엔드 호출은 fire-and-forget 패턴 (비동기)
+      api.purchaseCredits(sku, orderId)
+        .then(result => console.log('백엔드 응답:', result))
+        .catch(err => console.error('백엔드 오류:', err))
+
+      // 즉시 true 반환 (SDK 타임아웃 방지)
+      return true
     },
   },
-  onEvent: async () => {
+  onEvent: async (event) => {
     // 결제 성공 처리
+    console.log('결제 성공:', event)
   },
   onError: (error) => {
     // 결제 실패/취소 처리
+    console.error('결제 실패:', error)
   },
 })
 
 // 컴포넌트 언마운트 시 cleanup 호출 필수
 ```
 
+### processProductGrant 주의사항 (중요!)
+
+**SDK 버그/제한사항**: `processProductGrant`를 `async` 함수로 구현하면 SDK가 Promise 완료를 기다리지 않고 환불 페이지로 이동합니다.
+
+**해결 방법**:
+1. `processProductGrant`는 **동기 함수**로 구현
+2. 백엔드 호출은 **fire-and-forget** 패턴으로 비동기 처리
+3. 즉시 `true` 반환
+
+```typescript
+// 잘못된 예시 (환불 페이지로 이동함)
+processProductGrant: async ({ orderId }) => {
+  const result = await api.purchaseCredits(orderId)  // SDK가 기다리지 않음
+  return result.success
+}
+
+// 올바른 예시
+processProductGrant: ({ orderId }) => {
+  api.purchaseCredits(orderId).then(...).catch(...)  // fire-and-forget
+  return true  // 즉시 반환
+}
+```
+
 ### SKU 관련 주의사항
 
-- SKU는 **대소문자를 구분**합니다
-- 코드에서 사용하는 SKU가 콘솔 등록 SKU와 정확히 일치해야 합니다
-- 불일치 시 결제 오류 발생
+- 앱인토스 콘솔에서 상품 등록 시 **자동 생성된 SKU** 사용 (예: `ait.0000016607.xxx`)
+- 코드에서 사용하는 SKU가 콘솔 등록 SKU와 **정확히 일치**해야 함
+- 로컬 ID (`report_10`) → 콘솔 SKU (`ait.xxx`) 매핑 필요
+
+**RaymondsRisk SKU 매핑**:
+| 로컬 ID | 콘솔 SKU |
+|---------|----------|
+| `report_10` | `ait.0000016607.492ec06a.bd18e74b63.8287319702` |
+| `report_30` | `ait.0000016607.fb16c160.4943bb7107.8287358161` |
+| `report_unlimited` | `ait.0000016607.fb16c160.beb36e9854.8287409873` |
 
 ### 환경별 동작
 
@@ -626,9 +664,13 @@ const cleanup = IAP.createOneTimePurchaseOrder({
 
 ### 트러블슈팅
 
+#### 결제 성공 후 환불 페이지로 이동
+- `processProductGrant`가 `async` 함수인지 확인
+- **동기 함수**로 변경하고 즉시 `true` 반환
+
 #### SKU 불일치 오류
-- 앱인토스 콘솔에 등록된 SKU 확인
-- 대소문자 정확히 일치하는지 확인
+- 앱인토스 콘솔에 등록된 **자동 생성 SKU** 확인
+- 로컬 ID가 아닌 콘솔 SKU 사용
 
 #### 샌드박스에서 결제 실패
 - 샌드박스는 IAP 미지원
@@ -636,7 +678,7 @@ const cleanup = IAP.createOneTimePurchaseOrder({
 
 #### 결제 후 이용권 미충전
 - 백엔드 로그 확인 (`[Purchase]` prefix)
-- `processProductGrant` 반환값이 `true`인지 확인
+- fire-and-forget 호출이 정상 동작하는지 확인
 
 ---
 
