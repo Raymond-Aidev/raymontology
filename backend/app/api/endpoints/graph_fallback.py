@@ -307,11 +307,18 @@ async def get_company_network_fallback(
                         properties={"position": career.position}
                     ))
         
-        # 6. 대주주 조회
+        # 6. 대주주 조회 (무효 데이터 필터링 추가)
         shareholders_query = text("""
             SELECT id::text, shareholder_name, share_ratio, share_count, shareholder_type
             FROM major_shareholders
             WHERE company_id::text = :company_id
+              AND shareholder_name NOT IN (
+                  '주식수', '의결권 없는 주식', '의결권없는주식', '의결권없는 주식',
+                  '의결권이 없는 주식', '종류주식', '종류주', '자기주식', '우선주식',
+                  '보통주식', '기타주주', '성명순', '합계', '소계', '계', '주', '-'
+              )
+              AND shareholder_name !~ '^(주식수|보통주|우선주|의결권|종류주|자기주|합계|소계|계)\\s*$'
+              AND LENGTH(shareholder_name) > 1
             ORDER BY share_ratio DESC NULLS LAST
             LIMIT 10
         """)

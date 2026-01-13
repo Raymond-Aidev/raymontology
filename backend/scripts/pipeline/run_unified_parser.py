@@ -7,12 +7,13 @@
 사용법:
     python -m scripts.pipeline.run_unified_parser --quarter Q1 --year 2025
     python -m scripts.pipeline.run_unified_parser --quarter Q1 --year 2025 --type financial
+    python -m scripts.pipeline.run_unified_parser --quarter Q3 --year 2025 --type shareholder
     python -m scripts.pipeline.run_unified_parser --quarter Q1 --year 2025 --dry-run
 
 옵션:
     --quarter: 분기 (Q1, Q2, Q3, Q4)
     --year: 연도
-    --type: 파싱 유형 (financial, officer, all)
+    --type: 파싱 유형 (financial, officer, shareholder, all)
     --sample: 샘플 개수 (테스트용)
     --dry-run: 실제 저장 없이 파싱만
 """
@@ -32,7 +33,7 @@ import asyncpg
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from scripts.parsers import DARTUnifiedParser, FinancialParser, OfficerParser
+from scripts.parsers import DARTUnifiedParser, FinancialParser, OfficerParser, ShareholderParser
 
 logging.basicConfig(
     level=logging.INFO,
@@ -42,6 +43,8 @@ logger = logging.getLogger(__name__)
 
 # 데이터 경로
 QUARTERLY_DATA_DIR = Path(__file__).parent.parent.parent / 'data' / 'dart' / 'quarterly'
+# Q3 2025 대체 경로
+Q3_2025_DATA_DIR = Path(__file__).parent.parent.parent / 'data' / 'q3_reports_2025'
 
 
 class QuarterlyParser:
@@ -52,6 +55,7 @@ class QuarterlyParser:
         if not self.database_url:
             raise ValueError("DATABASE_URL 환경 변수가 설정되지 않았습니다")
         self.unified_parser = DARTUnifiedParser(self.database_url)
+        self.shareholder_parser = ShareholderParser(self.database_url)
 
         self.stats = {
             'started_at': None,
@@ -60,6 +64,7 @@ class QuarterlyParser:
             'reports_processed': 0,
             'financial_saved': 0,
             'officers_saved': 0,
+            'shareholders_saved': 0,
             'errors': 0,
         }
 
@@ -77,6 +82,10 @@ class QuarterlyParser:
         Returns:
             보고서 목록 [{'zip_path': Path, 'meta': dict}, ...]
         """
+        # Q3 2025 특별 처리 (대체 경로 사용)
+        if quarter == 'Q3' and year == 2025 and Q3_2025_DATA_DIR.exists():
+            return self._find_q3_2025_reports()
+
         data_dir = QUARTERLY_DATA_DIR / str(year) / quarter
 
         if not data_dir.exists():
@@ -107,6 +116,38 @@ class QuarterlyParser:
         logger.info(f"{quarter} {year} 보고서: {len(reports)}개")
         return reports
 
+    def _find_q3_2025_reports(self) -> List[Dict]:
+        """Q3 2025 보고서 검색 (대체 경로)
+
+        data/q3_reports_2025/{corp_code}/{rcept_no}.zip 구조
+        """
+        reports = []
+
+        for corp_dir in sorted(Q3_2025_DATA_DIR.iterdir()):
+            if not corp_dir.is_dir():
+                continue
+
+            for meta_path in corp_dir.glob('*_meta.json'):
+                zip_path = meta_path.with_name(meta_path.name.replace('_meta.json', '.zip'))
+
+                if not zip_path.exists():
+                    continue
+
+                try:
+                    with open(meta_path, 'r', encoding='utf-8') as f:
+                        meta = json.load(f)
+
+                    reports.append({
+                        'zip_path': zip_path,
+                        'meta': meta,
+                    })
+
+                except Exception as e:
+                    logger.warning(f"메타 파일 읽기 오류: {meta_path}: {e}")
+
+        logger.info(f"Q3 2025 보고서 (대체 경로): {len(reports)}개")
+        return reports
+
     async def parse_quarterly(
         self,
         quarter: str,
@@ -120,7 +161,7 @@ class QuarterlyParser:
         Args:
             quarter: 분기 (Q1, Q2, Q3, Q4)
             year: 연도
-            parse_type: 파싱 유형 (financial, officer, all)
+            parse_type: 파싱 유형 (financial, officer, shareholder, all)
             sample: 샘플 개수 (테스트용)
             dry_run: True면 실제 저장 없이 파싱만
 
@@ -148,9 +189,11 @@ class QuarterlyParser:
         try:
             # 파서 초기화
             await self.unified_parser.initialize(conn)
+            await self.shareholder_parser.load_companies(conn)
 
             parse_financial = parse_type in ['financial', 'all']
             parse_officers = parse_type in ['officer', 'all']
+            parse_shareholders = parse_type in ['shareholder', 'all']
 
             # 파싱 실행
             for i, report in enumerate(reports):
@@ -177,6 +220,16 @@ class QuarterlyParser:
                             if saved:
                                 self.stats['officers_saved'] += 1
 
+                    # 대주주 데이터 파싱
+                    if parse_shareholders:
+                        result = await self.shareholder_parser.parse(zip_path, meta)
+                        if result.get('success') and not dry_run:
+                            saved = await self.shareholder_parser.save_to_db(conn, result)
+                            if saved > 0:
+                                self.stats['shareholders_saved'] += saved
+                        elif result.get('success') and dry_run:
+                            logger.debug(f"[DRY-RUN] {len(result.get('shareholders', []))} shareholders for {meta.get('corp_code')}")
+
                     self.stats['reports_processed'] += 1
 
                 except Exception as e:
@@ -196,6 +249,7 @@ class QuarterlyParser:
         logger.info(f"  - 보고서 처리: {self.stats['reports_processed']:,}개")
         logger.info(f"  - 재무 저장: {self.stats['financial_saved']:,}개")
         logger.info(f"  - 임원 저장: {self.stats['officers_saved']:,}개")
+        logger.info(f"  - 대주주 저장: {self.stats['shareholders_saved']:,}개")
         logger.info(f"  - 오류: {self.stats['errors']:,}개")
         logger.info(f"{'=' * 50}")
 
@@ -207,7 +261,7 @@ async def main():
     parser.add_argument('--quarter', choices=['Q1', 'Q2', 'Q3', 'Q4'], required=True,
                         help='분기')
     parser.add_argument('--year', type=int, required=True, help='연도')
-    parser.add_argument('--type', choices=['financial', 'officer', 'all'], default='all',
+    parser.add_argument('--type', choices=['financial', 'officer', 'shareholder', 'all'], default='all',
                         help='파싱 유형')
     parser.add_argument('--sample', type=int, help='샘플 개수 (테스트용)')
     parser.add_argument('--dry-run', action='store_true', help='실제 저장 없이 파싱만')
