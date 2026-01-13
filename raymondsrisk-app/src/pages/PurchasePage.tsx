@@ -140,6 +140,63 @@ export default function PurchasePage() {
     loadProducts()
   }, [])
 
+  // 미결 주문 처리 (앱 시작 시)
+  // Apps-in-Toss SDK 1.2.2+ 권장: 결제 완료 후 앱 종료 등으로 상품 지급이 완료되지 않은 주문 복원
+  useEffect(() => {
+    const handlePendingOrders = async () => {
+      // 토스 앱 내부가 아니면 건너뛰기
+      if (!isInTossApp()) {
+        console.log('[PurchasePage] 토스 앱 외부 - 미결 주문 처리 건너뛰기')
+        return
+      }
+
+      try {
+        console.log('[PurchasePage] 미결 주문 확인 중...')
+        const pendingResult = await IAP.getPendingOrders()
+        const pendingOrders = pendingResult?.orders || []
+
+        if (pendingOrders.length === 0) {
+          console.log('[PurchasePage] 미결 주문 없음')
+          return
+        }
+
+        console.log('[PurchasePage] 미결 주문 발견:', pendingOrders.length, '건')
+
+        for (const order of pendingOrders) {
+          try {
+            console.log('[PurchasePage] 미결 주문 처리 중:', order.orderId)
+
+            // 백엔드에서 이미 처리됐는지 확인 (중복 방지)
+            // 주문이 이미 DB에 있으면 completeProductGrant만 호출
+            try {
+              // 상품 지급 시도 (이미 지급됐으면 409 에러)
+              await creditService.purchaseCredits(order.sku, order.orderId)
+              console.log('[PurchasePage] 미결 주문 상품 지급 완료:', order.orderId)
+            } catch (err) {
+              // 이미 처리된 주문이면 (409 Conflict) 무시
+              console.log('[PurchasePage] 미결 주문 이미 처리됨 (또는 에러):', order.orderId, err)
+            }
+
+            // SDK에 상품 지급 완료 알림
+            await IAP.completeProductGrant({ params: { orderId: order.orderId } })
+            console.log('[PurchasePage] completeProductGrant 호출 완료:', order.orderId)
+
+            // 잔액 새로고침
+            await refreshCredits()
+          } catch (err) {
+            console.error('[PurchasePage] 미결 주문 처리 실패:', order.orderId, err)
+          }
+        }
+      } catch (err) {
+        console.error('[PurchasePage] 미결 주문 조회 실패:', err)
+      }
+    }
+
+    if (isAuthenticated) {
+      handlePendingOrders()
+    }
+  }, [isAuthenticated, refreshCredits])
+
   // 결제 cleanup 함수 저장용 ref
   const purchaseCleanupRef = useRef<(() => void) | null>(null)
 
@@ -187,14 +244,26 @@ export default function PurchasePage() {
         options: {
           sku: normalizedSku,  // 정규화된 SKU 사용
           processProductGrant: async ({ orderId }) => {
-            console.log('[PurchasePage] processProductGrant 호출, orderId:', orderId)
+            console.log('[PurchasePage] processProductGrant 시작, orderId:', orderId)
             try {
               // 백엔드에 결제 기록 및 이용권 충전
+              console.log('[PurchasePage] 백엔드 API 호출 시작...')
               const result = await creditService.purchaseCredits(selectedProduct, orderId)
-              console.log('[PurchasePage] 백엔드 결제 처리 결과:', result)
-              return result.success
+              console.log('[PurchasePage] 백엔드 응답:', JSON.stringify(result))
+              console.log('[PurchasePage] result.success 값:', result.success, '타입:', typeof result.success)
+
+              // 명시적으로 boolean true 반환 (Apps-in-Toss SDK 요구사항)
+              // result.success가 truthy이면 true, 아니면 false
+              const grantSuccess = result.success === true
+              console.log('[PurchasePage] processProductGrant 반환값:', grantSuccess)
+              return grantSuccess
             } catch (err) {
               console.error('[PurchasePage] 백엔드 결제 처리 실패:', err)
+              // 에러 상세 정보 로깅
+              if (err instanceof Error) {
+                console.error('[PurchasePage] 에러 메시지:', err.message)
+                console.error('[PurchasePage] 에러 스택:', err.stack)
+              }
               return false
             }
           },
