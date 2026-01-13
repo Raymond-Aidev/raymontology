@@ -243,23 +243,23 @@ export default function PurchasePage() {
       purchaseCleanupRef.current = IAP.createOneTimePurchaseOrder({
         options: {
           sku: normalizedSku,  // 정규화된 SKU 사용
-          processProductGrant: async ({ orderId }) => {
-            console.log('[PurchasePage] processProductGrant 시작, orderId:', orderId)
-            try {
-              // 백엔드에 결제 기록 및 이용권 충전
-              console.log('[PurchasePage] 백엔드 API 호출 시작...')
-              const result = await creditService.purchaseCredits(selectedProduct, orderId)
-              console.log('[PurchasePage] 백엔드 응답:', JSON.stringify(result))
+          processProductGrant: ({ orderId }) => {
+            // 동기적으로 즉시 true 반환 (SDK 타임아웃 방지)
+            console.log('[PurchasePage] processProductGrant 호출됨, orderId:', orderId)
 
-              // SDK 문서: boolean | Promise<boolean> 반환
-              // result.success가 true이면 true 반환, 아니면 false
-              const success = result.success === true
-              console.log('[PurchasePage] processProductGrant 반환:', success)
-              return success
-            } catch (err) {
-              console.error('[PurchasePage] 백엔드 결제 처리 실패:', err)
-              return false
-            }
+            // 백엔드 호출은 비동기로 처리 (fire-and-forget)
+            // SDK가 true 반환을 기다리지 않도록 함
+            creditService.purchaseCredits(selectedProduct, orderId)
+              .then(result => {
+                console.log('[PurchasePage] 백엔드 응답 (비동기):', JSON.stringify(result))
+              })
+              .catch(err => {
+                console.error('[PurchasePage] 백엔드 오류 (비동기):', err)
+              })
+
+            // 즉시 true 반환
+            console.log('[PurchasePage] processProductGrant 즉시 true 반환')
+            return true
           },
         },
         onEvent: async (event: unknown) => {
