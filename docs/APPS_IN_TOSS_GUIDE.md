@@ -557,6 +557,89 @@ int main() {
 
 ---
 
+## 인앱결제 (IAP) 연동
+
+### 개요
+
+앱인토스 인앱결제는 `@apps-in-toss/web-framework`의 `IAP` 모듈을 통해 구현합니다.
+
+**중요 제한사항:**
+- 샌드박스 앱에서는 인앱결제 테스트 불가
+- 실제 결제 테스트는 토스 앱에서만 가능 (실제 결제 발생)
+
+### 앱인토스 콘솔 상품 등록 (필수)
+
+인앱결제를 사용하려면 **앱인토스 콘솔에서 상품(SKU)을 먼저 등록**해야 합니다.
+
+1. 앱인토스 콘솔 접속: https://console.apps-in-toss.toss.im
+2. 해당 앱 선택
+3. **인앱 결제 > 상품 관리** 메뉴
+4. 상품 등록
+
+**RaymondsRisk SKU 목록:**
+
+| SKU ID | 상품명 | 가격 |
+|--------|-------|------|
+| `report_10` | 리포트 10건 | 1,000원 |
+| `report_30` | 리포트 30건 | 3,000원 |
+| `report_unlimited` | 무제한 이용권 | 10,000원 |
+
+### 결제 코드 예시
+
+```typescript
+import { IAP } from '@apps-in-toss/web-framework'
+
+// 일회성 결제
+const cleanup = IAP.createOneTimePurchaseOrder({
+  options: {
+    sku: 'report_30',  // 앱인토스 콘솔에 등록된 SKU와 정확히 일치해야 함
+    processProductGrant: async ({ orderId }) => {
+      // 백엔드에 결제 검증 및 상품 지급 요청
+      const result = await api.purchaseCredits(sku, orderId)
+      return result.success
+    },
+  },
+  onEvent: async () => {
+    // 결제 성공 처리
+  },
+  onError: (error) => {
+    // 결제 실패/취소 처리
+  },
+})
+
+// 컴포넌트 언마운트 시 cleanup 호출 필수
+```
+
+### SKU 관련 주의사항
+
+- SKU는 **대소문자를 구분**합니다
+- 코드에서 사용하는 SKU가 콘솔 등록 SKU와 정확히 일치해야 합니다
+- 불일치 시 결제 오류 발생
+
+### 환경별 동작
+
+| 환경 | 동작 |
+|------|------|
+| **개발 환경 (`import.meta.env.DEV`)** | 모의 결제 (mock_* orderId 사용) |
+| **샌드박스 앱** | IAP 미지원 - 안내 메시지 표시 |
+| **토스 앱 (프로덕션)** | 실제 결제 진행 |
+
+### 트러블슈팅
+
+#### SKU 불일치 오류
+- 앱인토스 콘솔에 등록된 SKU 확인
+- 대소문자 정확히 일치하는지 확인
+
+#### 샌드박스에서 결제 실패
+- 샌드박스는 IAP 미지원
+- 토스 앱에서 테스트 필요
+
+#### 결제 후 이용권 미충전
+- 백엔드 로그 확인 (`[Purchase]` prefix)
+- `processProductGrant` 반환값이 `true`인지 확인
+
+---
+
 ## 검수 및 출시 프로세스
 
 1. **빌드 업로드**: 개발 완료된 앱 빌드 제출

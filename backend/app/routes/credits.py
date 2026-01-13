@@ -248,33 +248,61 @@ async def purchase_credits(
     - P1: 중복 구매 체크도 잠금 상태에서 수행
     - P3: UNLIMITED_CREDITS 상수 사용
     """
+    logger.info(f"[Purchase] 구매 요청 수신: productId={request.productId}, orderId={request.orderId}")
+
     # 상품 정보 조회 (2026-01-09 가격 개편)
     # - 10건 1,000원, 30건 3,000원, 무제한 10,000원
+
+    # 앱인토스 콘솔에 등록된 실제 SKU → 로컬 ID 매핑 (2026-01-13)
+    ait_sku_to_local = {
+        "ait.0000016607.492ec06a.bd18e74b63.8287319702": "report_10",      # 10회 이용권
+        "ait.0000016607.fb16c160.4943bb7107.8287358161": "report_30",      # 30회 이용권
+        "ait.0000016607.fb16c160.beb36e9854.8287409873": "report_unlimited", # 1개월 무제한 이용권
+    }
+
+    # SKU 대소문자 표준화 (앱인토스 콘솔 등록 형식에 맞춤)
     product_info = {
         "report_10": {"name": "리포트 10건", "credits": 10, "price": 1000},
         "report_30": {"name": "리포트 30건", "credits": 30, "price": 3000},
         "report_unlimited": {"name": "무제한 이용권", "credits": UNLIMITED_CREDITS, "price": 10000},
+        # 대문자 SKU도 허용 (앱인토스 콘솔에서 대문자로 등록한 경우 대비)
+        "REPORT_10": {"name": "리포트 10건", "credits": 10, "price": 1000},
+        "REPORT_30": {"name": "리포트 30건", "credits": 30, "price": 3000},
+        "REPORT_UNLIMITED": {"name": "무제한 이용권", "credits": UNLIMITED_CREDITS, "price": 10000},
     }
 
-    # DB에서 상품 조회
+    # SKU 표준화: 앱인토스 SKU → 로컬 ID → 소문자로 정규화
+    incoming_sku = request.productId
+    if incoming_sku in ait_sku_to_local:
+        normalized_product_id = ait_sku_to_local[incoming_sku]
+        logger.info(f"[Purchase] 앱인토스 SKU 변환: {incoming_sku} -> {normalized_product_id}")
+    else:
+        normalized_product_id = incoming_sku.lower()
+        logger.info(f"[Purchase] SKU 정규화: {incoming_sku} -> {normalized_product_id}")
+
+    # DB에서 상품 조회 (정규화된 ID로)
     result = await db.execute(
-        select(CreditProduct).where(CreditProduct.id == request.productId)
+        select(CreditProduct).where(CreditProduct.id == normalized_product_id)
     )
     product = result.scalar_one_or_none()
 
     if not product:
-        if request.productId not in product_info:
+        # 원본 ID와 정규화된 ID 모두 확인
+        if request.productId not in product_info and normalized_product_id not in product_info:
+            logger.warning(f"[Purchase] 유효하지 않은 상품: {request.productId}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="유효하지 않은 상품입니다"
+                detail=f"유효하지 않은 상품입니다: {request.productId}"
             )
-        product_data = product_info[request.productId]
+        product_data = product_info.get(request.productId) or product_info.get(normalized_product_id)
     else:
         product_data = {
             "name": product.name,
             "credits": product.credits,
             "price": product.price,
         }
+
+    logger.info(f"[Purchase] 상품 정보 확인: {product_data}")
 
     # ========== P1: SELECT FOR UPDATE로 사용자 행 잠금 ==========
     # Race Condition 방지: 동시 구매 요청 시 중복 처리 방지
@@ -298,13 +326,23 @@ async def purchase_credits(
         )
 
     # ========== 토스 인앱결제 검증 ==========
+    # 로컬 ID → 앱인토스 SKU 매핑 (토스 API가 반환하는 SKU와 비교용)
+    local_to_ait_sku = {
+        "report_10": "ait.0000016607.492ec06a.bd18e74b63.8287319702",
+        "report_30": "ait.0000016607.fb16c160.4943bb7107.8287358161",
+        "report_unlimited": "ait.0000016607.fb16c160.beb36e9854.8287409873",
+    }
+    # 검증 시 사용할 SKU: 이미 앱인토스 SKU면 그대로, 로컬 ID면 변환
+    verification_sku = local_to_ait_sku.get(normalized_product_id, request.productId)
+    logger.info(f"[Purchase] 검증용 SKU: {verification_sku}")
+
     if _toss_client_available and not request.orderId.startswith("mock_"):
         try:
             client = get_toss_client()
             verified, message = await client.verify_purchase(
                 user_key=locked_user.toss_user_key,
                 order_id=request.orderId,
-                expected_sku=request.productId,
+                expected_sku=verification_sku,  # 앱인토스 콘솔 SKU로 검증
             )
 
             if not verified:

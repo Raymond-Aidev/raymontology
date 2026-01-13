@@ -102,17 +102,28 @@ export async function getProducts(): Promise<CreditProduct[]> {
 
 /**
  * 이용권 구매
+ *
+ * @param productId - 상품 SKU (예: report_10, report_30, report_unlimited)
+ * @param orderId - 토스 인앱결제 주문 ID (프로덕션) 또는 undefined (개발환경에서 자동 생성)
  */
 export async function purchaseCredits(
   productId: string,
-  receiptData?: string
+  orderId?: string
 ): Promise<PurchaseResult> {
+  // 개발환경에서 orderId가 없으면 mock_ prefix로 자동 생성
+  const effectiveOrderId = orderId || `mock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+  console.log('[creditService] purchaseCredits 호출:', {
+    productId,
+    orderId: effectiveOrderId,
+    isProduction: !!orderId,
+  })
 
   const response = await apiClient.post<PurchaseResult>(
     '/api/credits/purchase',
     {
       productId,
-      receiptData,
+      orderId: effectiveOrderId,
     },
     {
       headers: getAuthHeaders(),

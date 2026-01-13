@@ -7,6 +7,71 @@ import * as creditService from '../services/creditService'
 import type { CreditProduct } from '../services/creditService'
 import { colors } from '../constants/colors'
 
+// ============================================================================
+// 환경 감지 유틸리티
+// ============================================================================
+
+/**
+ * 샌드박스 환경 여부 감지
+ * - 개발 모드 (localhost)
+ * - 샌드박스 앱 (userAgent 또는 referrer로 판단)
+ */
+function isSandboxEnvironment(): boolean {
+  // 개발 환경
+  if (import.meta.env.DEV) return true
+
+  // 브라우저 환경에서 샌드박스 감지
+  if (typeof window !== 'undefined') {
+    const userAgent = navigator.userAgent.toLowerCase()
+    const referrer = document.referrer.toLowerCase()
+
+    // 샌드박스 앱 감지 패턴
+    if (userAgent.includes('sandbox') || userAgent.includes('debug')) return true
+    if (referrer.includes('sandbox') || referrer.includes('localhost')) return true
+
+    // 로컬 개발 서버
+    if (window.location.hostname === 'localhost') return true
+    if (window.location.hostname.startsWith('192.168.')) return true
+  }
+
+  return false
+}
+
+/**
+ * 토스 앱 내부 환경 여부 감지
+ */
+function isInTossApp(): boolean {
+  if (typeof window === 'undefined') return false
+
+  const userAgent = navigator.userAgent.toLowerCase()
+  // 토스 앱 WebView 감지
+  return userAgent.includes('toss') || userAgent.includes('apps-in-toss')
+}
+
+// ============================================================================
+// SKU 매핑 (대소문자 및 형식 통일)
+// ============================================================================
+
+/**
+ * SKU ID 표준화 함수
+ * - 로컬 상품 ID를 앱인토스 콘솔에서 등록한 SKU로 변환
+ * - 앱인토스 콘솔은 자동 생성된 긴 형식의 SKU 사용
+ */
+function normalizeSkuId(localId: string): string {
+  // 앱인토스 콘솔에 등록된 실제 SKU (2026-01-13 확인)
+  const skuMapping: Record<string, string> = {
+    'report_10': 'ait.0000016607.492ec06a.bd18e74b63.8287319702',      // 10회 이용권
+    'report_30': 'ait.0000016607.fb16c160.4943bb7107.8287358161',      // 30회 이용권
+    'report_unlimited': 'ait.0000016607.fb16c160.beb36e9854.8287409873', // 1개월 무제한 이용권
+  }
+
+  return skuMapping[localId] || localId
+}
+
+// ============================================================================
+// 상품 정의
+// ============================================================================
+
 // 기본 상품 목록 (API 실패 시 폴백) - 2026-01-09 가격 개편
 const DEFAULT_PRODUCTS: ProductDisplay[] = [
   {
@@ -78,18 +143,33 @@ export default function PurchasePage() {
   // 결제 cleanup 함수 저장용 ref
   const purchaseCleanupRef = useRef<(() => void) | null>(null)
 
+  // 환경 상태 계산
+  const isSandbox = isSandboxEnvironment()
+  const inTossApp = isInTossApp()
+
   const handlePurchase = async () => {
     if (!isAuthenticated) {
       navigate('/paywall', { state: location.state })
       return
     }
 
+    // 샌드박스 환경에서 IAP 사용 시 경고
+    if (isSandbox && !import.meta.env.DEV) {
+      setError('샌드박스 환경에서는 실제 결제가 지원되지 않습니다. 토스 앱에서 테스트해주세요.')
+      return
+    }
+
     setIsPurchasing(true)
     setError(null)
 
+    // SKU를 앱인토스 콘솔 형식으로 정규화
+    const normalizedSku = normalizeSkuId(selectedProduct)
+    console.log('[PurchasePage] SKU 정규화:', selectedProduct, '->', normalizedSku)
+
     try {
-      // 개발 환경: 모의 결제
-      if (import.meta.env.DEV) {
+      // 개발 환경 또는 샌드박스: 모의 결제
+      if (import.meta.env.DEV || (isSandbox && !inTossApp)) {
+        console.log('[PurchasePage] 개발/샌드박스 환경 - 모의 결제 진행')
         await new Promise(resolve => setTimeout(resolve, 1500))
         // 백엔드 API 호출 (개발 환경에서도 실제 DB 기록)
         const result = await creditService.purchaseCredits(selectedProduct)
@@ -101,22 +181,27 @@ export default function PurchasePage() {
         throw new Error(result.message || '결제 처리 실패')
       }
 
-      // 프로덕션: @apps-in-toss/web-framework IAP 호출
+      // 프로덕션 (토스 앱 내부): @apps-in-toss/web-framework IAP 호출
+      console.log('[PurchasePage] 프로덕션 환경 - IAP 결제 시작, SKU:', normalizedSku)
       purchaseCleanupRef.current = IAP.createOneTimePurchaseOrder({
         options: {
-          sku: selectedProduct,
+          sku: normalizedSku,  // 정규화된 SKU 사용
           processProductGrant: async ({ orderId }) => {
+            console.log('[PurchasePage] processProductGrant 호출, orderId:', orderId)
             try {
               // 백엔드에 결제 기록 및 이용권 충전
               const result = await creditService.purchaseCredits(selectedProduct, orderId)
+              console.log('[PurchasePage] 백엔드 결제 처리 결과:', result)
               return result.success
-            } catch {
+            } catch (err) {
+              console.error('[PurchasePage] 백엔드 결제 처리 실패:', err)
               return false
             }
           },
         },
         onEvent: async () => {
           // 결제 성공
+          console.log('[PurchasePage] IAP 결제 성공')
           await refreshCredits()
           setIsPurchasing(false)
           purchaseCleanupRef.current?.()
@@ -124,6 +209,7 @@ export default function PurchasePage() {
         },
         onError: (error: unknown) => {
           // 결제 실패 또는 취소
+          console.error('[PurchasePage] IAP 결제 실패:', error)
           const errorMessage = error instanceof Error ? error.message : '결제가 취소되었습니다.'
           setError(errorMessage)
           setIsPurchasing(false)
@@ -131,6 +217,7 @@ export default function PurchasePage() {
         },
       })
     } catch (err) {
+      console.error('[PurchasePage] 결제 처리 예외:', err)
       setError(err instanceof Error ? err.message : '결제에 실패했습니다.')
       setIsPurchasing(false)
     }
@@ -179,6 +266,56 @@ export default function PurchasePage() {
       </header>
 
       <main style={{ padding: '20px' }}>
+        {/* 샌드박스/개발 환경 안내 배너 */}
+        {(isSandbox || import.meta.env.DEV) && (
+          <div style={{
+            backgroundColor: '#FEF3C7',
+            border: '1px solid #F59E0B',
+            borderRadius: '12px',
+            padding: '16px',
+            marginBottom: '16px',
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '12px',
+            }}>
+              <span style={{ fontSize: '20px' }}>⚠️</span>
+              <div>
+                <div style={{
+                  fontWeight: '600',
+                  color: '#92400E',
+                  marginBottom: '4px',
+                  fontSize: '14px',
+                }}>
+                  {import.meta.env.DEV ? '개발 환경' : '샌드박스 환경'}
+                </div>
+                <p style={{
+                  fontSize: '13px',
+                  color: '#B45309',
+                  margin: 0,
+                  lineHeight: '1.5',
+                }}>
+                  {import.meta.env.DEV
+                    ? '개발 환경에서는 모의 결제가 진행됩니다. 실제 결제는 토스 앱에서만 가능합니다.'
+                    : '샌드박스에서는 인앱 결제가 지원되지 않습니다. 실제 결제를 위해서는 토스 앱에서 테스트하세요.'
+                  }
+                </p>
+                {!import.meta.env.DEV && (
+                  <p style={{
+                    fontSize: '12px',
+                    color: '#92400E',
+                    margin: '8px 0 0 0',
+                    fontStyle: 'italic',
+                  }}>
+                    환경: {inTossApp ? '토스앱 내부' : '외부 브라우저'}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 현재 보유 이용권 */}
         <section style={{
           backgroundColor: colors.white,
