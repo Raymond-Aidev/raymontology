@@ -252,11 +252,22 @@ export default function PurchasePage() {
               console.log('[PurchasePage] 백엔드 응답:', JSON.stringify(result))
               console.log('[PurchasePage] result.success 값:', result.success, '타입:', typeof result.success)
 
-              // 명시적으로 boolean true 반환 (Apps-in-Toss SDK 요구사항)
-              // result.success가 truthy이면 true, 아니면 false
-              const grantSuccess = result.success === true
-              console.log('[PurchasePage] processProductGrant 반환값:', grantSuccess)
-              return grantSuccess
+              if (result.success === true) {
+                // 백엔드 처리 성공 시 SDK에 명시적으로 완료 알림
+                console.log('[PurchasePage] 백엔드 성공 - completeProductGrant 호출 시도')
+                try {
+                  await IAP.completeProductGrant({ params: { orderId } })
+                  console.log('[PurchasePage] completeProductGrant 호출 완료')
+                } catch (completeErr) {
+                  // completeProductGrant 실패해도 백엔드는 이미 처리됨
+                  console.warn('[PurchasePage] completeProductGrant 실패 (무시):', completeErr)
+                }
+                console.log('[PurchasePage] processProductGrant 반환값: true')
+                return true
+              } else {
+                console.error('[PurchasePage] 백엔드 응답 success=false')
+                return false
+              }
             } catch (err) {
               console.error('[PurchasePage] 백엔드 결제 처리 실패:', err)
               // 에러 상세 정보 로깅
