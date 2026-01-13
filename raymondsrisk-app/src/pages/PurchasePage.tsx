@@ -250,38 +250,22 @@ export default function PurchasePage() {
               console.log('[PurchasePage] 백엔드 API 호출 시작...')
               const result = await creditService.purchaseCredits(selectedProduct, orderId)
               console.log('[PurchasePage] 백엔드 응답:', JSON.stringify(result))
-              console.log('[PurchasePage] result.success 값:', result.success, '타입:', typeof result.success)
 
-              if (result.success === true) {
-                // 백엔드 처리 성공 시 SDK에 명시적으로 완료 알림
-                console.log('[PurchasePage] 백엔드 성공 - completeProductGrant 호출 시도')
-                try {
-                  await IAP.completeProductGrant({ params: { orderId } })
-                  console.log('[PurchasePage] completeProductGrant 호출 완료')
-                } catch (completeErr) {
-                  // completeProductGrant 실패해도 백엔드는 이미 처리됨
-                  console.warn('[PurchasePage] completeProductGrant 실패 (무시):', completeErr)
-                }
-                console.log('[PurchasePage] processProductGrant 반환값: true')
-                return true
-              } else {
-                console.error('[PurchasePage] 백엔드 응답 success=false')
-                return false
-              }
+              // SDK 문서: boolean | Promise<boolean> 반환
+              // result.success가 true이면 true 반환, 아니면 false
+              const success = result.success === true
+              console.log('[PurchasePage] processProductGrant 반환:', success)
+              return success
             } catch (err) {
               console.error('[PurchasePage] 백엔드 결제 처리 실패:', err)
-              // 에러 상세 정보 로깅
-              if (err instanceof Error) {
-                console.error('[PurchasePage] 에러 메시지:', err.message)
-                console.error('[PurchasePage] 에러 스택:', err.stack)
-              }
               return false
             }
           },
         },
-        onEvent: async () => {
-          // 결제 성공
-          console.log('[PurchasePage] IAP 결제 성공')
+        onEvent: async (event: unknown) => {
+          // 결제 이벤트 수신
+          console.log('[PurchasePage] onEvent 수신:', JSON.stringify(event))
+          // SDK 문서: event.type === 'success' 일 때 결제 성공
           await refreshCredits()
           setIsPurchasing(false)
           purchaseCleanupRef.current?.()
@@ -289,7 +273,7 @@ export default function PurchasePage() {
         },
         onError: (error: unknown) => {
           // 결제 실패 또는 취소
-          console.error('[PurchasePage] IAP 결제 실패:', error)
+          console.error('[PurchasePage] onError 수신:', error)
           const errorMessage = error instanceof Error ? error.message : '결제가 취소되었습니다.'
           setError(errorMessage)
           setIsPurchasing(false)
