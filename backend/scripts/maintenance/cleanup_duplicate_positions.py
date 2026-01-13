@@ -2,7 +2,8 @@
 cleanup_duplicate_positions.py - 중복 officer_positions 레코드 정리
 
 문제: 동일 임원이 동일 회사에서 분기별로 중복 레코드가 생성됨
-해결: 동일 (officer_id, company_id) 조합에서 최신 source_report_date 레코드만 유지
+해결: 동일 (officer_id, company_id, position) 조합에서 최신 source_report_date 레코드만 유지
+      ※ 같은 회사에서 다른 직책(이사→대표이사 등)은 별도 보존
 
 사용법:
     # 테스트 (삭제하지 않고 확인만)
@@ -32,18 +33,19 @@ logger = logging.getLogger(__name__)
 
 
 async def get_duplicate_stats(conn: asyncpg.Connection, company_name: str = None) -> dict:
-    """중복 레코드 통계 조회"""
+    """중복 레코드 통계 조회 (officer_id, company_id, position 기준)"""
     if company_name:
         query = """
             SELECT
                 c.name as company_name,
                 o.name as officer_name,
+                op.position,
                 COUNT(*) as record_count
             FROM officer_positions op
             JOIN officers o ON op.officer_id = o.id
             JOIN companies c ON op.company_id = c.id
             WHERE c.name = $1
-            GROUP BY c.id, c.name, o.id, o.name
+            GROUP BY c.id, c.name, o.id, o.name, op.position
             HAVING COUNT(*) > 1
             ORDER BY COUNT(*) DESC
         """
@@ -53,11 +55,12 @@ async def get_duplicate_stats(conn: asyncpg.Connection, company_name: str = None
             SELECT
                 c.name as company_name,
                 o.name as officer_name,
+                op.position,
                 COUNT(*) as record_count
             FROM officer_positions op
             JOIN officers o ON op.officer_id = o.id
             JOIN companies c ON op.company_id = c.id
-            GROUP BY c.id, c.name, o.id, o.name
+            GROUP BY c.id, c.name, o.id, o.name, op.position
             HAVING COUNT(*) > 1
             ORDER BY COUNT(*) DESC
             LIMIT 50
@@ -76,7 +79,8 @@ async def get_duplicate_stats(conn: asyncpg.Connection, company_name: str = None
 async def cleanup_duplicates(conn: asyncpg.Connection, dry_run: bool = True, company_name: str = None) -> dict:
     """중복 레코드 정리
 
-    각 (officer_id, company_id) 조합에서 source_report_date가 가장 최신인 레코드만 유지
+    각 (officer_id, company_id, position) 조합에서 source_report_date가 가장 최신인 레코드만 유지
+    ※ 같은 회사에서 다른 직책은 별도 보존됨
     """
     # 삭제 대상 조회
     if company_name:
@@ -87,6 +91,7 @@ async def cleanup_duplicates(conn: asyncpg.Connection, dry_run: bool = True, com
                 JOIN companies c ON op2.company_id = c.id
                 WHERE op2.officer_id = op1.officer_id
                   AND op2.company_id = op1.company_id
+                  AND op2.position = op1.position
                   AND op2.id != op1.id
                   AND c.name = $1
                   AND (
@@ -104,6 +109,7 @@ async def cleanup_duplicates(conn: asyncpg.Connection, dry_run: bool = True, com
                 SELECT 1 FROM officer_positions op2
                 WHERE op2.officer_id = op1.officer_id
                   AND op2.company_id = op1.company_id
+                  AND op2.position = op1.position
                   AND op2.id != op1.id
                   AND (
                       op2.source_report_date > op1.source_report_date
@@ -129,6 +135,7 @@ async def cleanup_duplicates(conn: asyncpg.Connection, dry_run: bool = True, com
                 JOIN companies c ON op2.company_id = c.id
                 WHERE op2.officer_id = op1.officer_id
                   AND op2.company_id = op1.company_id
+                  AND op2.position = op1.position
                   AND op2.id != op1.id
                   AND c.name = $1
                   AND (
@@ -146,6 +153,7 @@ async def cleanup_duplicates(conn: asyncpg.Connection, dry_run: bool = True, com
                 SELECT 1 FROM officer_positions op2
                 WHERE op2.officer_id = op1.officer_id
                   AND op2.company_id = op1.company_id
+                  AND op2.position = op1.position
                   AND op2.id != op1.id
                   AND (
                       op2.source_report_date > op1.source_report_date
@@ -201,9 +209,9 @@ async def main():
         logger.info(f"삭제 예정 레코드: {stats['records_to_delete']}건")
 
         if stats['top_duplicates']:
-            logger.info("\n상위 중복 현황:")
+            logger.info("\n상위 중복 현황 (동일 회사+동일 직책):")
             for row in stats['top_duplicates']:
-                logger.info(f"  {row['company_name']} - {row['officer_name']}: {row['record_count']}개 레코드")
+                logger.info(f"  {row['company_name']} - {row['officer_name']} ({row['position']}): {row['record_count']}개 레코드")
 
         if args.stats_only:
             return

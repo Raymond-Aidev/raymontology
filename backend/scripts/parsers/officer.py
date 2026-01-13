@@ -416,7 +416,10 @@ class OfficerParser(BaseParser):
         position = officer_data.get('position', '임원')
         term_start = officer_data.get('term_start_date')
         term_end = officer_data.get('term_end_date')
-        is_current = term_end is None or term_end >= date.today()
+        # is_current: 보고서 기준일 기준으로 계산 (date.today() 대신 source_report_date 사용)
+        # 이렇게 해야 과거 데이터 파싱 시에도 정확한 현직 여부 판단 가능
+        reference_date = source_report_date or date.today()
+        is_current = term_end is None or term_end >= reference_date
 
         # 재취임 번호 계산
         appointment_number = 1

@@ -230,6 +230,100 @@ async def monthly_cleanup():
         logger.error(f"월간 정리 작업 실패: {e}", exc_info=True)
 
 
+def get_current_quarter() -> tuple:
+    """현재 분기 및 파이프라인 실행 대상 분기 반환
+
+    Returns:
+        (quarter, year): 파이프라인 실행 대상 분기
+        - 5월: Q1 (1분기 보고서 마감 후)
+        - 8월: Q2 (반기 보고서 마감 후)
+        - 11월: Q3 (3분기 보고서 마감 후)
+        - 4월: Q4 (사업보고서 마감 후)
+    """
+    now = datetime.now()
+    month = now.month
+    year = now.year
+
+    if month in (5, 6, 7):  # 5-7월: Q1 처리
+        return 'Q1', year
+    elif month in (8, 9, 10):  # 8-10월: Q2 처리
+        return 'Q2', year
+    elif month in (11, 12, 1, 2, 3):  # 11월-3월: Q3 처리
+        return 'Q3', year if month >= 11 else year - 1
+    elif month == 4:  # 4월: Q4 (작년 사업보고서)
+        return 'Q4', year - 1
+    else:
+        return 'Q1', year
+
+
+async def quarterly_pipeline():
+    """
+    분기별 데이터 파이프라인
+
+    분기 보고서 마감 후 자동 실행:
+    - Q1: 5월 20일 02:00 (1분기 보고서, 마감 5/15)
+    - Q2: 8월 20일 02:00 (반기 보고서, 마감 8/14)
+    - Q3: 11월 20일 02:00 (3분기 보고서, 마감 11/14)
+    - Q4: 4월 5일 02:00 (사업보고서, 마감 3/31)
+
+    작업 내용:
+    1. DART에서 분기 보고서 다운로드
+    2. 임원/재무 데이터 파싱
+    3. 데이터 검증
+    4. RaymondsIndex 재계산
+    5. 품질 보고서 생성
+    6. Slack 알림 발송 (선택)
+    """
+    quarter, year = get_current_quarter()
+
+    logger.info("=" * 70)
+    logger.info(f"분기별 데이터 파이프라인 시작: {year}년 {quarter}")
+    logger.info(f"실행 시각: {datetime.now().isoformat()}")
+    logger.info("=" * 70)
+
+    try:
+        import subprocess
+        import os
+
+        # 파이프라인 스크립트 실행
+        script_path = os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            'scripts',
+            'pipeline',
+            'run_quarterly_pipeline.py'
+        )
+
+        cmd = [
+            'python', '-m', 'scripts.pipeline.run_quarterly_pipeline',
+            '--quarter', quarter,
+            '--year', str(year)
+        ]
+
+        logger.info(f"파이프라인 명령: {' '.join(cmd)}")
+
+        # 백그라운드 실행 (로그 파일에 기록)
+        log_file = f'/tmp/quarterly_pipeline_{year}_{quarter}.log'
+        with open(log_file, 'w') as f:
+            process = subprocess.Popen(
+                cmd,
+                stdout=f,
+                stderr=subprocess.STDOUT,
+                cwd=os.path.join(os.path.dirname(__file__), '..')
+            )
+
+        logger.info(f"파이프라인 시작됨 (PID: {process.pid})")
+        logger.info(f"로그 파일: {log_file}")
+
+        # 알림 발송 (향후 구현)
+        # await send_pipeline_started_notification(quarter, year)
+
+    except Exception as e:
+        logger.error(f"분기별 파이프라인 실행 실패: {e}", exc_info=True)
+        # 알림 발송 (향후 구현)
+        # await send_pipeline_failed_notification(quarter, year, str(e))
+
+
 def setup_scheduler():
     """
     스케줄러 설정 및 작업 등록
@@ -274,6 +368,47 @@ def setup_scheduler():
     )
     logger.info("스케줄 등록: 월간 정리 작업 (매월 1일 03:00)")
 
+    # 분기별 데이터 파이프라인
+    # Q1: 5월 20일 02:00 (1분기 보고서 마감 5/15 후)
+    scheduler.add_job(
+        quarterly_pipeline,
+        CronTrigger(month=5, day=20, hour=2, minute=0),
+        id='quarterly_pipeline_q1',
+        name='분기 파이프라인 (Q1)',
+        replace_existing=True
+    )
+    logger.info("스케줄 등록: 분기 파이프라인 Q1 (5월 20일 02:00)")
+
+    # Q2: 8월 20일 02:00 (반기 보고서 마감 8/14 후)
+    scheduler.add_job(
+        quarterly_pipeline,
+        CronTrigger(month=8, day=20, hour=2, minute=0),
+        id='quarterly_pipeline_q2',
+        name='분기 파이프라인 (Q2)',
+        replace_existing=True
+    )
+    logger.info("스케줄 등록: 분기 파이프라인 Q2 (8월 20일 02:00)")
+
+    # Q3: 11월 20일 02:00 (3분기 보고서 마감 11/14 후)
+    scheduler.add_job(
+        quarterly_pipeline,
+        CronTrigger(month=11, day=20, hour=2, minute=0),
+        id='quarterly_pipeline_q3',
+        name='분기 파이프라인 (Q3)',
+        replace_existing=True
+    )
+    logger.info("스케줄 등록: 분기 파이프라인 Q3 (11월 20일 02:00)")
+
+    # Q4: 4월 5일 02:00 (사업보고서 마감 3/31 후)
+    scheduler.add_job(
+        quarterly_pipeline,
+        CronTrigger(month=4, day=5, hour=2, minute=0),
+        id='quarterly_pipeline_q4',
+        name='분기 파이프라인 (Q4)',
+        replace_existing=True
+    )
+    logger.info("스케줄 등록: 분기 파이프라인 Q4 (4월 5일 02:00)")
+
 
 def start_scheduler():
     """스케줄러 시작"""
@@ -299,7 +434,8 @@ async def run_job_now(job_name: str):
         'daily_risk_analysis': daily_risk_analysis,
         'daily_financial_update': daily_financial_update,
         'weekly_data_collection': weekly_data_collection,
-        'monthly_cleanup': monthly_cleanup
+        'monthly_cleanup': monthly_cleanup,
+        'quarterly_pipeline': quarterly_pipeline
     }
 
     if job_name not in jobs:

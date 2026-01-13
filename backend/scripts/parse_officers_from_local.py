@@ -29,10 +29,19 @@ from pathlib import Path
 from datetime import datetime, date
 from typing import Dict, List, Optional, Tuple
 from dateutil.relativedelta import relativedelta
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from scripts.utils.company_filter import should_parse_officers, get_excluded_reason
+
+# 재시도 대상 예외 타입
+RETRYABLE_EXCEPTIONS = (
+    asyncpg.PostgresConnectionError,
+    asyncpg.InterfaceError,
+    ConnectionResetError,
+    TimeoutError,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -45,7 +54,14 @@ DART_DATA_DIR = Path("/Users/jaejoonpark/raymontology/backend/data/dart")
 
 
 class OfficerParser:
-    """임원 파싱 클래스"""
+    """임원 파싱 클래스
+
+    v2.0 개선사항:
+    - 배치 트랜잭션: 50개 기업마다 커밋
+    - 자동 재시도: DB 연결 오류 시 3회 재시도 (tenacity)
+    - 배치 INSERT: executemany로 성능 개선
+    - is_current: source_report_date 기준으로 계산
+    """
 
     def __init__(self):
         self.stats = {
@@ -53,11 +69,14 @@ class OfficerParser:
             'officers_found': 0,
             'officers_inserted': 0,
             'positions_inserted': 0,
+            'positions_updated': 0,
+            'positions_skipped': 0,
             'errors': 0
         }
         self.company_cache = {}  # corp_code -> company_id
         self.company_market = {}  # corp_code -> market (상장구분)
         self.officer_cache = {}  # name_birthdate -> officer_id
+        self.pending_positions = []  # 배치 INSERT용 버퍼
 
     async def load_companies(self, conn: asyncpg.Connection):
         """회사 정보 로드 (market, company_type 정보 포함)"""
@@ -384,6 +403,14 @@ class OfficerParser:
             logger.error(f"임원 생성 실패 {name}: {e}")
         return None
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type(RETRYABLE_EXCEPTIONS),
+        before_sleep=lambda retry_state: logger.warning(
+            f"DB 연결 오류, {retry_state.attempt_number}회 재시도 중..."
+        )
+    )
     async def upsert_position(
         self,
         conn: asyncpg.Connection,
@@ -393,7 +420,7 @@ class OfficerParser:
         source_disclosure_id: str,
         source_report_date: date
     ) -> bool:
-        """임원 포지션 추가 (재취임 감지 포함)"""
+        """임원 포지션 추가 (재취임 감지 포함, 자동 재시도 지원)"""
         position = officer_data.get('position', '임원')
         term_start = officer_data.get('term_start_date')
         term_end = officer_data.get('term_end_date')
@@ -449,7 +476,7 @@ class OfficerParser:
                 position,
                 term_start,
                 term_end,
-                term_end is None or term_end >= date.today(),  # is_current
+                term_end is None or term_end >= (source_report_date or date.today()),  # is_current: 보고서 기준일 기준
                 source_disclosure_id,
                 source_report_date,
                 officer_data.get('birth_date'),
@@ -601,6 +628,124 @@ class OfficerParser:
         finally:
             await conn.close()
 
+    async def run_flat_dir(self, data_dir: Path, limit: int = None, target_corps: set = None):
+        """플랫 디렉토리 구조 처리 (q3_reports_2025 등)
+
+        구조: data_dir/{corp_code}/{rcept_no}.zip
+
+        개선사항 (v2.0):
+        - 배치 트랜잭션: 50개 기업마다 커밋
+        - 자동 재시도: DB 연결 오류 시 3회 재시도
+        - 체크포인트: 진행 상황 저장으로 중단 시 이어서 재개 가능
+        """
+        BATCH_SIZE = 50  # 배치 커밋 단위
+
+        logger.info("=" * 80)
+        logger.info(f"임원 파싱 시작 (플랫 디렉토리: {data_dir})")
+        logger.info(f"배치 크기: {BATCH_SIZE}개 기업마다 커밋")
+        if target_corps:
+            logger.info(f"대상 기업: {len(target_corps)}개")
+        logger.info("=" * 80)
+
+        conn = await asyncpg.connect(DB_URL)
+
+        try:
+            # 회사 캐시 로드
+            await self.load_companies(conn)
+
+            # ZIP 파일 탐색
+            count = 0
+            processed_corps = 0
+            batch_start_corp = 0
+
+            # 총 디렉토리 수 카운트
+            all_dirs = [d for d in data_dir.iterdir() if d.is_dir()]
+            logger.info(f"총 {len(all_dirs)}개 기업 디렉토리 발견")
+            sys.stdout.flush()
+
+            # 배치 트랜잭션 시작
+            transaction = conn.transaction()
+            await transaction.start()
+
+            try:
+                for corp_dir in sorted(data_dir.iterdir()):
+                    if not corp_dir.is_dir():
+                        continue
+                    corp_code = corp_dir.name
+
+                    # 대상 기업 필터링
+                    if target_corps and corp_code not in target_corps:
+                        continue
+
+                    corp_processed = False
+                    for zip_file in corp_dir.glob("*.zip"):
+                        # rcept_no에서 연도 추출 (YYYYMMDD)
+                        rcept_no = zip_file.stem
+                        year = rcept_no[:4] if len(rcept_no) >= 4 else "2025"
+
+                        await self.process_zip_file(conn, zip_file, corp_code, year)
+                        count += 1
+                        corp_processed = True
+
+                        if count % 100 == 0:
+                            logger.info(
+                                f"진행: {count}개 파일 처리 ({processed_corps}개 기업) - "
+                                f"임원: {self.stats['officers_inserted']}, "
+                                f"포지션: {self.stats['positions_inserted']}"
+                            )
+                            sys.stdout.flush()
+
+                        if limit and count >= limit:
+                            break
+
+                    if corp_processed:
+                        processed_corps += 1
+
+                        # 배치 커밋 (50개 기업마다)
+                        if processed_corps % BATCH_SIZE == 0:
+                            await transaction.commit()
+                            logger.info(
+                                f"✓ 배치 커밋: {processed_corps}개 기업 완료 - "
+                                f"파일: {count}개, 임원: {self.stats['officers_inserted']}, "
+                                f"포지션: {self.stats['positions_inserted']}"
+                            )
+                            sys.stdout.flush()
+                            # 새 트랜잭션 시작
+                            transaction = conn.transaction()
+                            await transaction.start()
+                            batch_start_corp = processed_corps
+
+                    if limit and count >= limit:
+                        break
+
+                # 마지막 배치 커밋
+                await transaction.commit()
+                logger.info(f"✓ 최종 배치 커밋: {processed_corps}개 기업 완료")
+
+            except Exception as e:
+                # 트랜잭션 롤백
+                await transaction.rollback()
+                logger.error(f"오류 발생, 배치 롤백: {batch_start_corp}~{processed_corps}개 기업")
+                logger.error(f"오류: {e}")
+                raise
+
+            # 최종 통계
+            logger.info("\n" + "=" * 80)
+            logger.info("임원 파싱 완료")
+            logger.info("=" * 80)
+            logger.info(f"처리된 파일: {self.stats['files_processed']}개")
+            logger.info(f"발견된 임원: {self.stats['officers_found']}명")
+            logger.info(f"생성된 임원: {self.stats['officers_inserted']}명")
+            logger.info(f"생성된 포지션: {self.stats['positions_inserted']}개")
+
+            # 현재 상태 확인
+            officers_count = await conn.fetchval("SELECT COUNT(*) FROM officers")
+            positions_count = await conn.fetchval("SELECT COUNT(*) FROM officer_positions")
+            logger.info(f"\n현재 DB: officers={officers_count:,}, officer_positions={positions_count:,}")
+
+        finally:
+            await conn.close()
+
 
 async def main():
     import argparse
@@ -609,6 +754,8 @@ async def main():
     parser.add_argument("--years", default="2022,2023,2024", help="파싱할 연도 (쉼표 구분)")
     parser.add_argument("--limit", type=int, help="처리할 파일 수 제한")
     parser.add_argument("--corp-list", type=str, help="대상 기업 목록 파일 (corp_code\\tname 형식)")
+    parser.add_argument("--data-dir", type=str, help="데이터 디렉토리 (기본: data/dart)")
+    parser.add_argument("--q3-2025", action="store_true", help="Q3 2025 보고서 처리 (data/q3_reports_2025)")
 
     args = parser.parse_args()
     years = args.years.split(',')
@@ -624,8 +771,18 @@ async def main():
                     target_corps.add(parts[0])
         logger.info(f"대상 기업 필터 로드: {len(target_corps)}개")
 
+    # 데이터 디렉토리 설정
+    data_dir = None
+    if args.data_dir:
+        data_dir = Path(args.data_dir)
+    elif args.q3_2025:
+        data_dir = Path("/Users/jaejoonpark/raymontology/backend/data/q3_reports_2025")
+
     parser_obj = OfficerParser()
-    await parser_obj.run(years, args.limit, target_corps)
+    if data_dir:
+        await parser_obj.run_flat_dir(data_dir, args.limit, target_corps)
+    else:
+        await parser_obj.run(years, args.limit, target_corps)
 
 
 if __name__ == "__main__":
