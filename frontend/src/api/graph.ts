@@ -564,11 +564,20 @@ export interface ShareholderCompany {
  * 대주주 상세 정보 조회 API
  */
 export async function fetchShareholderDetail(shareholderId: string): Promise<ShareholderDetail | null> {
+  // 1차: Neo4j 기반 Graph API 시도
   try {
     const response = await apiClient.get<ShareholderDetail>(`/api/graph/shareholder/${shareholderId}/detail`)
     return response.data
   } catch (error) {
-    console.warn('Shareholder Detail API 호출 실패:', error)
+    console.warn('Neo4j Shareholder Detail API 실패, PostgreSQL 폴백 시도:', error)
+  }
+
+  // 2차: PostgreSQL 기반 폴백 API 시도
+  try {
+    const response = await apiClient.get<ShareholderDetail>(`/api/graph-fallback/shareholder/${shareholderId}/detail`)
+    return response.data
+  } catch (fallbackError) {
+    console.warn('PostgreSQL 폴백 API도 실패:', fallbackError)
     return null
   }
 }
@@ -577,12 +586,21 @@ export async function fetchShareholderDetail(shareholderId: string): Promise<Sha
  * 대주주 변동 이력 조회 API
  */
 export async function fetchShareholderHistory(shareholderId: string): Promise<ShareholderHistory[]> {
+  // 1차: Neo4j 기반 Graph API 시도
   try {
     const response = await apiClient.get<ShareholderHistory[]>(`/api/graph/shareholder/${shareholderId}/history`)
     // 최근 순으로 정렬
     return response.data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   } catch (error) {
-    console.warn('Shareholder History API 호출 실패:', error)
+    console.warn('Neo4j Shareholder History API 실패, PostgreSQL 폴백 시도:', error)
+  }
+
+  // 2차: PostgreSQL 기반 폴백 API 시도
+  try {
+    const response = await apiClient.get<ShareholderHistory[]>(`/api/graph-fallback/shareholder/${shareholderId}/history`)
+    return response.data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  } catch (fallbackError) {
+    console.warn('PostgreSQL 폴백 API도 실패:', fallbackError)
     return []
   }
 }
@@ -591,12 +609,21 @@ export async function fetchShareholderHistory(shareholderId: string): Promise<Sh
  * 대주주 관련 회사 조회 API
  */
 export async function fetchShareholderCompanies(shareholderId: string): Promise<ShareholderCompany[]> {
+  // 1차: Neo4j 기반 Graph API 시도
   try {
     const response = await apiClient.get<ShareholderCompany[]>(`/api/graph/shareholder/${shareholderId}/companies`)
     // 지분율 높은 순으로 정렬
     return response.data.sort((a, b) => b.percentage - a.percentage)
   } catch (error) {
-    console.warn('Shareholder Companies API 호출 실패:', error)
+    console.warn('Neo4j Shareholder Companies API 실패, PostgreSQL 폴백 시도:', error)
+  }
+
+  // 2차: PostgreSQL 기반 폴백 API 시도
+  try {
+    const response = await apiClient.get<ShareholderCompany[]>(`/api/graph-fallback/shareholder/${shareholderId}/companies`)
+    return response.data.sort((a, b) => b.percentage - a.percentage)
+  } catch (fallbackError) {
+    console.warn('PostgreSQL 폴백 API도 실패:', fallbackError)
     return []
   }
 }

@@ -228,9 +228,12 @@ class ShareholderParser(BaseParser):
             relationship = self._extract_cell_value(row, self.SHAREHOLDER_CODES['relationship']) or ''
             stock_type = self._extract_cell_value(row, self.SHAREHOLDER_CODES['stock_type']) or '보통주'
 
-            # 보통주가 아닌 경우 스킵 (우선주, 종류주 등)
-            if stock_type and '보통' not in stock_type:
-                continue
+            # 보통주/의결권 있는 주식이 아닌 경우 스킵 (우선주, 종류주 등)
+            # '의결권 있는 주식'은 보통주와 동일하게 취급
+            if stock_type:
+                is_voting_stock = '보통' in stock_type or '의결권' in stock_type
+                if not is_voting_stock:
+                    continue
 
             # 숫자 파싱
             share_count = None

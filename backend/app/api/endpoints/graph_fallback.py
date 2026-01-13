@@ -605,3 +605,237 @@ async def get_subscriber_investments_fallback(
     except Exception as e:
         logger.error(f"Error in subscriber investments fallback: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# 대주주 상세 API (PostgreSQL 폴백)
+# ============================================================================
+
+class ShareholderDetailFallbackResponse(BaseModel):
+    """대주주 상세 정보 응답"""
+    id: str
+    name: str
+    type: str  # individual, corporation, institution
+    shares: int
+    percentage: float
+    acquisition_date: Optional[str] = None
+    acquisition_price: Optional[int] = None
+    current_value: Optional[int] = None
+    profit_loss: Optional[int] = None
+
+
+class ShareholderHistoryFallbackItem(BaseModel):
+    """대주주 변동 이력 항목"""
+    date: str
+    percentage: float
+    change: float
+    shares_changed: int
+    reason: Optional[str] = None
+
+
+class ShareholderCompanyFallbackItem(BaseModel):
+    """대주주 관련 회사 항목"""
+    company_id: str
+    company_name: str
+    percentage: float
+    shares: int
+
+
+@router.get("/shareholder/{shareholder_id}/detail", response_model=ShareholderDetailFallbackResponse)
+async def get_shareholder_detail_fallback(
+    shareholder_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    대주주 상세 정보 조회 (PostgreSQL 폴백)
+
+    - major_shareholders 테이블에서 직접 조회
+    """
+    try:
+        # major_shareholders 테이블에서 조회
+        query = text("""
+            SELECT id::text, shareholder_name, shareholder_type, share_count, share_ratio,
+                   report_date, report_year, report_quarter
+            FROM major_shareholders
+            WHERE id::text = :shareholder_id
+        """)
+        result = await db.execute(query, {"shareholder_id": shareholder_id})
+        row = result.fetchone()
+
+        if not row:
+            raise HTTPException(status_code=404, detail="Shareholder not found")
+
+        # 타입 매핑 (프론트엔드 호환) - DB는 대문자로 저장됨
+        type_mapping = {
+            "individual": "individual",
+            "corporation": "corporation",
+            "institution": "institution",
+            "INDIVIDUAL": "individual",
+            "CORPORATION": "corporation",
+            "INSTITUTION": "institution",
+            None: "individual"
+        }
+        mapped_type = type_mapping.get(row.shareholder_type, "individual")
+
+        # report_date 포맷팅
+        report_date_str = None
+        if row.report_date:
+            report_date_str = row.report_date.isoformat() if hasattr(row.report_date, 'isoformat') else str(row.report_date)
+        elif row.report_year:
+            # report_date가 없으면 report_year/quarter로 추정
+            quarter_month = {"Q1": "03", "Q2": "06", "Q3": "09", "Q4": "12"}.get(row.report_quarter, "12")
+            report_date_str = f"{row.report_year}-{quarter_month}-30"
+
+        return ShareholderDetailFallbackResponse(
+            id=row.id,
+            name=row.shareholder_name,
+            type=mapped_type,
+            shares=int(row.share_count) if row.share_count else 0,
+            percentage=float(row.share_ratio) if row.share_ratio else 0.0,
+            acquisition_date=report_date_str,
+            acquisition_price=None,
+            current_value=None,
+            profit_loss=None
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in shareholder detail fallback: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/shareholder/{shareholder_id}/history", response_model=List[ShareholderHistoryFallbackItem])
+async def get_shareholder_history_fallback(
+    shareholder_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    대주주 지분 변동 이력 조회 (PostgreSQL 폴백)
+
+    - 동일 이름 기준으로 major_shareholders 테이블에서 이력 조회
+    """
+    try:
+        # 1. shareholder_id로 이름 조회
+        name_query = text("""
+            SELECT shareholder_name FROM major_shareholders WHERE id::text = :shareholder_id
+        """)
+        result = await db.execute(name_query, {"shareholder_id": shareholder_id})
+        name_row = result.fetchone()
+
+        if not name_row:
+            raise HTTPException(status_code=404, detail="Shareholder not found")
+
+        shareholder_name = name_row.shareholder_name
+
+        # 2. 동일 이름의 이력 조회
+        history_query = text("""
+            SELECT share_count, share_ratio, report_date, report_year, report_quarter,
+                   change_reason, previous_share_ratio
+            FROM major_shareholders
+            WHERE shareholder_name = :name
+            ORDER BY report_year DESC NULLS LAST, report_quarter DESC NULLS LAST
+            LIMIT 20
+        """)
+        result = await db.execute(history_query, {"name": shareholder_name})
+        rows = result.fetchall()
+
+        history = []
+        prev_share_count = None
+
+        for row in rows:
+            share_count = int(row.share_count) if row.share_count else 0
+            share_ratio = float(row.share_ratio) if row.share_ratio else 0.0
+
+            # 날짜 포맷팅
+            if row.report_date:
+                report_date = row.report_date.isoformat() if hasattr(row.report_date, 'isoformat') else str(row.report_date)
+            elif row.report_year:
+                quarter_month = {"Q1": "03", "Q2": "06", "Q3": "09", "Q4": "12"}.get(row.report_quarter, "12")
+                report_date = f"{row.report_year}-{quarter_month}-30"
+            else:
+                report_date = ""
+
+            # 지분 변동 계산
+            change = 0.0
+            if row.previous_share_ratio is not None:
+                change = share_ratio - float(row.previous_share_ratio)
+
+            # 주식 수 변동 계산
+            shares_changed = 0
+            if prev_share_count is not None:
+                shares_changed = prev_share_count - share_count  # 역순이므로 prev - current
+            prev_share_count = share_count
+
+            history.append(ShareholderHistoryFallbackItem(
+                date=report_date,
+                percentage=share_ratio,
+                change=round(change, 2),
+                shares_changed=shares_changed,
+                reason=row.change_reason
+            ))
+
+        return history
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in shareholder history fallback: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/shareholder/{shareholder_id}/companies", response_model=List[ShareholderCompanyFallbackItem])
+async def get_shareholder_companies_fallback(
+    shareholder_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    대주주 관련 회사 조회 (PostgreSQL 폴백)
+
+    - 동일 이름이 대주주로 등록된 모든 회사 조회
+    """
+    try:
+        # 1. shareholder_id로 이름 조회
+        name_query = text("""
+            SELECT shareholder_name FROM major_shareholders WHERE id::text = :shareholder_id
+        """)
+        result = await db.execute(name_query, {"shareholder_id": shareholder_id})
+        name_row = result.fetchone()
+
+        if not name_row:
+            raise HTTPException(status_code=404, detail="Shareholder not found")
+
+        shareholder_name = name_row.shareholder_name
+
+        # 2. 동일 이름이 대주주인 모든 회사 조회 (최신 데이터 기준)
+        companies_query = text("""
+            SELECT DISTINCT ON (c.id)
+                   c.id::text as company_id, c.name as company_name,
+                   ms.share_ratio, ms.share_count
+            FROM major_shareholders ms
+            JOIN companies c ON ms.company_id = c.id
+            WHERE ms.shareholder_name = :name
+            ORDER BY c.id, ms.report_year DESC NULLS LAST, ms.report_quarter DESC NULLS LAST
+        """)
+        result = await db.execute(companies_query, {"name": shareholder_name})
+        rows = result.fetchall()
+
+        companies = []
+        for row in rows:
+            companies.append(ShareholderCompanyFallbackItem(
+                company_id=row.company_id,
+                company_name=row.company_name,
+                percentage=float(row.share_ratio) if row.share_ratio else 0.0,
+                shares=int(row.share_count) if row.share_count else 0
+            ))
+
+        # 지분율 높은 순으로 정렬
+        companies.sort(key=lambda x: x.percentage, reverse=True)
+
+        return companies
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in shareholder companies fallback: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
