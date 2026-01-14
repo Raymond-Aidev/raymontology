@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 import logging
 import os
+import base64
 
 from app.database import get_db
 from app.models.toss_users import TossUser
@@ -37,6 +38,62 @@ except Exception as e:
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/auth/toss", tags=["toss-auth"])
+
+# ============================================================================
+# 토스 콜백 Basic Auth 설정
+# ============================================================================
+
+# 콘솔에 등록한 Basic Auth 값 (username:password 형식)
+TOSS_CALLBACK_CREDENTIALS = os.getenv(
+    "TOSS_CALLBACK_CREDENTIALS",
+    "raymondsrisk:Toss20260114Callback!"
+)
+
+
+def verify_toss_callback_auth(authorization: Optional[str] = Header(None)) -> bool:
+    """
+    토스 콜백 Basic Auth 검증
+
+    토스 서버가 콜백 호출 시 Authorization 헤더에 Base64 인코딩된 credentials를 보냄.
+    콘솔에 설정한 값과 일치하는지 검증.
+    """
+    if not authorization:
+        logger.warning("Toss callback: Missing Authorization header")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authorization header required"
+        )
+
+    if not authorization.startswith("Basic "):
+        logger.warning(f"Toss callback: Invalid auth scheme: {authorization[:20]}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Basic authentication required"
+        )
+
+    try:
+        # Base64 디코딩
+        encoded_credentials = authorization.replace("Basic ", "")
+        decoded_bytes = base64.b64decode(encoded_credentials)
+        decoded_credentials = decoded_bytes.decode("utf-8")
+
+        # 검증
+        if decoded_credentials != TOSS_CALLBACK_CREDENTIALS:
+            logger.warning(f"Toss callback: Invalid credentials")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid credentials"
+            )
+
+        return True
+
+    except Exception as e:
+        logger.error(f"Toss callback auth error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication failed"
+        )
+
 
 # ============================================================================
 # Request/Response Models
@@ -416,12 +473,14 @@ class DisconnectCallbackResponse(BaseModel):
 async def toss_disconnect_callback(
     request: DisconnectCallbackRequest,
     db: AsyncSession = Depends(get_db),
+    _auth: bool = Depends(verify_toss_callback_auth),
 ):
     """
     토스 로그인 끊기 콜백 (POST 방식)
 
     사용자가 토스앱에서 연결을 해제할 때 토스 서버가 호출합니다.
     - 콘솔에서 콜백 URL 및 Basic Auth 헤더 설정 필요
+    - Basic Auth: raymondsrisk:Toss20260114Callback!
 
     referrer 값:
     - UNLINK: 사용자가 토스앱에서 직접 연결 끊음
@@ -470,17 +529,51 @@ async def toss_disconnect_callback(
     )
 
 
-@router.get("/callback/disconnect")
+@router.get("/callback/disconnect", response_model=DisconnectCallbackResponse)
 async def toss_disconnect_callback_get(
     userKey: int,
     referrer: str,
     db: AsyncSession = Depends(get_db),
+    _auth: bool = Depends(verify_toss_callback_auth),
 ):
     """
     토스 로그인 끊기 콜백 (GET 방식)
 
     토스 서버가 GET 방식으로 호출할 때 사용.
+    - Basic Auth: raymondsrisk:Toss20260114Callback!
     """
-    # POST 방식과 동일한 로직
-    request = DisconnectCallbackRequest(userKey=userKey, referrer=referrer)
-    return await toss_disconnect_callback(request, db)
+    user_key = str(userKey)
+
+    logger.info(f"Toss disconnect callback (GET) received: userKey={user_key}, referrer={referrer}")
+
+    # 사용자 조회
+    result = await db.execute(
+        select(TossUser).where(TossUser.toss_user_key == user_key)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        logger.warning(f"Disconnect callback (GET): user not found: {user_key}")
+        return DisconnectCallbackResponse(
+            status="ok",
+            message="User not found (already disconnected or never connected)"
+        )
+
+    # 토큰 무효화
+    user.access_token = None
+    user.refresh_token = None
+    user.token_expires_at = None
+
+    # referrer에 따른 추가 처리
+    if referrer == "WITHDRAWAL_TOSS":
+        user.is_active = False
+        logger.info(f"User deactivated due to Toss withdrawal: {user_key}")
+
+    await db.commit()
+
+    logger.info(f"Disconnect callback (GET) processed: userKey={user_key}, referrer={referrer}")
+
+    return DisconnectCallbackResponse(
+        status="ok",
+        message=f"User {user_key} disconnected successfully"
+    )
