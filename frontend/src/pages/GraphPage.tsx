@@ -642,6 +642,69 @@ function GraphPage() {
         )}
       </div>
 
+      {/* 모바일 RaymondsIndex & 주가 차트 영역 */}
+      <div className="md:hidden mx-4 mt-2 bg-dark-card border border-dark-border rounded-lg p-3">
+        <div className="flex items-center justify-between gap-3">
+          {/* 관계형리스크등급 */}
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] text-text-muted uppercase">관계형리스크</span>
+            <span className={`text-xl font-bold font-mono ${
+              centerCompany?.investment_grade === 'A' ? 'text-blue-400' :
+              centerCompany?.investment_grade === 'AA' ? 'text-blue-400' :
+              centerCompany?.investment_grade === 'AAA' ? 'text-blue-400' :
+              centerCompany?.investment_grade === 'B' ? 'text-green-400' :
+              centerCompany?.investment_grade === 'BB' ? 'text-green-400' :
+              centerCompany?.investment_grade === 'BBB' ? 'text-green-400' :
+              centerCompany?.investment_grade === 'C' ? 'text-yellow-400' :
+              centerCompany?.investment_grade === 'CC' ? 'text-yellow-400' :
+              centerCompany?.investment_grade === 'CCC' ? 'text-yellow-400' :
+              centerCompany?.investment_grade === 'D' ? 'text-orange-400' :
+              centerCompany?.investment_grade === 'E' ? 'text-red-400' :
+              'text-text-muted'
+            }`}>
+              {centerCompany?.investment_grade || '-'}
+            </span>
+          </div>
+
+          <div className="w-px h-10 bg-dark-border" />
+
+          {/* RaymondsIndex */}
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] text-text-muted uppercase">RaymondsIndex</span>
+            {raymondsIndex ? (
+              <div className="flex items-center gap-1">
+                <span
+                  className="text-xl font-bold font-mono"
+                  style={{ color: getGradeColor(raymondsIndex.grade) }}
+                >
+                  {raymondsIndex.totalScore.toFixed(0)}
+                </span>
+                <span
+                  className="text-xs font-medium px-1 py-0.5 rounded"
+                  style={{
+                    color: getGradeColor(raymondsIndex.grade),
+                    backgroundColor: `${getGradeColor(raymondsIndex.grade)}20`
+                  }}
+                >
+                  {raymondsIndex.grade}
+                </span>
+              </div>
+            ) : (
+              <span className="text-text-muted text-sm">-</span>
+            )}
+          </div>
+
+          <div className="w-px h-10 bg-dark-border" />
+
+          {/* 주가 차트 */}
+          {companyId && (
+            <div className="flex-1 min-w-0">
+              <MiniStockChart companyId={companyId} companyName={centerCompany?.name} />
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* 메인 컨텐츠 */}
       <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 min-h-0 px-4 sm:px-6 lg:px-8 py-4">
         {/* 그래프 영역 */}
