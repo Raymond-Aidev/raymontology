@@ -47,12 +47,20 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    // 401 에러 시 토큰 제거 및 리다이렉트
+    // 401 에러 시 토큰 제거
     if (error.response?.status === 401) {
       removeToken()
       localStorage.removeItem('auth-store')
-      // 로그인 페이지가 아닌 경우에만 리다이렉트
-      if (window.location.pathname !== '/login') {
+
+      // Protected 경로에서만 로그인 페이지로 리다이렉트
+      // Public 페이지(메인, 소개, 가격 등)에서는 리다이렉트하지 않음
+      const PROTECTED_PATH_PREFIXES = ['/company/', '/service-application']
+      const currentPath = window.location.pathname
+      const isProtectedPath = PROTECTED_PATH_PREFIXES.some(
+        prefix => currentPath.startsWith(prefix)
+      )
+
+      if (isProtectedPath && currentPath !== '/login') {
         window.location.href = '/login'
       }
     }
