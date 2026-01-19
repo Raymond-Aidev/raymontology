@@ -1,7 +1,7 @@
 # Raymontology PRD (Product Requirements Document)
 
-**버전**: 2.0
-**최종 수정**: 2025-12-09
+**버전**: 2.1
+**최종 수정**: 2026-01-15
 **작성자**: Development Team
 
 ---
@@ -148,30 +148,48 @@ DART API ──▶ XML 파싱 ──▶ PostgreSQL ──▶ Neo4j ──▶ Fro
 
 ---
 
-## 5. 데이터 현황 (2025-12-09 기준)
+## 5. 데이터 현황 (2026-01-15 기준)
 
 ### 5.1 PostgreSQL
 
 | 테이블 | 레코드 수 | 상태 | 비고 |
 |--------|----------|------|------|
 | companies | 3,922 | ✅ | 상장사 전체 |
-| officers | 38,125 | ✅ | - |
-| officer_positions | 240,320 | ✅ | - |
-| convertible_bonds | 1,435 | ✅ | 2022-2025 |
-| cb_subscribers | 8,656 | ✅ | - |
-| major_shareholders | 1,130 | ✅ | - |
-| affiliates | 1,245 | ✅ | - |
-| financial_statements | 9,432 | ✅ | - |
+| officers | 49,446 | ✅ | - |
+| officer_positions | 75,059 | ✅ | - |
+| convertible_bonds | 1,133 | ✅ | 2022-2025 |
+| cb_subscribers | 7,026 | ✅ | - |
+| major_shareholders | 60,214 | ✅ | - |
+| affiliates | 973 | ✅ | - |
+| financial_statements | 9,820 | ✅ | - |
+| **financial_details** | **9,926** | ✅ | XBRL v3.0 파서 적용 |
+| **financial_ratios** | **신규 예정** | 🔧 | 25개 재무비율 계산 |
+| **raymonds_index** | **5,257** | ✅ | 자본배분효율성 지수 |
 | risk_signals | 1,412 | ✅ | 5개 패턴 |
 | risk_scores | 3,912 | ✅ | 99.7% 커버 |
-| disclosures | 206,767 | ✅ | - |
+| disclosures | 279,258 | ✅ | - |
+| stock_prices | 127,324 | ✅ | 월별 주가 |
+| news_articles | 468 | ✅ | 뉴스 분석 |
 
 ### 5.2 데이터 커버리지
 
 - **회사**: 상장사 3,922개 전체 커버
 - **리스크 점수**: 99.7% 회사 계산 완료
-- **CB 데이터**: 1,435건 (2022-2025)
-- **임원 데이터**: 38,125명 (현재+과거)
+- **CB 데이터**: 1,133건 (2022-2025)
+- **임원 데이터**: 49,446명 (현재+과거)
+- **RaymondsIndex**: 5,257개 기업 평가 완료
+- **재무 상세 데이터**: 2022-2025년 (9,926건)
+
+### 5.3 financial_details 연도별 현황
+
+| 연도 | 레코드 수 | 성장률 계산 |
+|------|----------|------------|
+| 2022 | 2,413 | ❌ (전기 없음) |
+| 2023 | 2,569 | ✅ |
+| 2024 | 2,723 | ✅ |
+| 2025 | 2,221 | ✅ |
+
+**결론**: 2023년부터 3년간 연속 추이 분석 가능
 
 ---
 
@@ -207,6 +225,45 @@ DART API ──▶ XML 파싱 ──▶ PostgreSQL ──▶ Neo4j ──▶ Fro
 │                                                                      │
 └─────────────────────────────────────────────────────────────────────┘
 ```
+
+### 6.1-1 재무건전성 평가 시스템 (신규)
+
+25개 재무비율을 6개 카테고리로 분류하여 종합 건전성 점수 산출:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                                                                      │
+│              재무건전성 평가 시스템 (25개 비율)                       │
+│                                                                      │
+│  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐           │
+│  │ 안정성    │ │ 수익성    │ │ 성장성    │ │ 활동성    │           │
+│  │ (6개)     │ │ (6개)     │ │ (4개)     │ │ (4개)     │           │
+│  │           │ │           │ │           │ │           │           │
+│  │ 유동비율  │ │ 영업이익률│ │ 매출성장률│ │ 자산회전율│           │
+│  │ 당좌비율  │ │ 순이익률  │ │ 영업성장률│ │ 채권회전율│           │
+│  │ 부채비율  │ │ ROA      │ │ 순이익증가│ │ 재고회전율│           │
+│  │ 자기자본  │ │ ROE      │ │ 자산성장률│ │ 매입채무  │           │
+│  │ 차입의존도│ │ 매출총이익│ │           │ │           │           │
+│  │ 비유동비율│ │ EBITDA   │ │           │ │           │           │
+│  └───────────┘ └───────────┘ └───────────┘ └───────────┘           │
+│                                                                      │
+│  ┌───────────┐ ┌───────────┐                                        │
+│  │ 현금흐름  │ │ 레버리지  │    ──────▶  종합 건전성 점수 (0-100)  │
+│  │ (3개)     │ │ (4개)     │             + 등급 (A++ ~ C)           │
+│  │           │ │           │                                        │
+│  │ OCF비율   │ │ 이자보상  │                                        │
+│  │ 이자보상  │ │ EBITDA보상│                                        │
+│  │ FCF      │ │ 순차입금  │                                        │
+│  │           │ │ 금융비용  │                                        │
+│  └───────────┘ └───────────┘                                        │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**성장성 지표 특별 처리**:
+- 전기(fiscal_year - 1) 데이터 필요
+- 2022년은 전기 데이터 없어 성장률 계산 불가
+- API 응답에 `growth_data_available` 플래그 포함
 
 ### 6.2 투자등급 매핑
 
@@ -304,6 +361,116 @@ Response:
     "cb_count": 15,
     "risk_level": "HIGH",
     "investment_grade": "CCC"
+  }
+]
+```
+
+### 7.5 재무비율 API (신규)
+
+#### 7.5.1 단일 회사 재무비율 조회
+
+```
+GET /api/financial-ratios/{company_id}
+
+Response:
+{
+  "company_id": "uuid",
+  "fiscal_year": 2024,
+  "financial_health_score": 72.5,
+  "financial_health_grade": "B+",
+  "financial_risk_level": "LOW",
+  "stability": {
+    "current_ratio": 245.3,
+    "quick_ratio": 180.2,
+    "debt_ratio": 65.2,
+    "equity_ratio": 60.5,
+    "debt_dependency": 25.3,
+    "non_current_ratio": 85.2,
+    "score": 78.5
+  },
+  "profitability": {
+    "operating_margin": 15.2,
+    "net_profit_margin": 10.8,
+    "roa": 8.5,
+    "roe": 12.5,
+    "gross_margin": 32.1,
+    "ebitda_margin": 18.5,
+    "score": 72.3
+  },
+  "growth": {
+    "revenue_growth": 12.3,
+    "operating_income_growth": 25.6,
+    "net_income_growth": 30.2,
+    "total_assets_growth": 5.1,
+    "data_available": true,
+    "score": 68.5
+  },
+  "activity": { ... },
+  "cashflow": { ... },
+  "leverage": { ... }
+}
+```
+
+#### 7.5.2 3년 추이 조회
+
+```
+GET /api/financial-ratios/{company_id}/history
+
+Response:
+{
+  "company_id": "uuid",
+  "company_name": "삼성전자",
+  "history": [
+    {
+      "fiscal_year": 2022,
+      "financial_health_score": 72.5,
+      "financial_health_grade": "B+",
+      "growth": { "data_available": false }
+    },
+    {
+      "fiscal_year": 2023,
+      "financial_health_score": 68.3,
+      "financial_health_grade": "B",
+      "growth": {
+        "revenue_growth": -8.5,
+        "data_available": true
+      }
+    },
+    {
+      "fiscal_year": 2024,
+      "financial_health_score": 75.1,
+      "financial_health_grade": "B+",
+      "growth": {
+        "revenue_growth": 12.3,
+        "data_available": true
+      }
+    }
+  ],
+  "trend_summary": {
+    "score_trend": "improving",
+    "avg_3y_growth": {
+      "revenue": 1.9,
+      "operating_income": 5.2
+    }
+  }
+}
+```
+
+#### 7.5.3 재무건전성 랭킹
+
+```
+GET /api/financial-ratios/ranking?limit=50&min_grade=B
+
+Response:
+[
+  {
+    "company_id": "uuid",
+    "company_name": "삼성전자",
+    "market": "KOSPI",
+    "financial_health_score": 85.2,
+    "financial_health_grade": "A",
+    "roe": 15.3,
+    "debt_ratio": 45.2
   }
 ]
 ```
@@ -884,6 +1051,84 @@ CREATE TABLE risk_signals (
     created_at TIMESTAMP,
     updated_at TIMESTAMP
 );
+```
+
+### financial_ratios (신규)
+
+```sql
+CREATE TABLE financial_ratios (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    fiscal_year INTEGER NOT NULL,
+    fiscal_quarter INTEGER,
+    calculation_date TIMESTAMP DEFAULT NOW(),
+    financial_detail_id UUID REFERENCES financial_details(id),
+
+    -- 안정성 지표 (6개)
+    current_ratio DECIMAL(10,2),
+    quick_ratio DECIMAL(10,2),
+    debt_ratio DECIMAL(10,2),
+    equity_ratio DECIMAL(10,2),
+    debt_dependency DECIMAL(10,2),
+    non_current_ratio DECIMAL(10,2),
+
+    -- 수익성 지표 (6개)
+    operating_margin DECIMAL(10,2),
+    net_profit_margin DECIMAL(10,2),
+    roa DECIMAL(10,2),
+    roe DECIMAL(10,2),
+    gross_margin DECIMAL(10,2),
+    ebitda_margin DECIMAL(10,2),
+    ebitda BIGINT,
+
+    -- 성장성 지표 (4개) ⭐전기 데이터 필요
+    revenue_growth DECIMAL(10,2),
+    operating_income_growth DECIMAL(10,2),
+    net_income_growth DECIMAL(10,2),
+    total_assets_growth DECIMAL(10,2),
+    growth_data_available BOOLEAN DEFAULT FALSE,
+
+    -- 활동성 지표 (4개)
+    asset_turnover DECIMAL(10,2),
+    receivables_turnover DECIMAL(10,2),
+    inventory_turnover DECIMAL(10,2),
+    payables_turnover DECIMAL(10,2),
+
+    -- 현금흐름 지표 (3개)
+    ocf_ratio DECIMAL(10,2),
+    ocf_interest_coverage DECIMAL(10,2),
+    free_cash_flow BIGINT,
+
+    -- 레버리지 지표 (4개)
+    interest_coverage DECIMAL(10,2),
+    ebitda_interest_coverage DECIMAL(10,2),
+    net_debt_to_ebitda DECIMAL(10,2),
+    financial_expense_ratio DECIMAL(10,2),
+
+    -- 연속 적자/흑자
+    consecutive_loss_quarters INTEGER DEFAULT 0,
+    consecutive_profit_quarters INTEGER DEFAULT 0,
+    is_loss_making BOOLEAN DEFAULT FALSE,
+
+    -- 종합 점수
+    stability_score DECIMAL(5,2),
+    profitability_score DECIMAL(5,2),
+    growth_score DECIMAL(5,2),
+    activity_score DECIMAL(5,2),
+    cashflow_score DECIMAL(5,2),
+    leverage_score DECIMAL(5,2),
+    financial_health_score DECIMAL(5,2),
+    financial_health_grade VARCHAR(5),
+    financial_risk_level VARCHAR(20),
+
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(company_id, fiscal_year, fiscal_quarter)
+);
+
+CREATE INDEX idx_fr_company ON financial_ratios(company_id);
+CREATE INDEX idx_fr_year ON financial_ratios(fiscal_year);
+CREATE INDEX idx_fr_health_score ON financial_ratios(financial_health_score);
+CREATE INDEX idx_fr_grade ON financial_ratios(financial_health_grade);
 ```
 
 ---
