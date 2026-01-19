@@ -231,6 +231,12 @@ class FinancialParser(BaseParser):
             '상품매출원가', '제품매출원가', '매 출 원 가',
             'Ⅱ.매출원가', 'II.매출원가', '2.매출원가'
         ],
+        # v3.1: 재무비율 계산용 신규 계정과목
+        'gross_profit': [
+            '매출총이익', '매출총손익', '매출 총이익',
+            '매출총이익(손실)', 'Ⅲ.매출총이익', 'III.매출총이익',
+            '매 출 총 이 익'
+        ],
         'selling_admin_expenses': [
             '판매비와관리비', '판관비', '판매관리비',
             '판매비', '관리비', '판매비및관리비',
@@ -260,10 +266,24 @@ class FinancialParser(BaseParser):
             '사채이자', '금융원가', '이자비용(금융비용)',
             '금융이자비용', '차입금이자비용'
         ],
+        # v3.1: 재무비율 계산용 신규 계정과목
+        'interest_income': [
+            '이자수익', '이자이익', '이자수입', '금융수익',
+            '이자 수익', '금융이익', '이자및배당금수익'
+        ],
+        'income_before_tax': [
+            '법인세비용차감전순이익', '법인세차감전순이익', '세전이익',
+            '법인세비용차감전이익', '세전순이익', '법인세비용차감전계속사업이익',
+            '세 전 이 익', '법인세비용차감전순손익', '법인세비용차감전분기순이익'
+        ],
         'tax_expense': [
             '법인세비용', '법인세', '소득세비용',
             '법인세비용(수익)', '당기법인세비용', '법인세등',
             '법인세비용(이익)', '계속사업법인세비용'
+        ],
+        'amortization': [
+            '무형자산상각비', '상각비', '무형자산 상각',
+            '무형자산상각', '무형자산감가상각비', '영업권상각비'
         ],
 
         # ═══════════════════════════════════════════════════════════════
@@ -367,9 +387,10 @@ class FinancialParser(BaseParser):
         {
             'name': 'income_statement',
             'fields': [
-                'revenue', 'cost_of_sales', 'selling_admin_expenses',
+                'revenue', 'cost_of_sales', 'gross_profit', 'selling_admin_expenses',
                 'operating_income', 'net_income',
-                'r_and_d_expense', 'depreciation_expense', 'interest_expense', 'tax_expense'
+                'r_and_d_expense', 'depreciation_expense', 'interest_expense',
+                'interest_income', 'income_before_tax', 'tax_expense', 'amortization'
             ]
         },
         {
@@ -610,7 +631,7 @@ class FinancialParser(BaseParser):
             except ValueError:
                 fiscal_year = datetime.now().year
 
-        # UPSERT 쿼리 (v3.0: 부채/자본 세부 필드 추가)
+        # UPSERT 쿼리 (v3.1: 재무비율 계산용 4개 필드 추가)
         query = '''
             INSERT INTO financial_details (
                 id, company_id, fiscal_year,
@@ -622,7 +643,8 @@ class FinancialParser(BaseParser):
                 non_current_liabilities, long_term_borrowings, bonds_payable,
                 total_liabilities,
                 total_equity, capital_stock, capital_surplus, retained_earnings, treasury_stock,
-                revenue, cost_of_sales, operating_income, net_income, interest_expense, tax_expense,
+                revenue, cost_of_sales, gross_profit, operating_income, net_income,
+                interest_expense, interest_income, income_before_tax, tax_expense, amortization,
                 operating_cash_flow, investing_cash_flow, financing_cash_flow,
                 capex, intangible_acquisition, dividend_paid,
                 fs_type, data_source, created_at, updated_at
@@ -632,9 +654,10 @@ class FinancialParser(BaseParser):
                 $9, $10, $11, $12,
                 $13, $14, $15, $16, $17, $18, $19,
                 $20, $21, $22, $23, $24,
-                $25, $26, $27, $28, $29, $30,
-                $31, $32, $33, $34, $35, $36,
-                $37, $38, NOW(), NOW()
+                $25, $26, $27, $28, $29,
+                $30, $31, $32, $33, $34,
+                $35, $36, $37, $38, $39, $40,
+                $41, $42, NOW(), NOW()
             )
             ON CONFLICT (company_id, fiscal_year)
             DO UPDATE SET
@@ -661,10 +684,14 @@ class FinancialParser(BaseParser):
                 treasury_stock = COALESCE(EXCLUDED.treasury_stock, financial_details.treasury_stock),
                 revenue = COALESCE(EXCLUDED.revenue, financial_details.revenue),
                 cost_of_sales = COALESCE(EXCLUDED.cost_of_sales, financial_details.cost_of_sales),
+                gross_profit = COALESCE(EXCLUDED.gross_profit, financial_details.gross_profit),
                 operating_income = COALESCE(EXCLUDED.operating_income, financial_details.operating_income),
                 net_income = COALESCE(EXCLUDED.net_income, financial_details.net_income),
                 interest_expense = COALESCE(EXCLUDED.interest_expense, financial_details.interest_expense),
+                interest_income = COALESCE(EXCLUDED.interest_income, financial_details.interest_income),
+                income_before_tax = COALESCE(EXCLUDED.income_before_tax, financial_details.income_before_tax),
                 tax_expense = COALESCE(EXCLUDED.tax_expense, financial_details.tax_expense),
+                amortization = COALESCE(EXCLUDED.amortization, financial_details.amortization),
                 operating_cash_flow = COALESCE(EXCLUDED.operating_cash_flow, financial_details.operating_cash_flow),
                 investing_cash_flow = COALESCE(EXCLUDED.investing_cash_flow, financial_details.investing_cash_flow),
                 financing_cash_flow = COALESCE(EXCLUDED.financing_cash_flow, financial_details.financing_cash_flow),
@@ -693,8 +720,9 @@ class FinancialParser(BaseParser):
                 values.get('capital_surplus'), values.get('retained_earnings'),
                 values.get('treasury_stock'),
                 values.get('revenue'), values.get('cost_of_sales'),
-                values.get('operating_income'), values.get('net_income'),
-                values.get('interest_expense'), values.get('tax_expense'),
+                values.get('gross_profit'), values.get('operating_income'), values.get('net_income'),
+                values.get('interest_expense'), values.get('interest_income'),
+                values.get('income_before_tax'), values.get('tax_expense'), values.get('amortization'),
                 values.get('operating_cash_flow'), values.get('investing_cash_flow'),
                 values.get('financing_cash_flow'), values.get('capex'),
                 values.get('intangible_acquisition'), values.get('dividend_paid'),

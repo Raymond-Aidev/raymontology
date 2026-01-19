@@ -44,10 +44,15 @@ router = APIRouter(prefix="/api/auth/toss", tags=["toss-auth"])
 # ============================================================================
 
 # 콘솔에 등록한 Basic Auth 값 (username:password 형식)
-TOSS_CALLBACK_CREDENTIALS = os.getenv(
-    "TOSS_CALLBACK_CREDENTIALS",
-    "raymondsrisk:Toss20260114Callback!"
-)
+# 프로덕션에서는 반드시 TOSS_CALLBACK_CREDENTIALS 환경변수 설정 필요
+_default_credentials = "dev:dev-callback-password"  # 개발용 기본값
+TOSS_CALLBACK_CREDENTIALS = os.getenv("TOSS_CALLBACK_CREDENTIALS", _default_credentials)
+
+# 프로덕션 환경에서 기본 자격증명 사용 시 경고
+if os.getenv("ENVIRONMENT") == "production" and TOSS_CALLBACK_CREDENTIALS == _default_credentials:
+    logger.error(
+        "⚠️ CRITICAL: 프로덕션에서 TOSS_CALLBACK_CREDENTIALS 환경변수가 설정되지 않았습니다!"
+    )
 
 
 def verify_toss_callback_auth(authorization: Optional[str] = Header(None)) -> bool:

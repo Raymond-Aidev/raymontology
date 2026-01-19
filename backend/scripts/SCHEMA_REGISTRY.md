@@ -2,31 +2,43 @@
 
 > **중요**: 모든 테이블 접근 시 이 문서 참조 필수. 테이블명 추측 금지.
 >
-> **마지막 업데이트**: 2026-01-05
+> **마지막 업데이트**: 2026-01-14
 >
-> **현재 데이터 상태** (2026-01-05):
+> **현재 데이터 상태** (2026-01-14):
 > - companies: 3,922건
-> - officers: 44,679건
-> - officer_positions: 48,862건 (2026-01-04 중복 정리 완료, position_history JSONB 추가)
-> - disclosures: 213,304건
-> - convertible_bonds: 1,133건 (2026-01-02 중복 정리 완료)
-> - cb_subscribers: 7,026건 (CB 정리에 따른 연쇄 정리)
-> - financial_statements: 9,432건
+> - officers: 49,446건
+> - officer_positions: 75,059건
+> - disclosures: 279,258건
+> - convertible_bonds: 1,133건
+> - cb_subscribers: 7,026건
+> - financial_statements: 9,820건
 > - risk_signals: 1,412건
 > - risk_scores: 3,912건
-> - major_shareholders: 47,453건
+> - major_shareholders: 60,214건
 > - affiliates: 973건
-> - financial_details: 10,288건 (2022-2025년, XBRL v3.0 파서 적용)
-> - **raymonds_index: 2,698건** (2026-01-01 재계산 완료)
+> - financial_details: 9,926건 (XBRL v3.0 파서 적용)
+> - **raymonds_index: 5,257건** (5,257개 기업 평가 완료)
 > - **stock_prices: 127,324건**
+> - **largest_shareholder_info: 4,599건** (최대주주 기본정보)
 > - users: 4건
 > - user_query_usage: - (조회 제한 추적)
 > - page_contents: - (페이지 콘텐츠 관리)
 > - site_settings: - (사이트 설정)
+> - **news_articles: 468건** (뉴스 기사)
+> - **news_entities: 2,703건** (뉴스 엔티티)
+> - **news_relations: 791건** (뉴스 관계)
+> - **news_risks: 1,470건** (뉴스 위험요소)
+> - **toss_users: 4건** (토스 로그인 사용자)
+> - **credit_transactions: 16건** (이용권 거래)
+> - **credit_products: 3건** (이용권 상품)
+> - **report_views: 6건** (리포트 조회)
+> - **pipeline_runs: 0건** (파이프라인 실행 이력)
+> - **service_applications: 1건** (서비스 이용신청)
+> - **financial_ratios: 신규 예정** (재무비율 분석 - 25개 재무비율)
 
 ---
 
-## 핵심 테이블 목록 (PostgreSQL) - 총 25개 테이블
+## 핵심 테이블 목록 (PostgreSQL) - 총 38개 테이블
 
 ### 1. companies (기업 정보) - 3,922건
 
@@ -53,12 +65,26 @@
 | properties | jsonb | YES | 추가 속성 |
 | created_at | timestamp(tz) | NO | 생성일시 |
 | updated_at | timestamp(tz) | NO | 수정일시 |
+| **company_type** | varchar(20) | YES | 기업 유형 (NORMAL/SPAC/REIT/ETF/HOLDING/FINANCIAL), 기본값: 'NORMAL' |
+| **trading_status** | varchar(20) | YES | 거래 상태 (NORMAL/SUSPENDED/TRADING_HALT), 기본값: 'NORMAL' |
+| **is_managed** | varchar(1) | YES | 관리종목 여부 (Y/N), 기본값: 'N' |
 
 **주의사항**: corp_code는 DART API 키, ticker는 거래소 코드
 
+#### 기업 유형별 현황 (2026-01-12 추가)
+
+| company_type | 설명 | 기업 수 |
+|--------------|------|--------|
+| NORMAL | 일반 상장사 | ~2,600 |
+| SPAC | 기업인수목적회사 | 80 |
+| REIT | 부동산투자회사 | 42 |
+| ETF | 상장지수펀드 | 1,149 |
+
+**참고**: SPAC/ETF/REIT는 임원/대주주/재무 데이터 구조가 다르므로 파싱 시 필터링 필요
+
 ---
 
-### 2. officers (임원 정보) - 44,679건
+### 2. officers (임원 정보) - 49,446건
 
 | 컬럼명 | 데이터타입 | NULL | 설명 |
 |--------|-----------|------|------|
@@ -103,11 +129,11 @@
 - `former`: 과거 경력 (前/전 패턴)
 - `unknown`: 상태 미확인
 
-**현황**: 44,679명 중 약 10,504명 (23.5%) 구조화된 경력 데이터 보유 (career_history)
+**현황**: 49,446명 중 구조화된 경력 데이터 보유 (career_history)
 
 #### career_raw_text 컬럼 상세 (v2.5 업데이트, 2026-01-07)
 
-**현황**: 44,679명 중 **28,710명 (64.3%)** 원문 경력 데이터 보유
+**현황**: 원문 경력 데이터 보유 (career_raw_text)
 
 **목적**: 경력 패턴 파싱 실패 시에도 원문 표시 가능하도록 원문 텍스트 저장
 
@@ -129,7 +155,7 @@
 
 ---
 
-### 3. officer_positions (임원 직책 이력) - 48,862건
+### 3. officer_positions (임원 직책 이력) - 75,059건
 
 | 컬럼명 | 데이터타입 | NULL | 설명 |
 |--------|-----------|------|------|
@@ -166,7 +192,7 @@
 
 ---
 
-### 4. disclosures (DART 공시) - 213,304건
+### 4. disclosures (DART 공시) - 279,258건
 
 | 컬럼명 | 데이터타입 | NULL | 설명 |
 |--------|-----------|------|------|
@@ -258,7 +284,7 @@
 
 ---
 
-### 7. financial_statements (재무제표) - 9,432건
+### 7. financial_statements (재무제표) - 9,820건
 
 | 컬럼명 | 데이터타입 | NULL | 설명 |
 |--------|-----------|------|------|
@@ -349,7 +375,7 @@
 
 ---
 
-### 10. major_shareholders (대주주) - 44,768건
+### 10. major_shareholders (대주주) - 60,214건
 
 | 컬럼명 | 데이터타입 | NULL | 설명 |
 |--------|-----------|------|------|
@@ -386,7 +412,7 @@
 
 **정제 결과** (2026-01-01):
 - 삭제된 레코드: 2,685건 (숫자 오기입 2,666건 + 재무항목명 19건)
-- 정제 후 레코드: 44,768건
+- 현재 레코드: 60,214건 (426개 기업 보완 파싱 적용)
 - 숫자로 시작하는 정상 데이터: 1건 (펀드명)
 
 **파싱 로직 개선** (2026-01-01):
@@ -425,7 +451,7 @@
 
 ---
 
-### 12. financial_details (상세 재무 데이터) - 10,288건
+### 12. financial_details (상세 재무 데이터) - 9,926건
 
 | 컬럼명 | 데이터타입 | NULL | 설명 |
 |--------|-----------|------|------|
@@ -501,6 +527,10 @@
 | fs_type | varchar | YES | 재무제표 유형 (CFS/OFS) |
 | data_source | varchar | YES | 데이터 출처 |
 | source_rcept_no | varchar | YES | 출처 공시번호 |
+| **gross_profit** | bigint | YES | 매출총이익 ⭐신규 |
+| **interest_income** | bigint | YES | 이자수익 ⭐신규 |
+| **income_before_tax** | bigint | YES | 법인세차감전이익 ⭐신규 |
+| **amortization** | bigint | YES | 무형자산상각비 ⭐신규 |
 | created_at | timestamp | YES | 생성일시 |
 | updated_at | timestamp | YES | 수정일시 |
 
@@ -509,7 +539,99 @@
 
 ---
 
-### 13. raymonds_index (자본 배분 효율성 지수 v2.1) - 2,698건
+### 12-1. financial_ratios (재무비율 분석) - 신규 예정 ⭐
+
+25개 재무비율 계산 결과 저장 테이블. `financial_details` 원본 데이터 기반으로 계산.
+
+| 컬럼명 | 데이터타입 | NULL | 설명 |
+|--------|-----------|------|------|
+| id | uuid | NO | PK |
+| company_id | uuid | NO | FK → companies |
+| fiscal_year | integer | NO | 사업연도 |
+| fiscal_quarter | integer | YES | 분기 (NULL=연간) |
+| calculation_date | timestamp | YES | 계산일시 |
+| financial_detail_id | uuid | YES | FK → financial_details |
+| **안정성 지표 (Stability)** |
+| current_ratio | decimal(10,2) | YES | 유동비율 (%) |
+| quick_ratio | decimal(10,2) | YES | 당좌비율 (%) |
+| debt_ratio | decimal(10,2) | YES | 부채비율 (%) |
+| equity_ratio | decimal(10,2) | YES | 자기자본비율 (%) |
+| debt_dependency | decimal(10,2) | YES | 차입금의존도 (%) |
+| non_current_ratio | decimal(10,2) | YES | 비유동비율 (%) |
+| **수익성 지표 (Profitability)** |
+| operating_margin | decimal(10,2) | YES | 매출액영업이익률 (%) |
+| net_profit_margin | decimal(10,2) | YES | 매출액순이익률 (%) |
+| roa | decimal(10,2) | YES | 총자산순이익률 (%) |
+| roe | decimal(10,2) | YES | 자기자본순이익률 (%) |
+| gross_margin | decimal(10,2) | YES | 매출총이익률 (%) |
+| ebitda_margin | decimal(10,2) | YES | EBITDA마진 (%) |
+| ebitda | bigint | YES | EBITDA (절대값) |
+| **성장성 지표 (Growth)** |
+| revenue_growth | decimal(10,2) | YES | 매출액증가율 (%) ⭐전기 데이터 필요 |
+| operating_income_growth | decimal(10,2) | YES | 영업이익증가율 (%) ⭐전기 데이터 필요 |
+| net_income_growth | decimal(10,2) | YES | 순이익증가율 (%) ⭐전기 데이터 필요 |
+| total_assets_growth | decimal(10,2) | YES | 총자산증가율 (%) ⭐전기 데이터 필요 |
+| growth_data_available | boolean | YES | 전기 데이터 유무, 기본값: false |
+| **활동성 지표 (Activity)** |
+| asset_turnover | decimal(10,2) | YES | 총자산회전율 (회) |
+| receivables_turnover | decimal(10,2) | YES | 매출채권회전율 (회) |
+| inventory_turnover | decimal(10,2) | YES | 재고자산회전율 (회) |
+| payables_turnover | decimal(10,2) | YES | 매입채무회전율 (회) |
+| receivables_days | decimal(10,2) | YES | 매출채권회수기간 (일) |
+| inventory_days | decimal(10,2) | YES | 재고자산보유기간 (일) |
+| payables_days | decimal(10,2) | YES | 매입채무지급기간 (일) |
+| cash_conversion_cycle | decimal(10,2) | YES | 현금전환주기 (일) |
+| **현금흐름 지표 (Cash Flow)** |
+| ocf_ratio | decimal(10,2) | YES | 영업현금흐름비율 (%) |
+| ocf_interest_coverage | decimal(10,2) | YES | 현금흐름이자보상배율 (배) |
+| free_cash_flow | bigint | YES | 잉여현금흐름 (원) |
+| fcf_margin | decimal(10,2) | YES | FCF마진 (%) |
+| **레버리지 지표 (Leverage)** |
+| interest_coverage | decimal(10,2) | YES | 이자보상배율 (배) |
+| ebitda_interest_coverage | decimal(10,2) | YES | EBITDA이자보상배율 (배) |
+| net_debt_to_ebitda | decimal(10,2) | YES | 순차입금/EBITDA (배) |
+| financial_expense_ratio | decimal(10,2) | YES | 금융비용부담률 (%) |
+| total_borrowings | bigint | YES | 총차입금 (원) |
+| net_debt | bigint | YES | 순차입금 (원) |
+| **연속 적자/흑자 정보** |
+| consecutive_loss_quarters | integer | YES | 연속 적자 분기 수, 기본값: 0 |
+| consecutive_profit_quarters | integer | YES | 연속 흑자 분기 수, 기본값: 0 |
+| is_loss_making | boolean | YES | 당기 적자 여부 |
+| **종합 점수** |
+| stability_score | decimal(5,2) | YES | 안정성 점수 (0-100) |
+| profitability_score | decimal(5,2) | YES | 수익성 점수 (0-100) |
+| growth_score | decimal(5,2) | YES | 성장성 점수 (0-100) |
+| activity_score | decimal(5,2) | YES | 활동성 점수 (0-100) |
+| cashflow_score | decimal(5,2) | YES | 현금흐름 점수 (0-100) |
+| leverage_score | decimal(5,2) | YES | 레버리지 점수 (0-100) |
+| financial_health_score | decimal(5,2) | YES | 종합 건전성 점수 (0-100) |
+| financial_health_grade | varchar(5) | YES | 등급 (A++~C) |
+| financial_risk_level | varchar(20) | YES | 위험 수준 (LOW/MEDIUM/HIGH/CRITICAL) |
+| **메타데이터** |
+| data_completeness | decimal(5,2) | YES | 데이터 완성도 (0-1) |
+| calculation_notes | text | YES | 계산 비고 |
+| created_at | timestamp | YES | 생성일시 |
+
+**UNIQUE 제약**: company_id + fiscal_year + fiscal_quarter
+**연관 모델**: `app/models/financial_ratios.py` (신규)
+**연관 서비스**: `app/services/financial_ratios_calculator.py` (신규)
+
+**성장성 지표 주의사항**:
+- 전기(fiscal_year - 1) 데이터가 없으면 성장률 계산 불가
+- `growth_data_available = false`인 경우 성장성 지표 모두 NULL
+- 2022년 데이터는 2021년 전기 데이터가 없어 성장률 계산 불가
+
+**데이터 현황** (예정):
+| 연도 | 계산 가능 | 성장률 계산 |
+|------|----------|------------|
+| 2022 | ✅ | ❌ (전기 없음) |
+| 2023 | ✅ | ✅ |
+| 2024 | ✅ | ✅ |
+| 2025 | ✅ | ✅ |
+
+---
+
+### 13. raymonds_index (자본 배분 효율성 지수 v2.1) - 5,257건
 
 | 컬럼명 | 데이터타입 | NULL | 설명 |
 |--------|-----------|------|------|
@@ -659,6 +781,333 @@
 
 ---
 
+## 주가 및 대주주 테이블 (2026-01-14 추가)
+
+### 21. stock_prices (주가 데이터) - 127,324건
+
+| 컬럼명 | 데이터타입 | NULL | 설명 |
+|--------|-----------|------|------|
+| id | uuid | NO | PK |
+| company_id | uuid | NO | FK → companies |
+| price_date | date | NO | 월말 기준일 (2022-01-31) |
+| year_month | varchar(7) | NO | 연월 ("2022-01", 조회 편의) |
+| close_price | float | NO | 종가 (원) |
+| open_price | float | YES | 시가 (월 시작일) |
+| high_price | float | YES | 월중 최고가 |
+| low_price | float | YES | 월중 최저가 |
+| volume | bigint | YES | 월간 거래량 |
+| change_rate | float | YES | 전월 대비 변동률 (%) |
+| created_at | timestamp(tz) | NO | 생성일시 |
+| updated_at | timestamp(tz) | NO | 수정일시 |
+
+**연관 모델**: `app/models/stock_prices.py`
+**UNIQUE 제약**: company_id + year_month
+**데이터 범위**: 2022년 1월 ~ 현재, 상장사만 대상
+
+---
+
+### 22. largest_shareholder_info (최대주주 기본정보) - 4,599건
+
+최대주주가 법인인 경우, 그 법인의 기본정보와 재무현황 저장.
+
+| 컬럼명 | 데이터타입 | NULL | 설명 |
+|--------|-----------|------|------|
+| id | uuid | NO | PK |
+| company_id | uuid | NO | FK → companies |
+| fiscal_year | integer | NO | 사업연도 |
+| report_date | date | YES | 보고일 |
+| shareholder_name | varchar(200) | YES | 최대주주명 |
+| investor_count | integer | YES | 투자자 수 |
+| ceo_name | varchar(100) | YES | 대표자명 |
+| ceo_share_ratio | numeric(10,2) | YES | 대표자 지분율 |
+| executor_name | varchar(100) | YES | 업무집행자명 |
+| executor_share_ratio | numeric(10,2) | YES | 업무집행자 지분율 |
+| largest_investor_name | varchar(100) | YES | 최대 출자자명 |
+| largest_investor_share_ratio | numeric(10,2) | YES | 최대 출자자 지분율 |
+| fin_total_assets | bigint | YES | 총자산 (원) |
+| fin_total_liabilities | bigint | YES | 총부채 (원) |
+| fin_total_equity | bigint | YES | 총자본 (원) |
+| fin_revenue | bigint | YES | 매출액 (원) |
+| fin_operating_income | bigint | YES | 영업이익 (원) |
+| fin_net_income | bigint | YES | 당기순이익 (원) |
+| data_source | varchar(50) | YES | 데이터 출처, 기본값: 'LOCAL_DART' |
+| created_at | timestamp | YES | 생성일시 |
+| updated_at | timestamp | YES | 수정일시 |
+
+**활용**: 실질 지배구조 파악, 연쇄 리스크 분석, 지배구조 복잡도 측정
+**UNIQUE 제약**: company_id + fiscal_year
+
+---
+
+## 뉴스 관계 분석 테이블 (2026-01-14 추가)
+
+⚠️ **안전 설계**: 기존 테이블(companies, officers)에 FK 없음 (소프트 참조). 완전 롤백 가능.
+
+### 23. news_articles (뉴스 기사) - 468건
+
+| 컬럼명 | 데이터타입 | NULL | 설명 |
+|--------|-----------|------|------|
+| id | uuid | NO | PK |
+| url | varchar(500) | NO | 기사 URL (UNIQUE) |
+| title | varchar(500) | NO | 기사 제목 |
+| publisher | varchar(100) | YES | 발행사 |
+| publish_date | date | YES | 발행일 |
+| author | varchar(100) | YES | 저자 |
+| summary | text | YES | Claude 분석 요약 |
+| raw_content | text | YES | 원문 내용 |
+| status | varchar(20) | NO | 상태 (active/archived/deleted), 기본값: 'active' |
+| parse_version | varchar(10) | YES | 파싱 버전, 기본값: 'v4' |
+| created_at | timestamp(tz) | YES | 생성일시 |
+| updated_at | timestamp(tz) | YES | 수정일시 |
+
+**연관 모델**: `app/models/news.py`
+
+---
+
+### 24. news_entities (뉴스 엔티티) - 2,703건
+
+기사에서 추출된 엔티티 (company, person, fund, spc).
+
+| 컬럼명 | 데이터타입 | NULL | 설명 |
+|--------|-----------|------|------|
+| id | uuid | NO | PK |
+| article_id | uuid | NO | FK → news_articles |
+| entity_type | varchar(30) | NO | 엔티티 유형 (company/person/fund/spc) |
+| entity_name | varchar(200) | NO | 엔티티명 |
+| entity_role | varchar(300) | YES | 기사에서의 역할/설명 |
+| matched_company_id | uuid | YES | 매칭된 companies.id (소프트 참조) |
+| matched_officer_id | uuid | YES | 매칭된 officers.id (소프트 참조) |
+| matched_corp_code | varchar(20) | YES | 매칭된 corp_code |
+| match_confidence | numeric(3,2) | YES | 매칭 신뢰도 (0.00~1.00) |
+| created_at | timestamp(tz) | YES | 생성일시 |
+
+---
+
+### 25. news_relations (뉴스 관계) - 791건
+
+엔티티 간 관계 정보와 위험 가중치.
+
+| 컬럼명 | 데이터타입 | NULL | 설명 |
+|--------|-----------|------|------|
+| id | uuid | NO | PK |
+| article_id | uuid | NO | FK → news_articles |
+| source_entity_id | uuid | NO | FK → news_entities (출발) |
+| target_entity_id | uuid | NO | FK → news_entities (도착) |
+| relation_type | varchar(50) | NO | 관계 유형 (cb_subscriber, major_shareholder 등) |
+| relation_detail | varchar(500) | YES | 상세 설명 |
+| relation_period | varchar(100) | YES | 기간 정보 |
+| risk_weight | numeric(3,2) | NO | 위험 가중치, 기본값: 1.0 |
+| created_at | timestamp(tz) | YES | 생성일시 |
+
+**관계 유형별 위험 가중치**:
+| relation_type | risk_weight | 설명 |
+|---------------|-------------|------|
+| cb_subscriber | 3.0 | CB 인수자 |
+| major_shareholder | 2.5 | 대주주 |
+| spc_related | 2.5 | SPC 관련 |
+| cross_officer | 2.0 | 겸직 임원 |
+| fund_related | 2.0 | 펀드 관련 |
+| affiliate | 1.5 | 계열사 |
+| investor | 1.5 | 투자자 |
+| business_partner | 1.0 | 거래처 |
+
+---
+
+### 26. news_risks (뉴스 위험요소) - 1,470건
+
+기사에서 감지된 위험 요소.
+
+| 컬럼명 | 데이터타입 | NULL | 설명 |
+|--------|-----------|------|------|
+| id | uuid | NO | PK |
+| article_id | uuid | NO | FK → news_articles |
+| risk_type | varchar(50) | NO | 위험 유형 (governance/financial/operational/legal) |
+| description | text | NO | 위험 설명 |
+| severity | varchar(20) | NO | 심각도 (low/medium/high/critical), 기본값: 'medium' |
+| created_at | timestamp(tz) | YES | 생성일시 |
+
+---
+
+### 27. news_company_complexity (기업 복잡도 스코어) - 0건
+
+뉴스 기반 관계 분석 결과를 집계한 기업별 복잡도 등급.
+
+| 컬럼명 | 데이터타입 | NULL | 설명 |
+|--------|-----------|------|------|
+| id | uuid | NO | PK |
+| company_id | uuid | NO | 소프트 참조 (companies.id) |
+| corp_code | varchar(20) | NO | corp_code |
+| complexity_score | numeric(5,2) | NO | 복잡도 점수 (0~100), 기본값: 0 |
+| complexity_grade | varchar(5) | NO | 복잡도 등급 (A~F), 기본값: 'A' |
+| entity_count | integer | NO | 엔티티 수 |
+| relation_count | integer | NO | 관계 수 |
+| high_risk_count | integer | NO | 고위험 관계 수 |
+| article_count | integer | NO | 관련 기사 수 |
+| calculated_at | timestamp(tz) | YES | 계산일시 |
+
+**복잡도 등급 기준**:
+| 등급 | 점수 범위 | 설명 |
+|------|----------|------|
+| A | 0-20 | 단순 |
+| B | 20-40 | 보통 |
+| C | 40-60 | 복잡 |
+| D | 60-80 | 매우 복잡 |
+| E | 80-90 | 위험 |
+| F | 90-100 | 고위험 |
+
+---
+
+## 앱인토스/토스 관련 테이블 (2026-01-14 추가)
+
+### 28. toss_users (토스 로그인 사용자) - 4건
+
+앱인토스에서 토스 로그인한 사용자 정보.
+
+| 컬럼명 | 데이터타입 | NULL | 설명 |
+|--------|-----------|------|------|
+| id | uuid | NO | PK |
+| toss_user_key | varchar(100) | NO | 토스 사용자 식별자 (UNIQUE) |
+| name | varchar(100) | YES | 복호화된 이름 |
+| phone | varchar(20) | YES | 복호화된 전화번호 |
+| email | varchar(255) | YES | 복호화된 이메일 |
+| credits | integer | NO | 이용권 수, 기본값: 0, -1은 무제한 |
+| access_token | text | YES | 토스 액세스 토큰 |
+| refresh_token | text | YES | 토스 리프레시 토큰 |
+| token_expires_at | timestamp(tz) | YES | 토큰 만료일시 |
+| is_active | boolean | NO | 활성 여부 |
+| created_at | timestamp(tz) | NO | 생성일시 |
+| updated_at | timestamp(tz) | NO | 수정일시 |
+| last_login_at | timestamp(tz) | YES | 마지막 로그인 |
+
+**CHECK 제약**: credits >= -1
+**연관 모델**: `app/models/toss_users.py`
+
+---
+
+### 29. credit_transactions (이용권 거래 내역) - 16건
+
+이용권 구매, 사용, 환불 등 모든 거래 기록.
+
+| 컬럼명 | 데이터타입 | NULL | 설명 |
+|--------|-----------|------|------|
+| id | uuid | NO | PK |
+| user_id | uuid | NO | FK → toss_users |
+| transaction_type | varchar(20) | NO | 거래 유형 (purchase/use/refund/bonus) |
+| amount | integer | NO | 금액 (양수: 충전, 음수: 사용) |
+| balance_after | integer | NO | 거래 후 잔액 |
+| product_id | varchar(50) | YES | 상품 ID (report_1, report_10, report_30) |
+| order_id | varchar(100) | YES | 토스 인앱결제 주문 ID |
+| payment_amount | integer | YES | 결제 금액 (원) |
+| payment_method | varchar(30) | YES | 결제 수단 |
+| receipt_data | text | YES | 영수증 데이터 |
+| company_id | varchar(20) | YES | 조회한 기업 코드 |
+| company_name | varchar(200) | YES | 조회한 기업명 |
+| description | varchar(500) | YES | 설명 |
+| created_at | timestamp(tz) | NO | 생성일시 |
+
+**UNIQUE 인덱스**: order_id (NULL 제외)
+
+---
+
+### 30. credit_products (이용권 상품) - 3건
+
+이용권 상품 정보.
+
+| 컬럼명 | 데이터타입 | NULL | 설명 |
+|--------|-----------|------|------|
+| id | varchar(50) | NO | PK (report_1, report_10, report_30) |
+| name | varchar(100) | NO | 상품명 |
+| credits | integer | NO | 충전되는 이용권 수 |
+| price | integer | NO | 가격 (원) |
+| badge | varchar(20) | YES | 배지 (추천, 최저가) |
+| is_active | boolean | NO | 활성 여부 |
+| sort_order | integer | NO | 정렬 순서 |
+| toss_sku | varchar(100) | YES | 토스 인앱결제 SKU |
+| apple_product_id | varchar(100) | YES | Apple 상품 ID |
+| google_product_id | varchar(100) | YES | Google 상품 ID |
+| created_at | timestamp(tz) | NO | 생성일시 |
+| updated_at | timestamp(tz) | NO | 수정일시 |
+
+---
+
+### 31. report_views (리포트 조회 기록) - 6건
+
+동일 기업 재조회 시 이용권 중복 차감 방지. 30일 보관 기간 적용.
+
+| 컬럼명 | 데이터타입 | NULL | 설명 |
+|--------|-----------|------|------|
+| id | uuid | NO | PK |
+| user_id | uuid | NO | FK → toss_users |
+| company_id | varchar(20) | NO | 기업 코드 (corp_code) |
+| company_name | varchar(200) | YES | 기업명 |
+| first_viewed_at | timestamp(tz) | NO | 최초 조회일시 |
+| last_viewed_at | timestamp(tz) | NO | 마지막 조회일시 |
+| view_count | integer | NO | 조회 횟수 |
+| expires_at | timestamp(tz) | YES | 만료일 (30일), NULL은 무제한 |
+
+**UNIQUE 인덱스**: user_id + company_id
+
+---
+
+## 파이프라인/서비스 테이블 (2026-01-14 추가)
+
+### 32. pipeline_runs (파이프라인 실행 이력) - 0건
+
+분기 파이프라인 및 배치 작업 실행 이력.
+
+| 컬럼명 | 데이터타입 | NULL | 설명 |
+|--------|-----------|------|------|
+| id | uuid | NO | PK |
+| pipeline_type | varchar(50) | NO | 파이프라인 유형 (quarterly/daily/manual/backfill) |
+| quarter | varchar(10) | YES | 분기 (Q1/Q2/Q3/Q4) |
+| year | integer | YES | 연도 |
+| status | varchar(20) | NO | 상태 (pending/running/completed/failed/cancelled) |
+| started_at | timestamp(tz) | YES | 시작일시 |
+| completed_at | timestamp(tz) | YES | 완료일시 |
+| duration_seconds | integer | YES | 실행 시간 (초) |
+| companies_processed | integer | YES | 처리된 기업 수 |
+| files_processed | integer | YES | 처리된 파일 수 |
+| officers_inserted | integer | YES | 추가된 임원 수 |
+| positions_inserted | integer | YES | 추가된 직책 수 |
+| errors_count | integer | YES | 오류 수 |
+| error_message | text | YES | 오류 메시지 |
+| log_file_path | varchar(500) | YES | 로그 파일 경로 |
+| metadata | jsonb | YES | 추가 메타데이터 |
+| created_at | timestamp(tz) | YES | 생성일시 |
+| updated_at | timestamp(tz) | YES | 수정일시 |
+
+**연관 모델**: `app/models/pipeline_run.py`
+
+---
+
+### 33. service_applications (서비스 이용신청) - 1건
+
+수동 입금확인 방식의 엔터프라이즈 서비스 이용신청 관리.
+
+| 컬럼명 | 데이터타입 | NULL | 설명 |
+|--------|-----------|------|------|
+| id | uuid | NO | PK |
+| user_id | uuid | NO | FK → users |
+| applicant_email | varchar(255) | NO | 신청자 이메일 |
+| business_registration_file_content | text | YES | 사업자등록증 (Base64) |
+| business_registration_file_name | varchar(255) | YES | 파일명 |
+| business_registration_mime_type | varchar(50) | YES | MIME 타입 |
+| plan_type | varchar(20) | NO | 플랜 (1_MONTH/6_MONTHS/1_YEAR) |
+| plan_amount | integer | NO | 금액 (원) |
+| status | varchar(20) | NO | 상태, 기본값: 'PENDING' |
+| admin_memo | text | YES | 관리자 메모 |
+| processed_by | uuid | YES | FK → users (처리자) |
+| processed_at | timestamp(tz) | YES | 처리일시 |
+| subscription_start_date | date | YES | 구독 시작일 |
+| subscription_end_date | date | YES | 구독 종료일 |
+| created_at | timestamp(tz) | NO | 생성일시 |
+| updated_at | timestamp(tz) | NO | 수정일시 |
+
+**상태 값**: PENDING → PAYMENT_CONFIRMED → APPROVED / REJECTED / CANCELLED
+**플랜별 금액**: 1_MONTH=300,000원, 6_MONTHS=1,500,000원, 1_YEAR=3,000,000원
+
+---
+
 ## 시스템/기타 테이블
 
 | 테이블명 | 레코드 수 | 용도 | 주의사항 |
@@ -687,7 +1136,12 @@
 | shareholder | **major_shareholders** | major_ 접두사 필요 |
 | affiliate | **affiliates** | 복수형 |
 | financial | **financial_details** | _details 접미사 필요 |
+| ratios | **financial_ratios** | financial_ 접두사 필요 |
 | raymond | **raymonds_index** | raymonds_index 사용 |
+| news | **news_articles** | news_articles 사용 |
+| toss_user | **toss_users** | 복수형 |
+| credit | **credit_transactions** | 전체 이름 사용 |
+| pipeline | **pipeline_runs** | _runs 접미사 필요 |
 
 ---
 
@@ -704,7 +1158,9 @@ companies (1) ─────┬────── (N) officers
                    │
                    ├────── (N) financial_statements
                    │
-                   ├────── (N) financial_details
+                   ├────── (N) financial_details ──── (N) financial_ratios
+                   │
+                   ├────── (N) financial_ratios
                    │
                    ├────── (N) raymonds_index
                    │
@@ -714,7 +1170,11 @@ companies (1) ─────┬────── (N) officers
                    │
                    ├────── (N) major_shareholders
                    │
-                   └────── (N) affiliates
+                   ├────── (N) affiliates
+                   │
+                   ├────── (N) stock_prices
+                   │
+                   └────── (N) largest_shareholder_info
 
 users (1) ─────────┬────── (N) user_query_usage
                    │
@@ -722,7 +1182,23 @@ users (1) ─────────┬────── (N) user_query_usage
                    │
                    ├────── (N) email_verification_tokens
                    │
-                   └────── (N) password_reset_tokens
+                   ├────── (N) password_reset_tokens
+                   │
+                   └────── (N) service_applications
+
+toss_users (1) ────┬────── (N) credit_transactions
+                   │
+                   └────── (N) report_views
+
+news_articles (1) ─┬────── (N) news_entities
+                   │
+                   ├────── (N) news_relations
+                   │
+                   └────── (N) news_risks
+
+news_entities (1) ─┬────── (N) news_relations (source)
+                   │
+                   └────── (N) news_relations (target)
 ```
 
 ---
@@ -745,6 +1221,18 @@ UNION ALL SELECT 'risk_signals', COUNT(*) FROM risk_signals
 UNION ALL SELECT 'risk_scores', COUNT(*) FROM risk_scores
 UNION ALL SELECT 'major_shareholders', COUNT(*) FROM major_shareholders
 UNION ALL SELECT 'affiliates', COUNT(*) FROM affiliates
+UNION ALL SELECT 'stock_prices', COUNT(*) FROM stock_prices
+UNION ALL SELECT 'largest_shareholder_info', COUNT(*) FROM largest_shareholder_info
+UNION ALL SELECT 'news_articles', COUNT(*) FROM news_articles
+UNION ALL SELECT 'news_entities', COUNT(*) FROM news_entities
+UNION ALL SELECT 'news_relations', COUNT(*) FROM news_relations
+UNION ALL SELECT 'news_risks', COUNT(*) FROM news_risks
+UNION ALL SELECT 'toss_users', COUNT(*) FROM toss_users
+UNION ALL SELECT 'credit_transactions', COUNT(*) FROM credit_transactions
+UNION ALL SELECT 'credit_products', COUNT(*) FROM credit_products
+UNION ALL SELECT 'report_views', COUNT(*) FROM report_views
+UNION ALL SELECT 'pipeline_runs', COUNT(*) FROM pipeline_runs
+UNION ALL SELECT 'service_applications', COUNT(*) FROM service_applications
 UNION ALL SELECT 'users', COUNT(*) FROM users
 ORDER BY 1;
 ```

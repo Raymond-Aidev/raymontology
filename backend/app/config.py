@@ -37,8 +37,9 @@ class Settings(BaseSettings):
     r2_bucket_name: Optional[str] = None
     r2_endpoint_url: Optional[str] = None
 
-    # Security (default key for development - CHANGE IN PRODUCTION)
-    secret_key: str = "dev-secret-key-change-in-production-please"
+    # Security - 프로덕션에서는 반드시 SECRET_KEY 환경변수 설정 필요
+    # 개발 환경에서만 기본값 사용 (프로덕션에서는 검증됨)
+    secret_key: str = "dev-secret-key-change-in-production"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
 
@@ -67,8 +68,9 @@ class Settings(BaseSettings):
     # Registration Control (회원가입 비활성화 - 관리자만 계정 생성 가능)
     registration_enabled: bool = False
 
-    # CORS - allow all origins during deployment testing
-    cors_allow_all: bool = True
+    # CORS - 프로덕션에서는 False로 설정하여 허용된 origin만 접근 허용
+    # 환경변수 CORS_ALLOW_ALL=false로 오버라이드 가능
+    cors_allow_all: bool = True  # TODO: 프로덕션 배포 전 False로 변경
 
     # Payment Gateway (PG) - 결제 대행사
     pg_provider: str = "mock"  # 'tosspayments', 'portone', 'mock'
@@ -90,6 +92,23 @@ class Settings(BaseSettings):
     def is_production(self) -> bool:
         return self.environment == "production"
 
+    def validate_production_settings(self) -> None:
+        """프로덕션 환경 필수 설정 검증"""
+        if self.is_production:
+            # 시크릿 키 검증
+            if self.secret_key.startswith("dev-"):
+                raise ValueError(
+                    "프로덕션 환경에서는 SECRET_KEY 환경변수를 설정해야 합니다. "
+                    "기본 개발용 키는 사용할 수 없습니다."
+                )
+            # CORS 검증 (경고만)
+            if self.cors_allow_all:
+                import logging
+                logging.warning(
+                    "⚠️ 프로덕션에서 CORS_ALLOW_ALL=true 설정됨. "
+                    "보안을 위해 False로 변경을 권장합니다."
+                )
+
     @property
     def allowed_origins(self) -> list[str]:
         """CORS allowed origins"""
@@ -109,3 +128,6 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# 프로덕션 설정 검증 (앱 시작 시 실행)
+settings.validate_production_settings()

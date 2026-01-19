@@ -4,11 +4,11 @@
 
 ---
 
-## 상태: 기업 유형 분류 시스템 구현 v2.7 (2026-01-12)
-전체 18개 테이블 데이터 적재 완료. **RaymondsIndex 계산 완료 (5,257건)**.
+## 상태: SCHEMA_REGISTRY 동기화 완료 v2.8 (2026-01-14)
+전체 **37개 테이블** 데이터 적재 완료. **RaymondsIndex 계산 완료 (5,257건)**.
 **RaymondsIndex 독립 사이트**: https://raymondsindex.konnect-ai.net 배포 완료.
 **RaymondsRisk 앱인토스**: 토스 로그인 연동 완료, 샌드박스 테스트 진행 중.
-**최근 업데이트**: company_type/trading_status 컬럼 추가, SPAC/REIT/ETF 필터링 구현 (2026-01-12)
+**최근 업데이트**: SCHEMA_REGISTRY.md 전면 업데이트 (37개 테이블), 네이버 서치어드바이저 등록 (2026-01-14)
 
 ---
 
@@ -65,6 +65,52 @@ ls /Users/jaejoonpark/raymontology/raymondsrisk-app/package.json
 
 # SDK 설치 확인
 grep "@apps-in-toss/web-framework" /Users/jaejoonpark/raymontology/raymondsrisk-app/package.json
+```
+
+---
+
+## 작업 지시 태그 규칙 (필수) ⭐
+
+### 태그 사용법
+
+작업 요청 시 **프로젝트 태그**를 명시하여 혼동 방지:
+
+| 태그 | 대상 폴더 | 배포 URL / 용도 |
+|------|----------|----------------|
+| `[RISK-WEB]` | `frontend/` | www.konnect-ai.net |
+| `[INDEX-WEB]` | `raymondsindex-web/` | raymondsindex.konnect-ai.net |
+| `[RISK-APP]` | `raymondsrisk-app/` | 토스 앱인앱 |
+| `[ANDROID]` | `android/` | 네이티브 앱 |
+| `[BACKEND]` | `backend/` | API 서버 |
+| `[NEWS]` | `news/` | 뉴스 수집/분석 스크립트 |
+
+### 작업 지시 예시
+
+```
+[BACKEND] 뉴스 API 엔드포인트 추가
+[RISK-WEB] 기업 상세 화면에 뉴스 탭 추가
+[INDEX-WEB] 스크리너에 뉴스 필터 추가
+[RISK-APP] 토스 앱에서 뉴스 알림 표시
+```
+
+### 키워드 → 프로젝트 매핑
+
+태그 없이 키워드로 언급 시 자동 매핑:
+
+| 키워드 | 대상 프로젝트 |
+|--------|--------------|
+| "www.konnect-ai.net", "RaymondsRisk 웹" | `frontend/` |
+| "raymondsindex.konnect-ai.net", "인덱스 사이트" | `raymondsindex-web/` |
+| "토스 앱", "앱인토스", "intoss://" | `raymondsrisk-app/` |
+| "API", "엔드포인트", "DB" | `backend/` |
+
+### 불명확한 경우
+
+**Claude는 작업 전 반드시 대상 프로젝트 확인 질문할 것:**
+
+```
+"기업 상세 화면" 수정 요청 시:
+→ "어느 프론트엔드인가요? [RISK-WEB] www.konnect-ai.net / [INDEX-WEB] raymondsindex.konnect-ai.net"
 ```
 
 ---
@@ -452,6 +498,67 @@ parser = DARTUnifiedParser()
 await parser.parse_all(target_years=[2024])
 report = await parser.validate()
 print(report.to_string())
+```
+
+---
+
+## 스크립트 테마별 폴더 구조 (2026-01-19 정리) ⭐
+
+백엔드 스크립트가 테마별로 정리되었습니다. **새 스크립트 작성 시 반드시 해당 테마 폴더에 배치하세요.**
+
+### 폴더 구조
+```
+backend/scripts/
+├── collection/      # 15개 - 데이터 수집 (download_*, collect_*, fetch_*, load_*, import_*)
+├── parsing/         # 25개 - 데이터 파싱 (parse_*, reparse_*)
+├── analysis/        # 12개 - 데이터 분석 (neo4j_*, calculate_*, generate_*, aggregate_*)
+├── sync/            # 9개 - DB 동기화 (sync_*, resync_*, convert_*)
+├── enrichment/      # 8개 - 데이터 보강 (enrich_*, update_*, supplement_*)
+├── maintenance/     # 15개 - 유지보수 (cleanup_*, verify_*, validate_*, create_*)
+├── pipeline/        # 9개 - 자동화 파이프라인 (분기별 데이터 처리)
+├── parsers/         # 9개 - 파서 모듈 (BaseParser 상속 구조)
+├── utils/           # 4개 - 유틸리티 (company_filter, schema_validator 등)
+└── _deprecated/     # 10개 - 사용 금지 스크립트
+```
+
+### 테마별 용도 가이드
+
+| 테마 | 용도 | 진입점/권장 스크립트 |
+|------|------|---------------------|
+| **pipeline/** | 분기별 데이터 처리 | `run_quarterly_pipeline.py` (통합) |
+| **parsers/** | 구조화된 파서 모듈 | `unified.py` (CLI 진입점) |
+| **collection/** | DART/외부 데이터 수집 | 개별 스크립트 |
+| **parsing/** | 레거시 파싱 스크립트 | → parsers/ 또는 pipeline/ 사용 권장 |
+| **analysis/** | 인덱스 계산, Neo4j 분석 | 개별 스크립트 |
+| **sync/** | PostgreSQL ↔ Neo4j 동기화 | `full_neo4j_sync.py` |
+| **enrichment/** | 기존 데이터 보강 | 개별 스크립트 |
+| **maintenance/** | 검증, 정리, 관리자 | `verify_data_status.py` |
+| **_deprecated/** | 사용 금지 | ⚠️ 절대 실행 금지 |
+
+### 새 스크립트 작성 규칙
+
+1. **파일명 규칙**: `{동사}_{대상}_{버전}.py`
+   - 예: `parse_officers_from_local.py`, `sync_cb_to_neo4j.py`
+
+2. **폴더 선택 기준**:
+   - 외부 API/파일에서 데이터 가져오기 → `collection/`
+   - 원시 데이터를 구조화 → `parsing/` (단, 새로운 파서는 `parsers/` 모듈로)
+   - 계산/집계/분석 → `analysis/`
+   - DB 간 동기화 → `sync/`
+   - 기존 데이터 보완 → `enrichment/`
+   - 검증/정리/관리 → `maintenance/`
+
+3. **분기별 작업은 반드시 `pipeline/` 사용**
+
+### 스크립트 검색 방법
+```bash
+# 특정 테마 스크립트 목록
+ls backend/scripts/collection/
+ls backend/scripts/parsing/
+
+# 특정 키워드 포함 스크립트 검색
+find backend/scripts -name "*officer*" -type f
+find backend/scripts -name "*cb*" -type f
 ```
 
 ---

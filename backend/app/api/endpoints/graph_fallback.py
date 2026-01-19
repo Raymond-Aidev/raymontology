@@ -126,40 +126,53 @@ async def get_company_network_fallback(
         deficit_result = await db.execute(deficit_query)
         deficit_company_ids = {row[0] for row in deficit_result.fetchall()}
 
-        for officer in officers:
-            if officer.id not in seen_node_ids:
-                # 해당 임원의 적자기업 경력 수 계산 (동명이인 방지: 이름 + 출생년월 비교)
-                # 주의: 현재 조회 중인 회사(center_id)는 제외 - 과거 경력만 카운트
-                deficit_career_query = text("""
-                    SELECT COUNT(DISTINCT op2.company_id)
-                    FROM officer_positions op2
-                    JOIN officers o2 ON op2.officer_id = o2.id
-                    WHERE o2.name = :name
-                    AND (o2.birth_date = :birth_date OR (o2.birth_date IS NULL AND :birth_date IS NULL))
-                    AND op2.company_id::text = ANY(:deficit_ids)
-                    AND op2.company_id::text != :current_company_id
+        # ======================================================================
+        # N+1 쿼리 최적화: 배치 쿼리로 모든 임원의 경력 수를 한 번에 조회
+        # ======================================================================
+        officer_identities = [(o.name, o.birth_date) for o in officers]
+        officer_names = [o.name for o in officers]
+
+        # 배치 쿼리: 모든 임원의 상장사 경력 수를 한 번에 조회
+        if officer_names:
+            batch_career_query = text("""
+                SELECT o.name, o.birth_date, COUNT(DISTINCT op.company_id) as career_count
+                FROM officer_positions op
+                JOIN officers o ON op.officer_id = o.id
+                WHERE o.name = ANY(:names)
+                GROUP BY o.name, o.birth_date
+            """)
+            career_result = await db.execute(batch_career_query, {"names": officer_names})
+            career_counts = {(row.name, row.birth_date): row.career_count for row in career_result.fetchall()}
+
+            # 배치 쿼리: 모든 임원의 적자기업 경력 수를 한 번에 조회
+            if deficit_company_ids:
+                batch_deficit_query = text("""
+                    SELECT o.name, o.birth_date, COUNT(DISTINCT op.company_id) as deficit_count
+                    FROM officer_positions op
+                    JOIN officers o ON op.officer_id = o.id
+                    WHERE o.name = ANY(:names)
+                      AND op.company_id::text = ANY(:deficit_ids)
+                      AND op.company_id::text != :current_company_id
+                    GROUP BY o.name, o.birth_date
                 """)
-                deficit_result = await db.execute(deficit_career_query, {
-                    "name": officer.name,
-                    "birth_date": officer.birth_date,
+                deficit_result = await db.execute(batch_deficit_query, {
+                    "names": officer_names,
                     "deficit_ids": list(deficit_company_ids),
                     "current_company_id": center_id
                 })
-                deficit_career_count = deficit_result.scalar() or 0
+                deficit_counts = {(row.name, row.birth_date): row.deficit_count for row in deficit_result.fetchall()}
+            else:
+                deficit_counts = {}
+        else:
+            career_counts = {}
+            deficit_counts = {}
 
-                # 상장사 경력 수 계산 (동명이인 방지: 이름 + 출생년월 비교)
-                career_query = text("""
-                    SELECT COUNT(DISTINCT op2.company_id)
-                    FROM officer_positions op2
-                    JOIN officers o2 ON op2.officer_id = o2.id
-                    WHERE o2.name = :name
-                    AND (o2.birth_date = :birth_date OR (o2.birth_date IS NULL AND :birth_date IS NULL))
-                """)
-                career_result = await db.execute(career_query, {
-                    "name": officer.name,
-                    "birth_date": officer.birth_date
-                })
-                listed_career_count = career_result.scalar() or 0
+        # 배치 조회 결과를 사용하여 노드 생성 (N+1 쿼리 제거됨)
+        for officer in officers:
+            if officer.id not in seen_node_ids:
+                identity_key = (officer.name, officer.birth_date)
+                listed_career_count = career_counts.get(identity_key, 0)
+                deficit_career_count = deficit_counts.get(identity_key, 0)
 
                 nodes.append(GraphNode(
                     id=officer.id,
@@ -173,7 +186,7 @@ async def get_company_network_fallback(
                     }
                 ))
                 seen_node_ids.add(officer.id)
-                
+
                 rel_counter += 1
                 relationships.append(GraphRelationship(
                     id=f"rel_{rel_counter}",
