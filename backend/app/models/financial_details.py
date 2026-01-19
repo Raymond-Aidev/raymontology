@@ -103,6 +103,12 @@ class FinancialDetails(Base):
     interest_expense = Column(BigInteger, nullable=True)          # 이자비용
     tax_expense = Column(BigInteger, nullable=True)               # 법인세비용
 
+    # --- v3.0 재무비율 계산용 신규 항목 ---
+    gross_profit = Column(BigInteger, nullable=True)              # 매출총이익
+    interest_income = Column(BigInteger, nullable=True)           # 이자수익
+    income_before_tax = Column(BigInteger, nullable=True)         # 법인세차감전순이익
+    amortization = Column(BigInteger, nullable=True)              # 무형자산상각비
+
     # ═══════════════════════════════════════════════════════════════
     # 현금흐름표 (Cash Flow Statement) - RaymondsIndex 핵심
     # ═══════════════════════════════════════════════════════════════

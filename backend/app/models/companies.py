@@ -61,6 +61,7 @@ class Company(Base):
     # Relationships
     disclosures = relationship("Disclosure", back_populates="company")
     financial_details = relationship("FinancialDetails", back_populates="company")
+    financial_ratios = relationship("FinancialRatios", back_populates="company")
     raymonds_indices = relationship("RaymondsIndex", back_populates="company")
     stock_prices = relationship("StockPrice", back_populates="company", cascade="all, delete-orphan")
 

@@ -19,6 +19,7 @@ from app.models.convertible_bonds import ConvertibleBond
 from app.models.cb_subscribers import CBSubscriber
 from app.models.financial_statements import FinancialStatement
 from app.models.financial_details import FinancialDetails
+from app.models.financial_ratios import FinancialRatios
 from app.models.raymonds_index import RaymondsIndex
 from app.models.users import User
 from app.models.major_shareholders import MajorShareholder
@@ -49,6 +50,7 @@ __all__ = [
     "CBSubscriber",
     "FinancialStatement",
     "FinancialDetails",
+    "FinancialRatios",
     "RaymondsIndex",
     "User",
     "MajorShareholder",
