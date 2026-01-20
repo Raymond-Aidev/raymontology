@@ -100,11 +100,11 @@ export interface RiskSignal {
   detected_at?: string
 }
 
-// 심각도별 설정
+// 심각도별 설정 (다크 테마)
 export const severityConfig: Record<RiskSignalSeverity, { bg: string; text: string; border: string; label: string }> = {
-  HIGH: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', label: '높음' },
-  MEDIUM: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', label: '보통' },
-  LOW: { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200', label: '낮음' },
+  HIGH: { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/30', label: '높음' },
+  MEDIUM: { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/30', label: '보통' },
+  LOW: { bg: 'bg-dark-surface', text: 'text-text-muted', border: 'border-dark-border', label: '낮음' },
 }
 
 // 계열회사 관계 유형
