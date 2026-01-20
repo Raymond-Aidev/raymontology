@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { SearchInput, MarketBadge } from '../components/common'
+import { SearchInput, MarketBadge, MiniStockChart } from '../components/common'
 import { getHighRiskCompanies, getPlatformStats, type PlatformStats } from '../api/company'
 import { useAuthStore } from '../store/authStore'
 import type { CompanySearchResult } from '../types/company'
@@ -297,6 +297,11 @@ function MainSearchPage() {
                           {company.investment_grade}
                         </span>
                       )}
+                    </div>
+
+                    {/* Stock Chart - 최근 1년 주가 추이 */}
+                    <div className="mb-3 flex items-center justify-end">
+                      <MiniStockChart companyId={company.id} width={120} height={36} />
                     </div>
 
                     {/* Stats Row */}
