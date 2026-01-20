@@ -142,27 +142,16 @@ async def init_db():
         else:
             logger.info("PostgreSQL connected (use Alembic for migrations)")
 
-    # Redis (최적화된 연결 풀) - Optional
+    # Redis (간소화된 연결) - Optional
     if settings.redis_url:
-        logger.info("Initializing Redis...")
+        logger.info(f"Initializing Redis... URL: {settings.redis_url[:30]}...")
         try:
             redis_client = await Redis.from_url(
                 settings.redis_url,
                 encoding="utf-8",
                 decode_responses=True,
-                # 연결 풀 최적화
-                max_connections=50,  # 최대 연결 수
                 socket_connect_timeout=5,
                 socket_timeout=5,
-                socket_keepalive=True,
-                socket_keepalive_options={
-                    1: 1,  # TCP_KEEPIDLE
-                    2: 10,  # TCP_KEEPINTVL
-                    3: 5,  # TCP_KEEPCNT
-                },
-                health_check_interval=30,
-                retry_on_timeout=True,
-                retry_on_error=[ConnectionError, TimeoutError],
             )
             await redis_client.ping()
             logger.info("Redis connected successfully")

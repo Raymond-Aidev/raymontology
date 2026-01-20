@@ -34,11 +34,12 @@ def get_redis_client():
                 return None
 
             import redis
+            logger.info(f"Connecting to Redis: {settings.redis_url[:30]}...")
             _redis_client = redis.from_url(
                 settings.redis_url,
                 decode_responses=True,
-                socket_timeout=2,
-                socket_connect_timeout=2,
+                socket_timeout=5,
+                socket_connect_timeout=5,
             )
             # 연결 테스트
             _redis_client.ping()
