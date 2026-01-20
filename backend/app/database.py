@@ -150,8 +150,9 @@ async def init_db():
         raise
 
     # Redis (간소화된 연결) - Optional
+    print(f"=== Redis check: url={bool(settings.redis_url)} ===", flush=True)
     if settings.redis_url:
-        logger.info(f"Initializing Redis... URL: {settings.redis_url[:30]}...")
+        print(f"=== Initializing Redis: {settings.redis_url[:30]}... ===", flush=True)
         try:
             redis_client = await Redis.from_url(
                 settings.redis_url,
@@ -161,12 +162,12 @@ async def init_db():
                 socket_timeout=5,
             )
             await redis_client.ping()
-            logger.info("Redis connected successfully")
+            print("=== Redis connected successfully ===", flush=True)
         except Exception as e:
-            logger.warning(f"Redis connection failed: {e}. Caching disabled.")
+            print(f"=== Redis connection failed: {e} ===", flush=True)
             redis_client = None
     else:
-        logger.info("Redis URL not configured. Caching disabled.")
+        print("=== Redis URL not configured ===", flush=True)
         redis_client = None
 
     # Neo4j (optional)
