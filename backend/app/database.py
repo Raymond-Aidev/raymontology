@@ -132,27 +132,17 @@ async def init_db():
     global redis_client, neo4j_driver
 
     # PostgreSQL - 테이블 생성
-    print("=== init_db() called ===", flush=True)
-    print(f"=== REDIS_URL: {settings.redis_url[:30] if settings.redis_url else 'None'} ===", flush=True)
     logger.info("Initializing PostgreSQL...")
-    try:
-        async with engine.begin() as conn:
-            # 개발 환경에서만 테이블 자동 생성
-            # 프로덕션에서는 Alembic 사용
-            if settings.debug:
-                await conn.run_sync(Base.metadata.create_all)
-                logger.info("PostgreSQL tables created (debug mode)")
-            else:
-                logger.info("PostgreSQL connected (use Alembic for migrations)")
-        print("=== PostgreSQL OK ===", flush=True)
-    except Exception as e:
-        print(f"=== PostgreSQL ERROR: {e} ===", flush=True)
-        raise
+    async with engine.begin() as conn:
+        if settings.debug:
+            await conn.run_sync(Base.metadata.create_all)
+            logger.info("PostgreSQL tables created (debug mode)")
+        else:
+            logger.info("PostgreSQL connected (use Alembic for migrations)")
 
     # Redis (간소화된 연결) - Optional
-    print(f"=== Redis check: url={bool(settings.redis_url)} ===", flush=True)
     if settings.redis_url:
-        print(f"=== Initializing Redis: {settings.redis_url[:30]}... ===", flush=True)
+        logger.info(f"Initializing Redis...")
         try:
             redis_client = await Redis.from_url(
                 settings.redis_url,
@@ -162,12 +152,12 @@ async def init_db():
                 socket_timeout=5,
             )
             await redis_client.ping()
-            print("=== Redis connected successfully ===", flush=True)
+            logger.info("Redis connected successfully")
         except Exception as e:
-            print(f"=== Redis connection failed: {e} ===", flush=True)
+            logger.warning(f"Redis connection failed: {e}. Caching disabled.")
             redis_client = None
     else:
-        print("=== Redis URL not configured ===", flush=True)
+        logger.info("Redis URL not configured. Caching disabled.")
         redis_client = None
 
     # Neo4j (optional)
