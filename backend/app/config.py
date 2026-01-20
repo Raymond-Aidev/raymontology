@@ -1,10 +1,26 @@
 """
 Raymontology 환경 설정
-Railway 환경 변수 기반
+환경별 설정 파일 지원 (.env.development, .env.staging, .env.production)
 """
-from pydantic_settings import BaseSettings
-from typing import Optional
+import os
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Optional, List
 from pathlib import Path
+
+
+def get_env_file() -> str:
+    """환경에 따른 .env 파일 경로 반환"""
+    env = os.getenv("ENVIRONMENT", "development")
+    env_files = {
+        "development": ".env.development",
+        "staging": ".env.staging",
+        "production": ".env.production",
+    }
+    env_file = env_files.get(env, ".env")
+    # 파일이 존재하면 해당 파일 사용, 없으면 기본 .env
+    if Path(env_file).exists():
+        return env_file
+    return ".env"
 
 
 class Settings(BaseSettings):
@@ -82,11 +98,18 @@ class Settings(BaseSettings):
     sentry_environment: str = "production"
     sentry_traces_sample_rate: float = 0.1
     slack_webhook_url: Optional[str] = None
+    slack_channel: Optional[str] = None
     log_level: str = "INFO"
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
+    # Allowed origins 설정 (환경변수로 오버라이드 가능)
+    allowed_origins_str: Optional[str] = None
+
+    model_config = SettingsConfigDict(
+        env_file=get_env_file(),
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",  # 알 수 없는 환경변수 무시
+    )
 
     @property
     def is_production(self) -> bool:
@@ -110,12 +133,26 @@ class Settings(BaseSettings):
                 )
 
     @property
-    def allowed_origins(self) -> list[str]:
+    def allowed_origins(self) -> List[str]:
         """CORS allowed origins"""
         if self.cors_allow_all:
             return ["*"]
+        # 환경변수로 설정된 origins 우선
+        if self.allowed_origins_str:
+            return [o.strip() for o in self.allowed_origins_str.split(",")]
+        # 환경별 기본값
         if self.is_production:
-            return [self.frontend_url]
+            return [
+                "https://www.konnect-ai.net",
+                "https://konnect-ai.net",
+                "https://raymondsindex.konnect-ai.net",
+            ]
+        if self.environment == "staging":
+            return [
+                "https://staging.konnect-ai.net",
+                "http://localhost:5173",
+            ]
+        # development
         return [
             "http://localhost:3000",
             "http://localhost:5173",
@@ -123,7 +160,7 @@ class Settings(BaseSettings):
             "http://localhost:5175",
             "http://localhost:5176",
             "http://localhost:5177",
-            self.frontend_url
+            self.frontend_url,
         ]
 
 

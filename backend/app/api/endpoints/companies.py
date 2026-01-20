@@ -13,6 +13,7 @@ from sqlalchemy import select, or_, func, and_
 
 from app.database import AsyncSessionLocal
 from app.models import Company, ConvertibleBond, Officer, OfficerPosition, FinancialStatement
+from app.services.cache_service import cache
 import logging
 from sqlalchemy import text
 
@@ -108,6 +109,11 @@ async def get_platform_stats(
     - 주주변동 데이터 수
     - 재무제표 건수
     """
+    # 캐시 조회
+    cached = cache.get("platform_stats")
+    if cached:
+        return PlatformStatsResponse(**cached)
+
     try:
         # 각 테이블의 COUNT 조회
         companies_count = await db.execute(select(func.count(Company.id)))
@@ -120,13 +126,18 @@ async def get_platform_stats(
             text("SELECT COUNT(*) FROM major_shareholders")
         )
 
-        return PlatformStatsResponse(
+        result = PlatformStatsResponse(
             companies=companies_count.scalar() or 0,
             convertible_bonds=cb_count.scalar() or 0,
             officers=officers_count.scalar() or 0,
             major_shareholders=major_shareholders_result.scalar() or 0,
             financial_statements=financial_count.scalar() or 0
         )
+
+        # 캐시 저장 (5분)
+        cache.set("platform_stats", result.model_dump(), ttl=300)
+
+        return result
     except Exception as e:
         logger.error(f"Error getting platform stats: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -464,6 +475,12 @@ async def get_company_detail(
     - 임원 수
     - company_id: UUID 또는 corp_code로 검색
     """
+    # 캐시 조회
+    cache_key = f"company_detail:{company_id}"
+    cached = cache.get(cache_key)
+    if cached:
+        return CompanyDetailResponse(**cached)
+
     try:
         import uuid
 
@@ -514,7 +531,7 @@ async def get_company_detail(
         officer_count_result = await db.execute(officer_count_query)
         officer_count = officer_count_result.scalar() or 0
 
-        return CompanyDetailResponse(
+        result = CompanyDetailResponse(
             id=str(company.id),
             name=company.name,
             ticker=company.ticker,
@@ -529,6 +546,14 @@ async def get_company_detail(
             created_at=company.created_at.isoformat() if company.created_at else datetime.utcnow().isoformat(),
             updated_at=company.updated_at.isoformat() if company.updated_at else datetime.utcnow().isoformat()
         )
+
+        # 캐시 저장 (5분) - 실제 company_id로 저장
+        cache.set(f"company_detail:{actual_company_id}", result.model_dump(), ttl=300)
+        # 원래 요청 키로도 저장 (corp_code나 ticker로 요청 시)
+        if company_id != actual_company_id:
+            cache.set(cache_key, result.model_dump(), ttl=300)
+
+        return result
 
     except HTTPException:
         raise
@@ -654,6 +679,11 @@ async def list_sectors(
     - 중복 제거
     - 알파벳 순 정렬
     """
+    # 캐시 조회 (업종 목록은 자주 바뀌지 않음)
+    cached = cache.get("sectors_list")
+    if cached:
+        return cached
+
     try:
         query = select(Company.sector).where(
             Company.sector.isnot(None)
@@ -661,6 +691,9 @@ async def list_sectors(
 
         result = await db.execute(query)
         sectors = [row[0] for row in result.all()]
+
+        # 캐시 저장 (1시간)
+        cache.set("sectors_list", sectors, ttl=3600)
 
         return sectors
 

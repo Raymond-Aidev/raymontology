@@ -135,21 +135,22 @@ export default function PaywallPage() {
           <>
             <button
               onClick={handleLogin}
+              disabled={loginInProgress}
               style={{
                 width: '100%',
                 padding: '16px',
                 borderRadius: '12px',
                 border: 'none',
-                backgroundColor: colors.blue500,
+                backgroundColor: loginInProgress ? colors.gray500 : colors.blue500,
                 color: colors.white,
                 fontSize: '17px',
                 fontWeight: '600',
-                cursor: 'pointer',
+                cursor: loginInProgress ? 'not-allowed' : 'pointer',
                 marginBottom: '12px',
                 minHeight: '54px',
               }}
             >
-              토스로 시작하기
+              {loginInProgress ? '로그인 중...' : '토스로 시작하기'}
             </button>
             <p style={{
               fontSize: '13px',
