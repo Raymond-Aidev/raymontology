@@ -132,6 +132,8 @@ async def init_db():
     global redis_client, neo4j_driver
 
     # PostgreSQL - 테이블 생성
+    print("=== init_db() called ===", flush=True)
+    print(f"=== REDIS_URL: {settings.redis_url[:30] if settings.redis_url else 'None'} ===", flush=True)
     logger.info("Initializing PostgreSQL...")
     async with engine.begin() as conn:
         # 개발 환경에서만 테이블 자동 생성
