@@ -2,6 +2,7 @@
  * 투자괴리율 게이지 컴포넌트
  *
  * 현금 증가율과 CAPEX 증가율의 차이(투자괴리율)를 시각화
+ * 다크 테마 적용 버전
  */
 import React from 'react'
 
@@ -33,12 +34,12 @@ export const InvestmentGapMeter: React.FC<InvestmentGapMeterProps> = ({
 
   const getStatusBadgeColor = () => {
     switch (status.color) {
-      case 'green': return 'bg-green-100 text-green-800'
-      case 'yellow': return 'bg-yellow-100 text-yellow-800'
-      case 'red': return 'bg-red-100 text-red-800'
-      case 'blue': return 'bg-blue-100 text-blue-800'
-      case 'purple': return 'bg-purple-100 text-purple-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'green': return 'bg-green-500/20 text-green-400 border border-green-500/30'
+      case 'yellow': return 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+      case 'red': return 'bg-red-500/20 text-red-400 border border-red-500/30'
+      case 'blue': return 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+      case 'purple': return 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+      default: return 'bg-dark-surface text-text-secondary border border-dark-border'
     }
   }
 
@@ -53,10 +54,21 @@ export const InvestmentGapMeter: React.FC<InvestmentGapMeterProps> = ({
     }
   }
 
+  const getValueColor = () => {
+    switch (status.color) {
+      case 'green': return 'text-green-400'
+      case 'yellow': return 'text-yellow-400'
+      case 'red': return 'text-red-400'
+      case 'blue': return 'text-blue-400'
+      case 'purple': return 'text-purple-400'
+      default: return 'text-text-secondary'
+    }
+  }
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+    <div className="bg-dark-card rounded-xl shadow-card border border-dark-border p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">투자괴리율</h3>
+        <h3 className="text-lg font-semibold text-text-primary">투자괴리율</h3>
         <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeColor()}`}>
           {status.label}
         </span>
@@ -65,25 +77,25 @@ export const InvestmentGapMeter: React.FC<InvestmentGapMeterProps> = ({
       {/* 게이지 */}
       <div className="relative mb-6">
         {/* 배경 그라데이션 바 */}
-        <div className="h-4 rounded-full bg-gradient-to-r from-purple-200 via-green-200 to-red-200 relative overflow-hidden">
+        <div className="h-4 rounded-full bg-gradient-to-r from-purple-900/50 via-green-900/50 to-red-900/50 relative overflow-hidden">
           {/* 중앙 균형 구간 표시 */}
           <div
-            className="absolute h-full bg-green-300 opacity-50"
+            className="absolute h-full bg-green-500/30"
             style={{ left: '45%', width: '10%' }}
           />
         </div>
 
         {/* 현재 위치 인디케이터 */}
         <div
-          className={`absolute top-0 w-4 h-4 rounded-full ${getIndicatorColor()} border-2 border-white shadow-md transform -translate-x-1/2`}
+          className={`absolute top-0 w-4 h-4 rounded-full ${getIndicatorColor()} border-2 border-dark-card shadow-md transform -translate-x-1/2`}
           style={{ left: `${percentage}%` }}
         />
 
         {/* 눈금 레이블 */}
-        <div className="flex justify-between mt-2 text-xs text-gray-500">
+        <div className="flex justify-between mt-2 text-xs text-text-muted">
           <span>-50%</span>
           <span>-25%</span>
-          <span className="text-green-600 font-medium">0%</span>
+          <span className="text-green-400 font-medium">0%</span>
           <span>+25%</span>
           <span>+50%</span>
         </div>
@@ -91,34 +103,34 @@ export const InvestmentGapMeter: React.FC<InvestmentGapMeterProps> = ({
 
       {/* 수치 */}
       <div className="text-center mb-6">
-        <div className={`text-3xl font-bold ${status.color === 'green' ? 'text-green-600' : status.color === 'yellow' ? 'text-yellow-600' : status.color === 'red' ? 'text-red-600' : status.color === 'blue' ? 'text-blue-600' : 'text-purple-600'}`}>
+        <div className={`text-3xl font-bold ${getValueColor()}`}>
           {gap > 0 ? '+' : ''}{gap.toFixed(1)}%
         </div>
-        <p className="text-sm text-gray-500 mt-1">
+        <p className="text-sm text-text-muted mt-1">
           = 현금증가율 - CAPEX증가율
         </p>
       </div>
 
       {/* 세부 지표 */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-blue-50 rounded-lg p-3">
-          <div className="text-sm text-blue-600 mb-1">현금 CAGR</div>
-          <div className="text-xl font-bold text-blue-700">
+        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+          <div className="text-sm text-blue-400 mb-1">현금 CAGR</div>
+          <div className="text-xl font-bold text-blue-300">
             {cashGrowth > 0 ? '+' : ''}{cashGrowth.toFixed(1)}%
           </div>
-          <div className="text-xs text-blue-500">3년간 연평균</div>
+          <div className="text-xs text-blue-400/70">3년간 연평균</div>
         </div>
-        <div className="bg-orange-50 rounded-lg p-3">
-          <div className="text-sm text-orange-600 mb-1">CAPEX 증가율</div>
-          <div className="text-xl font-bold text-orange-700">
+        <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-3">
+          <div className="text-sm text-orange-400 mb-1">CAPEX 증가율</div>
+          <div className="text-xl font-bold text-orange-300">
             {capexGrowth > 0 ? '+' : ''}{capexGrowth.toFixed(1)}%
           </div>
-          <div className="text-xs text-orange-500">3년간 연평균</div>
+          <div className="text-xs text-orange-400/70">3년간 연평균</div>
         </div>
       </div>
 
       {/* 해석 */}
-      <div className="mt-4 text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
+      <div className="mt-4 text-sm text-text-secondary bg-dark-surface rounded-lg p-3">
         {gap >= -5 && gap <= 5 && (
           <span>✅ 현금 증가와 투자가 균형을 이루고 있습니다.</span>
         )}

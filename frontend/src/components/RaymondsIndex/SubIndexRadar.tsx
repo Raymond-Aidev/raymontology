@@ -2,6 +2,7 @@
  * Sub-Index 레이더 차트 컴포넌트
  *
  * 4개의 Sub-Index (CEI, RII, CGI, MAI)를 레이더 차트로 시각화
+ * 다크 테마 적용 버전
  */
 import React, { useMemo } from 'react'
 
@@ -51,8 +52,8 @@ export const SubIndexRadar: React.FC<SubIndexRadarProps> = ({
   const gridLevels = [20, 40, 60, 80, 100]
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Sub-Index 분석</h3>
+    <div className="bg-dark-card rounded-xl shadow-card border border-dark-border p-6">
+      <h3 className="text-lg font-semibold text-text-primary mb-4">Sub-Index 분석</h3>
 
       <div className="flex flex-col items-center">
         <svg width={size} height={size} className="overflow-visible">
@@ -69,7 +70,7 @@ export const SubIndexRadar: React.FC<SubIndexRadarProps> = ({
                 key={level}
                 d={path}
                 fill="none"
-                stroke="#e5e7eb"
+                stroke="#262626"
                 strokeWidth="1"
               />
             )
@@ -85,7 +86,7 @@ export const SubIndexRadar: React.FC<SubIndexRadarProps> = ({
                 y1={center}
                 x2={p.x}
                 y2={p.y}
-                stroke="#e5e7eb"
+                stroke="#262626"
                 strokeWidth="1"
               />
             )
@@ -122,7 +123,8 @@ export const SubIndexRadar: React.FC<SubIndexRadarProps> = ({
                   x={p.x}
                   y={p.y - 8}
                   textAnchor="middle"
-                  className="fill-gray-700 text-xs font-medium"
+                  fill="#a1a1aa"
+                  className="text-xs font-medium"
                 >
                   {item.shortLabel}
                 </text>
@@ -130,7 +132,8 @@ export const SubIndexRadar: React.FC<SubIndexRadarProps> = ({
                   x={p.x}
                   y={p.y + 6}
                   textAnchor="middle"
-                  className="fill-gray-500 text-xs"
+                  fill="#52525b"
+                  className="text-xs"
                 >
                   {item.weight}
                 </text>
@@ -142,10 +145,10 @@ export const SubIndexRadar: React.FC<SubIndexRadarProps> = ({
         {/* 상세 점수 */}
         <div className="mt-4 grid grid-cols-2 gap-3 w-full">
           {SUB_INDEX_LABELS.map((item, i) => (
-            <div key={item.key} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+            <div key={item.key} className="flex items-center justify-between bg-dark-surface rounded-lg px-3 py-2">
               <div>
-                <span className="text-sm font-medium text-gray-700">{item.shortLabel}</span>
-                <span className="text-xs text-gray-500 ml-1">{item.label}</span>
+                <span className="text-sm font-medium text-text-secondary">{item.shortLabel}</span>
+                <span className="text-xs text-text-muted ml-1">{item.label}</span>
               </div>
               <span className={`text-sm font-bold ${getScoreColor(scores[i])}`}>
                 {scores[i].toFixed(0)}
@@ -159,11 +162,11 @@ export const SubIndexRadar: React.FC<SubIndexRadarProps> = ({
 }
 
 function getScoreColor(score: number): string {
-  if (score >= 80) return 'text-green-600'
-  if (score >= 60) return 'text-lime-600'
-  if (score >= 40) return 'text-yellow-600'
-  if (score >= 20) return 'text-orange-600'
-  return 'text-red-600'
+  if (score >= 80) return 'text-green-400'
+  if (score >= 60) return 'text-lime-400'
+  if (score >= 40) return 'text-yellow-400'
+  if (score >= 20) return 'text-orange-400'
+  return 'text-red-400'
 }
 
 export default SubIndexRadar
