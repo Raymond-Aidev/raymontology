@@ -1,7 +1,7 @@
 """
 Usage Service - 조회 횟수 추적 및 제한 체크
 """
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, Tuple
 from uuid import UUID
 
@@ -42,8 +42,19 @@ async def get_user_usage(
 
     # 이용권 만료 체크
     tier = user.subscription_tier or "free"
-    if user.subscription_expires_at and user.subscription_expires_at < datetime.now(user.subscription_expires_at.tzinfo):
-        tier = "free"
+
+    # trial 이용권: 가입 후 30일 만료
+    if tier == "trial" and user.created_at:
+        now = datetime.now(user.created_at.tzinfo) if user.created_at.tzinfo else datetime.now()
+        trial_expires = user.created_at + timedelta(days=30)
+        if now > trial_expires:
+            tier = "free"
+
+    # 유료 구독 (light, max): subscription_expires_at 체크
+    if tier in ["light", "max"] and user.subscription_expires_at:
+        now = datetime.now(user.subscription_expires_at.tzinfo) if user.subscription_expires_at.tzinfo else datetime.now()
+        if now > user.subscription_expires_at:
+            tier = "free"
 
     # 제한 조회
     limits = SUBSCRIPTION_LIMITS.get(tier, SUBSCRIPTION_LIMITS["free"])
