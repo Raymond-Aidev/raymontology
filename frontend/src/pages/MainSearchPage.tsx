@@ -39,7 +39,7 @@ function MainSearchPage() {
   const [showPaywallModal, setShowPaywallModal] = useState(false)
   const [stats, setStats] = useState<PlatformStats | null>(null)
 
-  // 유효한 이용권 확인 (light, max 중 하나이면서 만료 안 됨)
+  // 유효한 이용권 확인 (trial, light, max 중 하나이면서 만료 안 됨)
   const hasValidSubscription = () => {
     if (!user) return false
     const tier = user.subscription_tier
@@ -51,7 +51,7 @@ function MainSearchPage() {
       const expiresAt = new Date(user.subscription_expires_at)
       if (expiresAt < new Date()) return false
     }
-    return tier === 'light' || tier === 'max'
+    return tier === 'trial' || tier === 'light' || tier === 'max'
   }
 
   useEffect(() => {
