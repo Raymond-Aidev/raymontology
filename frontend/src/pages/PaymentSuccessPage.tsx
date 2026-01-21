@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-import RaymondsRiskLogo from '../components/common/RaymondsRiskLogo'
 import apiClient from '../api/client'
 
 function PaymentSuccessPage() {
@@ -63,20 +62,9 @@ function PaymentSuccessPage() {
   }
 
   return (
-    <div className="min-h-screen bg-theme-bg flex flex-col">
-      {/* Header */}
-      <header className="bg-dark-surface/80 backdrop-blur-xl border-b border-dark-border">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center h-14">
-            <Link to="/">
-              <RaymondsRiskLogo size="sm" variant="compact" />
-            </Link>
-          </div>
-        </div>
-      </header>
-
+    <div className="bg-theme-bg">
       {/* Content */}
-      <main className="flex-1 flex items-center justify-center p-4">
+      <main className="min-h-[60vh] flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="bg-theme-card border border-theme-border rounded-2xl p-8 text-center">
             {isVerifying ? (

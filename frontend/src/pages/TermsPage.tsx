@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
 import apiClient from '../api/client'
-import RaymondsRiskLogo from '../components/common/RaymondsRiskLogo'
 
 function TermsPage() {
   const [content, setContent] = useState('')
@@ -48,32 +46,7 @@ function TermsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-theme-bg">
-      {/* Header */}
-      <header className="bg-dark-surface/80 backdrop-blur-xl border-b border-dark-border sticky top-0 z-50">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-14">
-            <Link to="/" className="inline-block">
-              <RaymondsRiskLogo size="sm" variant="compact" />
-            </Link>
-            <nav className="flex items-center gap-4">
-              <Link
-                to="/"
-                className="text-sm text-text-secondary hover:text-text-primary transition-colors"
-              >
-                홈
-              </Link>
-              <Link
-                to="/privacy"
-                className="text-sm text-text-secondary hover:text-text-primary transition-colors"
-              >
-                개인정보처리방침
-              </Link>
-            </nav>
-          </div>
-        </div>
-      </header>
-
+    <div className="bg-theme-bg">
       {/* Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="bg-theme-card border border-theme-border rounded-2xl p-8">

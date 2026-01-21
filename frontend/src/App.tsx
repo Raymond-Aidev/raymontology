@@ -39,29 +39,29 @@ function App() {
   return (
     <Suspense fallback={<PageLoading />}>
       <Routes>
-        {/* Public routes */}
+        {/* Auth pages (no header) */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="/contact" element={<ContactPage />} />
-        <Route path="/pricing" element={<PricingPage />} />
-        <Route path="/payment/success" element={<PaymentSuccessPage />} />
-        <Route path="/payment/fail" element={<PaymentFailPage />} />
-        <Route path="/terms" element={<TermsPage />} />
-        <Route path="/privacy" element={<PrivacyPage />} />
-        <Route path="/admin" element={<AdminPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
 
-        {/* Public MainLayout routes (home is public, but search requires auth) */}
+        {/* Admin page (separate layout) */}
+        <Route path="/admin" element={<AdminPage />} />
+
+        {/* Public MainLayout routes (shared header) */}
         <Route element={<MainLayout />}>
           <Route path="/" element={<MainSearchPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/raymonds-index" element={<RaymondsIndexRankingPage />} />
+          <Route path="/payment/success" element={<PaymentSuccessPage />} />
+          <Route path="/payment/fail" element={<PaymentFailPage />} />
         </Route>
-
-        {/* RaymondsIndex Ranking Page (public) */}
-        <Route path="/raymonds-index" element={<RaymondsIndexRankingPage />} />
 
         {/* Protected routes */}
         <Route element={

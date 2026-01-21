@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-import RaymondsRiskLogo from '../components/common/RaymondsRiskLogo'
 import apiClient from '../api/client'
 
 // 환경변수로 이용권 기능 활성화 여부 제어 (기본: false = 준비중)
@@ -133,32 +132,7 @@ function PricingPage() {
     const isTrialUser = isAuthenticated && user?.subscription_tier === 'trial'
 
     return (
-      <div className="min-h-screen bg-theme-bg">
-        {/* Header */}
-        <header className="bg-dark-surface/80 backdrop-blur-xl border-b border-dark-border sticky top-0 z-50">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-14">
-              <Link to="/" className="inline-block">
-                <RaymondsRiskLogo size="sm" variant="compact" />
-              </Link>
-              <nav className="flex items-center gap-4">
-                <Link
-                  to="/"
-                  className="text-sm text-text-secondary hover:text-text-primary transition-colors"
-                >
-                  홈
-                </Link>
-                <Link
-                  to="/about"
-                  className="text-sm text-text-secondary hover:text-text-primary transition-colors"
-                >
-                  서비스 소개
-                </Link>
-              </nav>
-            </div>
-          </div>
-        </header>
-
+      <div className="bg-theme-bg">
         {/* Content */}
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="bg-theme-card border border-theme-border rounded-2xl p-8">
@@ -213,44 +187,7 @@ function PricingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-theme-bg">
-      {/* Header */}
-      <header className="bg-dark-surface/80 backdrop-blur-xl border-b border-dark-border sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-14">
-            <Link to="/" className="inline-block">
-              <RaymondsRiskLogo size="sm" variant="compact" />
-            </Link>
-            <nav className="flex items-center gap-4">
-              <Link
-                to="/"
-                className="text-sm text-text-secondary hover:text-text-primary transition-colors"
-              >
-                홈
-              </Link>
-              <Link
-                to="/about"
-                className="text-sm text-text-secondary hover:text-text-primary transition-colors"
-              >
-                서비스 소개
-              </Link>
-              {isAuthenticated ? (
-                <span className="text-sm text-text-muted">
-                  {user?.email}
-                </span>
-              ) : (
-                <Link
-                  to="/login"
-                  className="text-sm text-accent-primary hover:text-accent-primary/80 transition-colors"
-                >
-                  로그인
-                </Link>
-              )}
-            </nav>
-          </div>
-        </div>
-      </header>
-
+    <div className="bg-theme-bg">
       {/* Content */}
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Title */}

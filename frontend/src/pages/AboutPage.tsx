@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import RaymondsRiskLogo from '../components/common/RaymondsRiskLogo'
 
 interface PageContent {
   [section: string]: {
@@ -115,45 +114,7 @@ export default function AboutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-theme-bg">
-      {/* 헤더 - 메인과 동일한 네비게이션 */}
-      <header className="sticky top-0 z-50 bg-theme-bg/80 backdrop-blur-lg border-b border-theme-border">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="inline-block">
-            <RaymondsRiskLogo size="md" variant="compact" />
-          </Link>
-
-          {/* 네비게이션 */}
-          <nav className="hidden md:flex items-center gap-1">
-            <Link
-              to="/"
-              className="px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-theme-hover rounded-lg transition-all"
-            >
-              검색
-            </Link>
-            <Link
-              to="/about"
-              className="px-3 py-2 text-sm text-text-primary font-medium bg-theme-hover rounded-lg"
-            >
-              서비스 소개
-            </Link>
-            <Link
-              to="/contact"
-              className="px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-theme-hover rounded-lg transition-all"
-            >
-              문의
-            </Link>
-          </nav>
-
-          <Link
-            to="/login"
-            className="px-4 py-2 bg-[#5E6AD2] hover:bg-[#4F5ABF] text-white text-sm font-medium rounded-lg transition-colors"
-          >
-            로그인
-          </Link>
-        </div>
-      </header>
-
+    <div className="bg-theme-bg">
       {/* 히어로 섹션 */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-[#5E6AD2]/5 to-transparent dark:from-[#5E6AD2]/10" />
@@ -613,22 +574,6 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* 푸터 */}
-      <footer className="py-12 bg-theme-card border-t border-theme-border">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <RaymondsRiskLogo size="sm" variant="compact" />
-            <div className="flex items-center gap-6 text-sm text-text-secondary">
-              <Link to="/terms" className="hover:text-text-primary transition-colors">이용약관</Link>
-              <Link to="/privacy" className="hover:text-text-primary transition-colors">개인정보처리방침</Link>
-              <a href="mailto:contact@konnect-ai.net" className="hover:text-text-primary transition-colors">문의</a>
-            </div>
-            <p className="text-sm text-text-muted">
-              © 2024 Raymond Partners. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </footer>
     </div>
   )
 }
