@@ -149,14 +149,16 @@ function LoginPage() {
               </button>
             </form>
 
-          {/* 문의 안내 (회원가입 비활성화됨) */}
+          {/* 회원가입 링크 */}
           <div className="mt-6 pt-6 border-t border-theme-border text-center">
             <p className="text-sm text-text-secondary">
-              계정이 필요하시면{' '}
-              <Link to="/contact" className="text-accent-primary hover:underline">
-                문의하기
+              계정이 없으신가요?{' '}
+              <Link to="/register" className="text-accent-primary hover:underline font-medium">
+                회원가입
               </Link>
-              를 이용해주세요.
+            </p>
+            <p className="text-xs text-text-muted mt-2">
+              회원가입 시 1회 무료 기업 조회가 제공됩니다
             </p>
           </div>
         </div>

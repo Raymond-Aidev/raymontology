@@ -14,6 +14,7 @@ from app.database import Base
 class SubscriptionTier(str, enum.Enum):
     """이용권 등급"""
     FREE = "free"
+    TRIAL = "trial"  # 회원가입 시 1회 무료 체험
     LIGHT = "light"  # 3,000원/월
     MAX = "max"      # 30,000원/월
 
@@ -110,6 +111,10 @@ SUBSCRIPTION_LIMITS = {
         "monthly_queries": 0,       # 조회 불가 (비로그인은 검색만 가능)
         "monthly_reports": 0,       # 리포트 불가
     },
+    "trial": {
+        "monthly_queries": 1,       # 회원가입 시 1회 무료 체험
+        "monthly_reports": 0,       # 리포트 불가
+    },
     "light": {
         "monthly_queries": 30,      # 월 30건 조회
         "monthly_reports": 30,      # 월 30건 리포트
@@ -131,6 +136,16 @@ SUBSCRIPTION_PLANS = {
         "features": [
             "회사 검색",
             "로그인 필요"
+        ]
+    },
+    "trial": {
+        "name": "Trial",
+        "name_ko": "체험",
+        "price": 0,
+        "price_display": "무료",
+        "features": [
+            "회원가입 시 1회 무료 체험",
+            "기업 관계도 분석 1회"
         ]
     },
     "light": {

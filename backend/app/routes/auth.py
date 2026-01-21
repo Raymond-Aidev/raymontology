@@ -216,12 +216,13 @@ async def verify_email(
                 detail="이미 사용 중인 닉네임입니다."
             )
 
-        # 사용자 생성
+        # 사용자 생성 (회원가입 시 trial tier 부여 - 1회 무료 조회)
         new_user = User(
             email=verification.email,
             username=verification.username,
             hashed_password=verification.hashed_password,
             full_name=verification.full_name,
+            subscription_tier="trial",  # 신규 가입자 1회 무료 체험
         )
 
         db.add(new_user)

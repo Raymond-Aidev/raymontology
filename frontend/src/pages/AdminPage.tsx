@@ -24,22 +24,25 @@ interface User {
   last_login: string | null
 }
 
-type SubscriptionTier = 'free' | 'light' | 'max'
+type SubscriptionTier = 'free' | 'trial' | 'light' | 'max'
 
 const TIER_LABELS: Record<SubscriptionTier, string> = {
   free: '무료',
+  trial: '체험',
   light: '라이트',
   max: '맥스'
 }
 
 const TIER_COLORS: Record<SubscriptionTier, string> = {
   free: 'bg-gray-500/20 text-gray-400',
+  trial: 'bg-green-500/20 text-green-400',
   light: 'bg-blue-500/20 text-blue-400',
   max: 'bg-purple-500/20 text-purple-400'
 }
 
 const TIER_PRICES: Record<SubscriptionTier, string> = {
   free: '무료',
+  trial: '1회 체험',
   light: '3,000원/월',
   max: '30,000원/월'
 }
