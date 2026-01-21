@@ -1,7 +1,7 @@
 # Raymontology 프로젝트 설정 및 구현 현황
 
-> **마지막 업데이트**: 2025-12-26
-> **상태**: 서비스 운영 중 (RaymondsIndex 포함)
+> **마지막 업데이트**: 2026-01-21
+> **상태**: 서비스 운영 중 (RaymondsIndex 포함, 조회 기록 기능 추가)
 
 ---
 
@@ -51,25 +51,28 @@ npm run dev
 
 ---
 
-## 3. 데이터베이스 현황 (2025-12-26)
+## 3. 데이터베이스 현황 (2026-01-21)
 
 | 테이블 | 레코드 수 | 설명 |
 |--------|----------|------|
 | companies | 3,922 | 상장사 목록 |
-| officers | 44,679 | 임원 정보 |
-| officer_positions | 64,265 | 임원-회사 연결 |
-| disclosures | 213,304 | 공시 원본 |
-| convertible_bonds | 1,463 | CB 발행 정보 |
-| cb_subscribers | 7,490 | CB 인수자 |
-| financial_statements | 9,432 | 재무제표 |
+| officers | 49,446 | 임원 정보 |
+| officer_positions | 75,059 | 임원-회사 연결 |
+| disclosures | 279,258 | 공시 원본 |
+| convertible_bonds | 1,133 | CB 발행 정보 |
+| cb_subscribers | 7,026 | CB 인수자 |
+| financial_statements | 9,820 | 재무제표 |
 | risk_signals | 1,412 | 리스크 신호 |
 | risk_scores | 3,912 | 리스크 점수 |
-| major_shareholders | 47,453 | 대주주 |
+| major_shareholders | 60,214 | 대주주 |
 | affiliates | 973 | 계열회사 |
-| **financial_details** | **10,314** | **RaymondsIndex용 상세 재무** |
-| **raymonds_index** | **7,646** | **자본 배분 효율성 지수 (2025 포함)** |
+| **financial_details** | **9,926** | **RaymondsIndex용 상세 재무** |
+| **raymonds_index** | **5,257** | **자본 배분 효율성 지수** |
+| stock_prices | 127,324 | 주가 데이터 |
+| largest_shareholder_info | 4,599 | 최대주주 기본정보 |
 | user_query_usage | - | 월별 조회 사용량 추적 |
 | page_contents | - | 페이지 콘텐츠 동적 관리 |
+| **company_view_history** | **-** | **조회한 기업 기록 (2026-01-21 신규)** |
 
 ---
 
@@ -94,6 +97,7 @@ npm run dev
 
 /api/subscription/usage           - 월별 조회 사용량 조회
 /api/admin/users/{id}/subscription - 관리자: 사용자 구독 변경
+/api/companies/view-history/list  - 조회한 기업 목록 (2026-01-21)
 
 /api/content/{page}               - 페이지 콘텐츠 조회 (공개)
 /api/content/{page}/{section}/{field} - 콘텐츠 수정 (관리자)
@@ -147,6 +151,27 @@ Company ──1:N── OfficerPosition ──N:1── Officer
 ---
 
 ## 6. 최근 변경사항
+
+### 2026-01-21: 조회 기록 및 Trial 이용권 개선
+
+**조회한 기업 목록 기능 추가**:
+- `company_view_history` 테이블 신규 생성
+- `/api/companies/view-history/list` API 추가
+- `ViewedCompaniesPage.tsx` 프론트엔드 구현
+- 유료 회원만 접근 가능
+
+**Trial 이용권 정책 개선**:
+- 30일 후 자동 만료 로직 구현
+- 이전 조회 기업 재조회 허용 (30일 이내)
+- 조회 제한 UX 개선 (사전 체크 API)
+
+**공유 Header 전체 적용**:
+- 모든 페이지에 일관된 Header 컴포넌트 적용
+- 로그인 상태에 따른 메뉴 표시
+
+**관련 파일**:
+- Backend: `app/routes/view_history.py`, `app/models/subscriptions.py`, `app/services/usage_service.py`
+- Frontend: `pages/ViewedCompaniesPage.tsx`, `components/common/Header.tsx`, `api/company.ts`, `api/graph.ts`
 
 ### 2025-12-26: RaymondsIndex 시스템 완료
 
@@ -264,6 +289,10 @@ b3cd8d9 fix: Neo4j 없을 때 PostgreSQL fallback으로 임원 경력 조회
 - [x] 구독 시스템 구현 - 2025-12-25 완료
 - [x] 조회 제한 시스템 구현 - 2025-12-25 완료
 - [x] 콘텐츠 관리 시스템 - 2025-12-25 완료
+- [x] 조회한 기업 목록 기능 - 2026-01-21 완료
+- [x] Trial 이용권 30일 만료 로직 - 2026-01-21 완료
+- [x] 조회 제한 UX 개선 - 2026-01-21 완료
+- [x] 공유 Header 전체 적용 - 2026-01-21 완료
 
 ---
 

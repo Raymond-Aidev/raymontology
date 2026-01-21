@@ -2,7 +2,7 @@
 
 > **중요**: 모든 테이블 접근 시 이 문서 참조 필수. 테이블명 추측 금지.
 >
-> **마지막 업데이트**: 2026-01-14
+> **마지막 업데이트**: 2026-01-21
 >
 > **현재 데이터 상태** (2026-01-14):
 > - companies: 3,922건
@@ -35,10 +35,11 @@
 > - **pipeline_runs: 0건** (파이프라인 실행 이력)
 > - **service_applications: 1건** (서비스 이용신청)
 > - **financial_ratios: 신규 예정** (재무비율 분석 - 25개 재무비율)
+> - **company_view_history: 신규** (사용자 기업 조회 기록)
 
 ---
 
-## 핵심 테이블 목록 (PostgreSQL) - 총 38개 테이블
+## 핵심 테이블 목록 (PostgreSQL) - 총 39개 테이블
 
 ### 1. companies (기업 정보) - 3,922건
 
@@ -779,6 +780,25 @@
 
 ### 20. site_settings (사이트 설정) - 2건
 
+### 20-1. company_view_history (기업 조회 기록) - 신규 (2026-01-21)
+
+사용자가 조회한 기업 목록을 저장하여 나중에 다시 볼 수 있도록 함.
+
+| 컬럼명 | 데이터타입 | NULL | 설명 |
+|--------|-----------|------|------|
+| id | uuid | NO | PK |
+| user_id | uuid | NO | FK → users |
+| company_id | uuid | NO | FK → companies |
+| company_name | varchar(200) | YES | 기업명 스냅샷 |
+| ticker | varchar(20) | YES | 종목코드 스냅샷 |
+| market | varchar(20) | YES | 시장 스냅샷 |
+| viewed_at | timestamp(tz) | NO | 조회 시간 |
+
+**용도**: 유료 회원의 조회한 기업 목록 기능
+**인덱스**: `ix_company_view_history_user_viewed` (user_id, viewed_at)
+**연관 모델**: `app/models/subscriptions.py` (CompanyViewHistory 클래스)
+**연관 API**: `app/routes/view_history.py`
+
 ---
 
 ## 주가 및 대주주 테이블 (2026-01-14 추가)
@@ -1184,7 +1204,9 @@ users (1) ─────────┬────── (N) user_query_usage
                    │
                    ├────── (N) password_reset_tokens
                    │
-                   └────── (N) service_applications
+                   ├────── (N) service_applications
+                   │
+                   └────── (N) company_view_history
 
 toss_users (1) ────┬────── (N) credit_transactions
                    │

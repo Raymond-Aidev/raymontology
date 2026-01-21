@@ -10,14 +10,14 @@
 | 항목 | 내용 |
 |------|------|
 | 문서명 | RaymondsRisk Service PRD (통합본) |
-| 버전 | 4.4 |
+| 버전 | 4.5 |
 | 작성일 | 2025-12-15 |
-| 최종 수정일 | 2026-01-20 |
+| 최종 수정일 | 2026-01-21 |
 | 이전 문서 | IMPLEMENTATION_PLAN.md, PHASE2_2_FRONTEND_IMPLEMENTATION.md, 화면기획서 v3.0, 관계형 리스크 기획서 v3.2.1 |
 | 아키텍처 | PostgreSQL (정형 데이터) + Neo4j (관계 그래프) |
 | 핵심 서비스 | 이해관계자 360° 통합 뷰 |
 | Backend 상태 | 95% 완료 |
-| Frontend 상태 | 85% 완료 |
+| Frontend 상태 | 90% 완료 |
 
 ---
 
@@ -25,6 +25,7 @@
 
 | 버전 | 날짜 | 변경 내용 |
 |------|------|----------|
+| 4.5 | 2026-01-21 | 조회한 기업 목록 기능 추가, Trial 사용자 30일 만료/재조회 허용, 조회 제한 UX 개선, 공유 Header 전체 적용 |
 | 4.4 | 2026-01-20 | Frontend 상태 85% 업데이트, 다크 테마 적용 완료, 미니 주가 차트 추가 |
 | 4.3 | 2025-12-15 | 초기 작성 |
 
@@ -1904,6 +1905,100 @@ jobs:
 | 보안 패치 적용 | 수시 | 1시간 | 롤링 재시작 |
 | 로그 정리 | 주 1회 | 자동 | 없음 |
 | 데이터 정합성 검사 | 주 1회 | 10분 | 없음 |
+
+---
+
+## 19.5 구독 및 조회 시스템 (2026-01-21 업데이트)
+
+### 19.5.1 이용권 체계
+
+| 이용권 | 가격 | 월 조회 제한 | 특징 |
+|--------|------|-------------|------|
+| Free | 무료 | 0건 | 검색만 가능 (상세 조회 불가) |
+| **Trial** | 무료 | 1건 | 회원가입 시 자동 부여, **30일 후 만료** |
+| Light | 3,000원/월 | 30건 | 기본 분석 기능 |
+| Max | 30,000원/월 | 무제한 | 전체 기능 + API |
+
+### 19.5.2 Trial 이용권 정책 (2026-01-21)
+
+**핵심 로직**:
+- 회원가입 시 자동으로 `trial` 등급 부여
+- **30일 후 자동 만료** → `free` 등급과 동일 취급
+- Trial 기간 내 최대 1건 조회 가능
+- **이전 조회 기업 재조회 허용** (30일 이내, 추가 이용권 미차감)
+
+**만료 체크 로직** (`usage_service.py`):
+```python
+if tier == "trial":
+    created_at = user.created_at
+    trial_expires = created_at + timedelta(days=30)
+    if now > trial_expires:
+        # Trial 만료 → free와 동일 취급
+```
+
+### 19.5.3 조회한 기업 목록 기능 (2026-01-21 신규)
+
+**목적**: 유료 회원이 과거에 조회한 기업을 다시 확인할 수 있도록 함
+
+**테이블**: `company_view_history`
+| 컬럼 | 설명 |
+|------|------|
+| user_id | 조회한 사용자 |
+| company_id | 조회한 기업 |
+| company_name | 기업명 스냅샷 |
+| ticker | 종목코드 스냅샷 |
+| market | 시장 스냅샷 |
+| viewed_at | 조회 시간 |
+
+**API 엔드포인트**:
+```
+GET /api/companies/view-history/list
+  - page: 페이지 번호 (1부터)
+  - page_size: 페이지당 항목 수 (최대 100)
+```
+
+**접근 권한**:
+- Free: 접근 불가 (403)
+- Trial (만료 전): 접근 가능
+- Trial (만료 후): 접근 불가 (403)
+- Light/Max: 접근 가능
+
+**관련 파일**:
+- Backend: `app/routes/view_history.py`, `app/models/subscriptions.py`
+- Frontend: `pages/ViewedCompaniesPage.tsx`, `api/company.ts`
+
+### 19.5.4 조회 제한 UX 개선 (2026-01-21)
+
+**사전 체크 API** (`graph.ts`):
+```typescript
+// 조회 전 이용권 상태 확인
+checkUsageAvailability(companyId): Promise<{
+  can_view: boolean;
+  reason?: string;
+  is_requery?: boolean;  // 재조회 여부
+}>
+```
+
+**UX 개선 포인트**:
+1. 조회 버튼 클릭 전 이용권 상태 표시 (UsageIndicator)
+2. 재조회 시 "이전에 조회하셨던 기업입니다" 메시지
+3. 이용권 부족 시 요금제 페이지로 자연스러운 유도
+4. Trial 만료 시 명확한 안내 메시지
+
+### 19.5.5 공유 Header 컴포넌트 (2026-01-21)
+
+모든 페이지에 일관된 Header 컴포넌트 적용 완료.
+
+**적용 페이지**:
+- MainSearchPage, GraphPage, PricingPage
+- AboutPage, ContactPage, PrivacyPage, TermsPage
+- PaymentSuccessPage, PaymentFailPage
+- RaymondsIndexRankingPage, ViewedCompaniesPage
+
+**Header 기능**:
+- 로고 클릭 → 홈 이동
+- 로그인/로그아웃 버튼
+- 유료 회원: "조회한 기업" 메뉴 표시
 
 ---
 
