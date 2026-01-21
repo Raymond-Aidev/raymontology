@@ -31,6 +31,7 @@ from app.api.endpoints import (
 )
 from app.routes import auth, oauth, admin, subscription, content, service_application
 from app.routes import toss_auth, credits
+from app.routes import view_history  # 조회 기록 API
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -80,6 +81,7 @@ app.include_router(content.router)
 app.include_router(toss_auth.router)
 app.include_router(credits.router)
 app.include_router(service_application.router)
+app.include_router(view_history.router)  # 조회 기록 API
 
 # Static files (이미지 업로드)
 os.makedirs("uploads/content", exist_ok=True)

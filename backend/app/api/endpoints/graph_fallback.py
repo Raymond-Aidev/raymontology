@@ -4,13 +4,16 @@ PostgreSQL 기반 Graph API (Neo4j 폴백)
 Neo4j가 없을 때 PostgreSQL 데이터만으로 관계도를 제공합니다.
 """
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 import logging
 
 from app.database import AsyncSessionLocal
+from app.core.security import get_current_user_optional
+from app.models.users import User
+from app.routes.view_history import save_view_history
 
 logger = logging.getLogger(__name__)
 
@@ -46,16 +49,20 @@ async def get_db():
 @router.get("/company/{company_id}", response_model=GraphResponse)
 async def get_company_network_fallback(
     company_id: str,
+    request: Request,
     depth: int = Query(1, ge=1, le=3),
     limit: int = Query(100, ge=10, le=500),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """
     PostgreSQL 기반 회사 관계 네트워크 (Neo4j 폴백)
-    
+
     - depth 1: 임원 + CB
     - depth 2: 1단계 + CB 인수자
     - depth 3: 2단계 + 임원 타사 경력
+
+    로그인한 사용자의 경우 조회 기록이 저장됩니다.
     """
     nodes = []
     relationships = []
@@ -361,12 +368,27 @@ async def get_company_network_fallback(
                     properties={"share_ratio": float(sh.share_ratio) if sh.share_ratio else 0}
                 ))
         
+        # 조회 기록 저장 (로그인 사용자만)
+        if current_user:
+            try:
+                await save_view_history(
+                    db=db,
+                    user_id=current_user.id,
+                    company_id=center_id,
+                    company_name=company.name,
+                    ticker=company.ticker,
+                    market=company.market
+                )
+                logger.info(f"View history saved for user {current_user.id}, company {center_id}")
+            except Exception as e:
+                logger.warning(f"Failed to save view history: {e}")
+
         return GraphResponse(
             nodes=nodes,
             relationships=relationships,
             center={"type": "Company", "id": company_id}
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:

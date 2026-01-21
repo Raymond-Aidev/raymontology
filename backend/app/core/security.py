@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from typing import Optional, Any
 import bcrypt
 from jose import JWTError, jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -227,6 +227,50 @@ async def get_current_active_user(
             detail="Inactive user"
         )
     return current_user
+
+
+async def get_current_user_optional(
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+) -> Optional[User]:
+    """
+    선택적 사용자 인증 (로그인 없어도 API 호출 가능)
+
+    인증 토큰이 있으면 사용자 반환, 없으면 None 반환.
+    조회 기록 저장 등 선택적 기능에 사용.
+
+    Args:
+        request: HTTP 요청
+        db: 데이터베이스 세션
+
+    Returns:
+        Optional[User]: 인증된 사용자 또는 None
+    """
+    # Authorization 헤더 확인
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return None
+
+    try:
+        token = auth_header.split(" ")[1]
+        payload = decode_access_token(token)
+        if payload is None:
+            return None
+
+        email: str = payload.get("sub")
+        if email is None:
+            return None
+
+        result = await db.execute(
+            select(User).where(User.email == email)
+        )
+        user = result.scalar_one_or_none()
+
+        if user and user.is_active:
+            return user
+        return None
+    except Exception:
+        return None
 
 
 # ============================================================================
