@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import apiClient, { setToken as saveToken, removeToken } from '../api/client'
+import { useGraphStore } from './graphStore'
 
 // 사용자 타입 (백엔드 UserMe 스키마와 일치)
 export interface User {
@@ -83,11 +84,16 @@ export const useAuthStore = create<AuthState>()(
             headers: { Authorization: `Bearer ${access_token}` }
           })
 
+          const user = userResponse.data
           set({
-            user: userResponse.data,
+            user,
             isAuthenticated: true,
             isLoading: false,
           })
+
+          // 사용자 ID를 graphStore에 설정 (사용자별 탐색 경로 관리)
+          useGraphStore.getState().setCurrentUserId(user.id)
+
           return true
         } catch (err: unknown) {
           const error = err as { response?: { data?: { detail?: string } } }
@@ -132,6 +138,9 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: false,
           error: null,
         })
+
+        // 로그아웃 시 탐색 경로 초기화 (다른 사용자 데이터 노출 방지)
+        useGraphStore.getState().setCurrentUserId(null)
       },
 
       checkAuth: async () => {
@@ -149,11 +158,16 @@ export const useAuthStore = create<AuthState>()(
             headers: { Authorization: `Bearer ${token}` }
           })
 
+          const user = response.data
           set({
-            user: response.data,
+            user,
             isAuthenticated: true,
             isLoading: false,
           })
+
+          // 사용자 ID를 graphStore에 설정 (사용자별 탐색 경로 관리)
+          useGraphStore.getState().setCurrentUserId(user.id)
+
           return true
         } catch {
           // 토큰이 유효하지 않으면 로그아웃
@@ -163,6 +177,10 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: false,
             isLoading: false,
           })
+
+          // 인증 실패 시 탐색 경로 초기화
+          useGraphStore.getState().setCurrentUserId(null)
+
           return false
         }
       },

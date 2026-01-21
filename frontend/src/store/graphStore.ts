@@ -50,6 +50,10 @@ interface GraphUIState {
   navigateToIndex: (index: number) => NavigationEntry | null
   clearNavigation: () => void
 
+  // 사용자별 데이터 관리
+  currentUserId: string | null
+  setCurrentUserId: (userId: string | null) => void
+
   // 초기화
   reset: () => void
 }
@@ -71,6 +75,7 @@ const initialState = {
   dateRange: defaultDateRange,
   navigationHistory: [] as NavigationEntry[],
   navigationIndex: -1,
+  currentUserId: null as string | null,
 }
 
 export const useGraphStore = create<GraphUIState>()(
@@ -160,6 +165,19 @@ export const useGraphStore = create<GraphUIState>()(
         navigationIndex: -1,
       }),
 
+      // 사용자 변경 시 호출 - 다른 사용자면 탐색 경로 초기화
+      setCurrentUserId: (userId) => set((state) => {
+        // 사용자가 바뀌면 탐색 경로 초기화
+        if (state.currentUserId !== userId) {
+          return {
+            currentUserId: userId,
+            navigationHistory: [],
+            navigationIndex: -1,
+          }
+        }
+        return { currentUserId: userId }
+      }),
+
       reset: () => set(initialState),
     }),
     {
@@ -171,12 +189,14 @@ export const useGraphStore = create<GraphUIState>()(
         visibleNodeTypes: Array.from(state.visibleNodeTypes), // Set은 직접 저장 불가
         navigationHistory: state.navigationHistory,
         navigationIndex: state.navigationIndex,
+        currentUserId: state.currentUserId, // 사용자 ID도 저장
       }),
       // Set 복원 및 Date 복원을 위한 커스텀 merge
       merge: (persistedState: unknown, currentState: GraphUIState) => {
         const persisted = persistedState as Partial<GraphUIState & {
           visibleNodeTypes: NodeType[],
-          dateRange: { startDate: string | null, endDate: string | null, reportYears?: number[] }
+          dateRange: { startDate: string | null, endDate: string | null, reportYears?: number[] },
+          currentUserId: string | null
         }>
 
         // dateRange의 Date 문자열 → Date 객체 복원
