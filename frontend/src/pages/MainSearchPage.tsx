@@ -130,9 +130,18 @@ function MainSearchPage() {
     }
 
     // 사용량 체크: 조회 가능 여부 확인
+    // 주의: Trial 사용자는 이전에 조회한 기업은 재조회 가능 (백엔드에서 처리)
+    // 따라서 사용량 초과 시에도 일단 페이지로 이동, 백엔드에서 재조회 여부 판단
     if (usageData) {
       // 무제한이 아니고 남은 조회 횟수가 0 이하인 경우
       if (!usageData.query.unlimited && usageData.query.remaining <= 0) {
+        // Trial 사용자는 백엔드에서 재조회 여부 판단하므로 일단 이동
+        // (이전에 조회한 기업이면 백엔드에서 허용, 새 기업이면 403 반환)
+        if (user?.subscription_tier === 'trial') {
+          navigate(`/company/${company.id}/graph`)
+          return
+        }
+        // 그 외 (free, 만료된 유료 등)는 모달 표시
         setShowNoQuotaModal(true)
         return
       }

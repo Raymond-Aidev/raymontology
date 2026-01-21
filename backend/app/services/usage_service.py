@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert
 
 from app.models.users import User
-from app.models.subscriptions import UserQueryUsage, SUBSCRIPTION_LIMITS
+from app.models.subscriptions import UserQueryUsage, CompanyViewHistory, SUBSCRIPTION_LIMITS
 
 
 def get_current_year_month() -> str:
@@ -186,3 +186,84 @@ async def get_usage_stats(
         },
         "year_month": get_current_year_month()
     }
+
+
+async def has_viewed_company(
+    db: AsyncSession,
+    user_id: UUID,
+    company_id: str
+) -> bool:
+    """
+    사용자가 해당 기업을 이전에 조회한 적이 있는지 확인
+
+    Args:
+        db: DB 세션
+        user_id: 사용자 ID
+        company_id: 회사 ID (문자열)
+
+    Returns:
+        이전 조회 여부
+    """
+    try:
+        company_uuid = UUID(company_id) if isinstance(company_id, str) else company_id
+
+        result = await db.execute(
+            select(CompanyViewHistory).where(
+                CompanyViewHistory.user_id == user_id,
+                CompanyViewHistory.company_id == company_uuid
+            )
+        )
+        return result.scalar_one_or_none() is not None
+    except Exception:
+        return False
+
+
+async def is_requery_allowed(
+    db: AsyncSession,
+    user_id: UUID,
+    company_id: str
+) -> Tuple[bool, str]:
+    """
+    이용권 한도를 초과했지만 재조회가 허용되는지 확인
+    Trial 사용자가 가입 후 30일 이내이고, 해당 기업을 이전에 조회한 적 있으면 재조회 허용
+
+    Args:
+        db: DB 세션
+        user_id: 사용자 ID
+        company_id: 회사 ID
+
+    Returns:
+        (allowed, reason_message)
+    """
+    # 사용자 정보 조회
+    user_result = await db.execute(
+        select(User).where(User.id == user_id)
+    )
+    user = user_result.scalar_one_or_none()
+
+    if not user:
+        return (False, "사용자를 찾을 수 없습니다")
+
+    tier = user.subscription_tier or "free"
+
+    # trial 사용자만 재조회 허용 대상
+    if tier != "trial":
+        return (False, "재조회 허용 대상이 아닙니다")
+
+    # 가입 후 30일 이내인지 확인
+    if not user.created_at:
+        return (False, "가입 정보를 확인할 수 없습니다")
+
+    now = datetime.now(user.created_at.tzinfo) if user.created_at.tzinfo else datetime.now()
+    trial_expires = user.created_at + timedelta(days=30)
+
+    if now > trial_expires:
+        return (False, "무료 체험 기간(30일)이 만료되었습니다")
+
+    # 이전에 조회한 적 있는 기업인지 확인
+    viewed = await has_viewed_company(db, user_id, company_id)
+
+    if viewed:
+        return (True, "이전에 조회한 기업은 가입 후 30일까지 재조회 가능합니다")
+
+    return (False, "이전에 조회한 적 없는 기업입니다")

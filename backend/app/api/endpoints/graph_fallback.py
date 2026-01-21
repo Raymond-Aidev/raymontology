@@ -14,7 +14,7 @@ from app.database import AsyncSessionLocal
 from app.core.security import get_current_user_optional
 from app.models.users import User
 from app.routes.view_history import save_view_history
-from app.services.usage_service import check_query_limit, increment_usage
+from app.services.usage_service import check_query_limit, increment_usage, is_requery_allowed
 
 logger = logging.getLogger(__name__)
 
@@ -66,18 +66,26 @@ async def get_company_network_fallback(
     로그인한 사용자의 경우 조회 기록이 저장되고 조회 횟수가 차감됩니다.
     """
     # 로그인 사용자 조회 제한 체크
+    is_requery = False  # 재조회 여부 (재조회면 사용량 차감 안 함)
     if current_user:
         allowed, message, current_count, query_limit = await check_query_limit(db, current_user.id, "query")
         if not allowed:
-            raise HTTPException(
-                status_code=403,
-                detail={
-                    "message": message,
-                    "code": "QUERY_LIMIT_EXCEEDED",
-                    "used": current_count,
-                    "limit": query_limit
-                }
-            )
+            # 한도 초과 시, 이전에 조회한 기업인지 확인 (재조회 허용)
+            requery_allowed, requery_msg = await is_requery_allowed(db, current_user.id, company_id)
+            if requery_allowed:
+                # 재조회 허용 - 사용량 차감 없이 조회 진행
+                is_requery = True
+                logger.info(f"Requery allowed for user={current_user.id}, company={company_id}")
+            else:
+                raise HTTPException(
+                    status_code=403,
+                    detail={
+                        "message": message,
+                        "code": "QUERY_LIMIT_EXCEEDED",
+                        "used": current_count,
+                        "limit": query_limit
+                    }
+                )
 
     nodes = []
     relationships = []
@@ -386,11 +394,14 @@ async def get_company_network_fallback(
         # 조회 기록 저장 및 사용량 증가 (로그인 사용자만)
         if current_user:
             try:
-                # 1. 조회 횟수 증가
-                await increment_usage(db, current_user.id, "query")
-                logger.info(f"Usage incremented for user {current_user.id}")
+                # 1. 조회 횟수 증가 (재조회가 아닌 경우에만)
+                if not is_requery:
+                    await increment_usage(db, current_user.id, "query")
+                    logger.info(f"Usage incremented for user {current_user.id}")
+                else:
+                    logger.info(f"Requery - skipping usage increment for user {current_user.id}")
 
-                # 2. 조회 기록 저장
+                # 2. 조회 기록 저장 (재조회 시에도 viewed_at 업데이트)
                 await save_view_history(
                     db=db,
                     user_id=current_user.id,
