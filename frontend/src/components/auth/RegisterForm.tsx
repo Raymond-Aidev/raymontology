@@ -1,11 +1,15 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
+import apiClient from '../../api/client'
 
 interface RegisterFormProps {
   onSuccess?: () => void
   onSwitchToLogin?: () => void
 }
+
+// 약관 모달 타입
+type TermsModalType = 'terms' | 'privacy' | null
 
 export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
   const { register, isLoading, error, clearError } = useAuthStore()
@@ -25,6 +29,65 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
     password: false,
     confirmPassword: false,
   })
+
+  // 약관 모달 상태
+  const [termsModal, setTermsModal] = useState<TermsModalType>(null)
+  const [termsContent, setTermsContent] = useState('')
+  const [privacyContent, setPrivacyContent] = useState('')
+  const [isLoadingTerms, setIsLoadingTerms] = useState(false)
+
+  // 약관 내용 로드
+  useEffect(() => {
+    const loadTermsContent = async () => {
+      if (termsModal === 'terms' && !termsContent) {
+        setIsLoadingTerms(true)
+        try {
+          const response = await apiClient.get('/api/admin/public/settings/terms')
+          setTermsContent(response.data.value || '이용약관 내용을 불러올 수 없습니다.')
+        } catch {
+          setTermsContent('이용약관을 불러오는데 실패했습니다.')
+        } finally {
+          setIsLoadingTerms(false)
+        }
+      } else if (termsModal === 'privacy' && !privacyContent) {
+        setIsLoadingTerms(true)
+        try {
+          const response = await apiClient.get('/api/admin/public/settings/privacy')
+          setPrivacyContent(response.data.value || '개인정보 처리방침 내용을 불러올 수 없습니다.')
+        } catch {
+          setPrivacyContent('개인정보 처리방침을 불러오는데 실패했습니다.')
+        } finally {
+          setIsLoadingTerms(false)
+        }
+      }
+    }
+    loadTermsContent()
+  }, [termsModal, termsContent, privacyContent])
+
+  // 간단한 Markdown 렌더링
+  const renderMarkdown = (text: string) => {
+    return text.split('\n').map((line, index) => {
+      if (line.startsWith('# ')) {
+        return <h1 key={index} className="text-xl font-bold text-text-primary mt-4 mb-3">{line.slice(2)}</h1>
+      }
+      if (line.startsWith('## ')) {
+        return <h2 key={index} className="text-lg font-semibold text-text-primary mt-3 mb-2">{line.slice(3)}</h2>
+      }
+      if (line.startsWith('### ')) {
+        return <h3 key={index} className="text-base font-medium text-text-primary mt-2 mb-1">{line.slice(4)}</h3>
+      }
+      if (line.startsWith('- ')) {
+        return <li key={index} className="text-text-secondary ml-4 mb-1 text-sm">{line.slice(2)}</li>
+      }
+      if (line.startsWith('---')) {
+        return <hr key={index} className="my-4 border-theme-border" />
+      }
+      if (line.trim() === '') {
+        return <br key={index} />
+      }
+      return <p key={index} className="text-text-secondary mb-1 text-sm">{line}</p>
+    })
+  }
 
   // 유효성 검사
   const usernameError = touched.username && !username ? '사용자명을 입력해주세요' :
@@ -299,8 +362,20 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
           className="mt-1 w-4 h-4 text-accent-primary border-theme-border rounded focus:ring-accent-primary"
         />
         <label htmlFor="agree-terms" className="text-sm text-text-secondary">
-          <Link to="/terms" className="text-accent-primary hover:underline">이용약관</Link> 및{' '}
-          <Link to="/privacy" className="text-accent-primary hover:underline">개인정보 처리방침</Link>에 동의합니다
+          <button
+            type="button"
+            onClick={() => setTermsModal('terms')}
+            className="text-accent-primary hover:underline"
+          >
+            이용약관
+          </button> 및{' '}
+          <button
+            type="button"
+            onClick={() => setTermsModal('privacy')}
+            className="text-accent-primary hover:underline"
+          >
+            개인정보 처리방침
+          </button>에 동의합니다
           <span className="text-accent-danger ml-1">*</span>
         </label>
       </div>
@@ -339,6 +414,54 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
               로그인
             </button>
           </p>
+        </div>
+      )}
+
+      {/* 약관/개인정보처리방침 모달 */}
+      {termsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-theme-card border border-theme-border rounded-2xl max-w-2xl w-full mx-4 shadow-2xl animate-scale-in max-h-[80vh] flex flex-col">
+            {/* 모달 헤더 */}
+            <div className="flex items-center justify-between p-4 border-b border-theme-border">
+              <h3 className="text-lg font-semibold text-text-primary">
+                {termsModal === 'terms' ? '이용약관' : '개인정보 처리방침'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setTermsModal(null)}
+                className="text-text-muted hover:text-text-secondary transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* 모달 본문 */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {isLoadingTerms ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-8 h-8 border-2 border-accent-primary border-t-transparent rounded-full animate-spin" />
+                  <span className="ml-3 text-text-secondary">내용을 불러오는 중...</span>
+                </div>
+              ) : (
+                <div className="prose prose-sm max-w-none">
+                  {renderMarkdown(termsModal === 'terms' ? termsContent : privacyContent)}
+                </div>
+              )}
+            </div>
+
+            {/* 모달 푸터 */}
+            <div className="p-4 border-t border-theme-border">
+              <button
+                type="button"
+                onClick={() => setTermsModal(null)}
+                className="w-full py-3 px-4 bg-accent-primary hover:bg-accent-primary/90 text-white font-medium rounded-xl text-center transition-colors"
+              >
+                확인
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
