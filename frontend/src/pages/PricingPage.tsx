@@ -127,8 +127,11 @@ function PricingPage() {
     )
   }
 
-  // 이용권 기능 비활성화 시 "준비중" 페이지 표시
+  // 이용권 기능 비활성화 시 페이지 표시
   if (!PRICING_ENABLED) {
+    // trial 이용권 사용자에게는 다른 메시지 표시
+    const isTrialUser = isAuthenticated && user?.subscription_tier === 'trial'
+
     return (
       <div className="min-h-screen bg-theme-bg">
         {/* Header */}
@@ -156,22 +159,52 @@ function PricingPage() {
           </div>
         </header>
 
-        {/* Content - 준비중 */}
+        {/* Content */}
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="bg-theme-card border border-theme-border rounded-2xl p-8">
             <div className="text-center py-20">
-              <div className="w-16 h-16 bg-accent-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg className="w-8 h-8 text-accent-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h1 className="text-2xl font-bold text-text-primary mb-4">이용권</h1>
-              <p className="text-text-secondary text-lg">
-                현재 준비중입니다
-              </p>
-              <p className="text-text-tertiary text-sm mt-2">
-                서비스 준비가 완료되면 안내드리겠습니다.
-              </p>
+              {isTrialUser ? (
+                <>
+                  {/* Trial 사용자 안내 */}
+                  <div className="w-16 h-16 bg-accent-success/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <svg className="w-8 h-8 text-accent-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                    </svg>
+                  </div>
+                  <h1 className="text-2xl font-bold text-text-primary mb-4">1회 무료 이용권</h1>
+                  <p className="text-accent-success text-lg font-medium">
+                    가입 기념으로 1회 무료 이용 가능합니다
+                  </p>
+                  <p className="text-text-secondary text-sm mt-3">
+                    기업 관계도 분석을 1회 무료로 체험해보세요.
+                  </p>
+                  <Link
+                    to="/"
+                    className="inline-flex items-center gap-2 mt-6 px-6 py-3 bg-accent-primary hover:bg-accent-primary/90 text-white font-medium rounded-xl transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    기업 검색하러 가기
+                  </Link>
+                </>
+              ) : (
+                <>
+                  {/* 일반 사용자 - 준비중 안내 */}
+                  <div className="w-16 h-16 bg-accent-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <svg className="w-8 h-8 text-accent-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <h1 className="text-2xl font-bold text-text-primary mb-4">이용권</h1>
+                  <p className="text-text-secondary text-lg">
+                    현재 준비중입니다
+                  </p>
+                  <p className="text-text-tertiary text-sm mt-2">
+                    서비스 준비가 완료되면 안내드리겠습니다.
+                  </p>
+                </>
+              )}
             </div>
           </div>
         </main>
