@@ -16,6 +16,15 @@ interface UsageData {
   }
 }
 
+// 조회 가능 여부 사전 체크 응답 타입
+interface CanQueryResponse {
+  allowed: boolean
+  reason: string
+  used: number
+  limit: number
+  is_requery: boolean
+}
+
 // Risk level config for dark theme
 const riskConfig: Record<string, { bg: string; text: string; border: string; label: string }> = {
   critical: { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/30', label: '위험' },
@@ -49,6 +58,7 @@ function MainSearchPage() {
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showPaywallModal, setShowPaywallModal] = useState(false)
   const [showNoQuotaModal, setShowNoQuotaModal] = useState(false)
+  const [noQuotaMessage, setNoQuotaMessage] = useState<string>('')
   const [stats, setStats] = useState<PlatformStats | null>(null)
   const [usageData, setUsageData] = useState<UsageData | null>(null)
   const usageLoadedRef = useRef(false)
@@ -110,7 +120,7 @@ function MainSearchPage() {
     }
   }, [isAuthenticated, loadUsage])
 
-  const handleSelectCompany = useCallback((company: CompanySearchResult) => {
+  const handleSelectCompany = useCallback(async (company: CompanySearchResult) => {
     // 로그인하지 않은 경우 로그인 모달 표시
     if (!isAuthenticated) {
       setShowLoginModal(true)
@@ -129,28 +139,35 @@ function MainSearchPage() {
       return
     }
 
-    // 사용량 체크: 조회 가능 여부 확인
-    // 주의: Trial 사용자는 이전에 조회한 기업은 재조회 가능 (백엔드에서 처리)
-    // 따라서 사용량 초과 시에도 일단 페이지로 이동, 백엔드에서 재조회 여부 판단
-    if (usageData) {
-      // 무제한이 아니고 남은 조회 횟수가 0 이하인 경우
-      if (!usageData.query.unlimited && usageData.query.remaining <= 0) {
-        // Trial 사용자는 백엔드에서 재조회 여부 판단하므로 일단 이동
-        // (이전에 조회한 기업이면 백엔드에서 허용, 새 기업이면 403 반환)
-        if (user?.subscription_tier === 'trial') {
-          navigate(`/company/${company.id}/graph`)
-          return
-        }
-        // 그 외 (free, 만료된 유료 등)는 모달 표시
+    // 사전 조회 가능 여부 체크 API 호출
+    try {
+      const response = await apiClient.get<CanQueryResponse>(`/api/subscription/can-query/${company.id}`)
+      const canQuery = response.data
+
+      if (!canQuery.allowed) {
+        // 조회 불가 - 서버에서 받은 메시지로 모달 표시
+        setNoQuotaMessage(canQuery.reason)
+        setUsageData({
+          query: {
+            used: canQuery.used,
+            limit: canQuery.limit,
+            remaining: canQuery.limit - canQuery.used,
+            unlimited: canQuery.limit === -1
+          }
+        })
         setShowNoQuotaModal(true)
         return
       }
-    }
 
-    // 모든 검증 통과 - 관계도 페이지로 이동
-    navigate(`/company/${company.id}/graph`)
+      // 조회 가능 - 관계도 페이지로 이동
+      navigate(`/company/${company.id}/graph`)
+    } catch (error) {
+      console.error('조회 가능 여부 확인 실패:', error)
+      // API 오류 시 일단 페이지로 이동 (백엔드에서 최종 판단)
+      navigate(`/company/${company.id}/graph`)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, navigate, user, usageData])
+  }, [isAuthenticated, navigate, user])
 
   return (
     <>
@@ -582,13 +599,10 @@ function MainSearchPage() {
           </h3>
 
           {/* Description */}
-          <p className="text-sm text-text-secondary text-center mb-2">
-            {user?.subscription_tier === 'trial'
-              ? '무료 체험 1회를 모두 사용하셨습니다.'
-              : '월 조회 한도를 모두 사용하셨습니다.'}
-          </p>
-          <p className="text-xs text-text-muted text-center mb-6">
-            이용권을 구매하시면 더 많은 기업을 분석할 수 있습니다.
+          <p className="text-sm text-text-secondary text-center mb-6">
+            {noQuotaMessage || (user?.subscription_tier === 'trial'
+              ? '무료 체험 1회를 모두 사용하셨습니다. 이용권을 구매하시면 더 많은 기업을 분석할 수 있습니다.'
+              : '월 조회 한도를 모두 사용하셨습니다. 이용권을 업그레이드하세요.')}
           </p>
 
           {/* Usage Info */}

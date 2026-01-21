@@ -333,3 +333,80 @@ async def get_usage(
     """
     usage = await get_usage_stats(db, current_user.id)
     return usage
+
+
+# ============================================================================
+# 조회 가능 여부 사전 체크
+# ============================================================================
+
+from app.services.usage_service import is_requery_allowed
+
+@router.get("/can-query/{company_id}")
+async def check_can_query(
+    company_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    특정 기업 조회 가능 여부를 사전에 체크
+    기업 클릭 시 페이지 이동 전에 호출하여 이용권 필요 여부 확인
+
+    Returns:
+        {
+            "allowed": bool,
+            "reason": str,
+            "used": int,
+            "limit": int,
+            "is_requery": bool  # 이전에 조회한 기업인지 여부
+        }
+    """
+    # 관리자는 항상 허용
+    if current_user.is_superuser:
+        return {
+            "allowed": True,
+            "reason": "관리자 권한",
+            "used": 0,
+            "limit": -1,
+            "is_requery": False
+        }
+
+    # 조회 제한 체크
+    allowed, message, used, limit = await check_query_limit(db, current_user.id, "query")
+
+    if allowed:
+        return {
+            "allowed": True,
+            "reason": message,
+            "used": used,
+            "limit": limit,
+            "is_requery": False
+        }
+
+    # 제한 초과 시 재조회 가능 여부 확인 (Trial 사용자 전용)
+    requery_allowed, requery_reason = await is_requery_allowed(db, current_user.id, company_id)
+
+    if requery_allowed:
+        return {
+            "allowed": True,
+            "reason": requery_reason,
+            "used": used,
+            "limit": limit,
+            "is_requery": True
+        }
+
+    # 조회 불가
+    tier = current_user.subscription_tier or "free"
+    if tier == "trial":
+        reason = "무료 체험 1회를 모두 사용하셨습니다. 이용권을 구매하시면 더 많은 기업을 분석할 수 있습니다."
+    elif tier == "free":
+        reason = "이용권이 필요합니다. 이용권을 구매하시면 기업 관계도를 분석할 수 있습니다."
+    else:
+        reason = f"월 조회 한도 {limit}건을 모두 사용했습니다. 이용권을 업그레이드하세요."
+
+    return {
+        "allowed": False,
+        "reason": reason,
+        "used": used,
+        "limit": limit,
+        "is_requery": False
+    }
