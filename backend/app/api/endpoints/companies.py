@@ -384,7 +384,8 @@ async def get_high_risk_companies(
     - risk_scores 테이블의 investment_grade 기준
     - B, CCC, CC, C, D 등급 기업 랜덤 조회
     - CB 발행 기업 우선 (has_cb=true)
-    - 상장폐지/ETF 제외
+    - KOSPI/KOSDAQ 시장만 표시 (ETF, KONEX 등 제외)
+    - 상장폐지 제외
     """
     try:
         # 등급 필터링 조건 설정
@@ -399,6 +400,7 @@ async def get_high_risk_companies(
             grade_filter = ['D']
 
         # Raw SQL로 랜덤 조회 (성능 최적화)
+        # KOSPI/KOSDAQ 시장만 표시 (ETF, KONEX 등 제외)
         query = text("""
             SELECT
                 c.id::text,
@@ -419,6 +421,7 @@ async def get_high_risk_companies(
             LEFT JOIN officer_positions op ON c.id = op.company_id AND op.is_current = true
             WHERE rs.investment_grade = ANY(:grades)
             AND c.listing_status = 'LISTED'
+            AND c.market IN ('KOSPI', 'KOSDAQ')
             GROUP BY c.id, c.name, c.ticker, c.corp_code, c.sector, c.market,
                      c.market_cap, c.listing_status, rs.investment_grade, rs.total_score
             HAVING (:has_cb = false OR COUNT(cb.id) > 0)

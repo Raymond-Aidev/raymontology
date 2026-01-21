@@ -85,9 +85,9 @@ function MainSearchPage() {
       setIsLoadingHighRisk(true)
       setHighRiskError(null)
       try {
-        // 병렬로 데이터 로드
+        // 병렬로 데이터 로드 (주의 필요 기업 3개만 표시)
         const [companies, platformStats] = await Promise.all([
-          getHighRiskCompanies(5, 6),
+          getHighRiskCompanies(5, 3),
           getPlatformStats()
         ])
         setHighRiskCompanies(companies)
