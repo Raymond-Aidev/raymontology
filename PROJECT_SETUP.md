@@ -51,28 +51,33 @@ npm run dev
 
 ---
 
-## 3. 데이터베이스 현황 (2026-01-21)
+## 3. 데이터베이스 현황 (2026-01-21 갱신)
 
 | 테이블 | 레코드 수 | 설명 |
 |--------|----------|------|
-| companies | 3,922 | 상장사 목록 |
-| officers | 49,446 | 임원 정보 |
-| officer_positions | 75,059 | 임원-회사 연결 |
+| companies | **3,109** | 상장사 목록 (**813개 삭제 후**: 3,021 LISTED + 88 ETF) |
+| officers | 47,444 | 임원 정보 |
+| officer_positions | 62,141 | 임원-회사 연결 |
 | disclosures | 279,258 | 공시 원본 |
 | convertible_bonds | 1,133 | CB 발행 정보 |
 | cb_subscribers | 7,026 | CB 인수자 |
 | financial_statements | 9,820 | 재무제표 |
 | risk_signals | 1,412 | 리스크 신호 |
-| risk_scores | 3,912 | 리스크 점수 |
-| major_shareholders | 60,214 | 대주주 |
-| affiliates | 973 | 계열회사 |
-| **financial_details** | **9,926** | **RaymondsIndex용 상세 재무** |
+| risk_scores | **3,138** | 리스크 점수 (**774건 삭제 후**) |
+| major_shareholders | 44,574 | 대주주 |
+| affiliates | **864** | 계열회사 (**109건 삭제 후**) |
+| **financial_details** | **10,288** | **RaymondsIndex용 상세 재무** |
 | **raymonds_index** | **5,257** | **자본 배분 효율성 지수** |
-| stock_prices | 127,324 | 주가 데이터 |
+| stock_prices | **126,506** | 주가 데이터 (**818건 삭제 후**) |
 | largest_shareholder_info | 4,599 | 최대주주 기본정보 |
 | user_query_usage | - | 월별 조회 사용량 추적 |
 | page_contents | - | 페이지 콘텐츠 동적 관리 |
 | **company_view_history** | **-** | **조회한 기업 기록 (2026-01-21 신규)** |
+
+### 삭제된 기업 (2026-01-21)
+- **유령 기업 39개**: LISTED이나 사업보고서/임원/재무 0건
+- **상장폐지 기업 774개**: DELISTED + 사업보고서 0건
+- **상세 내역**: `backend/scripts/COMPANY_MANAGEMENT.md` 참조
 
 ---
 
@@ -151,6 +156,22 @@ Company ──1:N── OfficerPosition ──N:1── Officer
 ---
 
 ## 6. 최근 변경사항
+
+### 2026-01-21: 기업 데이터 정리 및 문서화
+
+**유령 기업 및 상장폐지 기업 삭제**:
+- 유령 기업 39개 삭제 (LISTED이나 사업보고서 0건)
+- 상장폐지 기업 774개 삭제 (DELISTED + 사업보고서 0건)
+- 총 813개 기업 정리, 현재 3,109개 기업 관리 중
+
+**기업 관리 문서 신규**:
+- `backend/scripts/COMPANY_MANAGEMENT.md` 생성
+- 삭제 이력, 관리 대상 기업 기준, 파이프라인 규칙 문서화
+- CLAUDE.md에 파이프라인 실행 체크리스트 추가
+
+**관련 스크립트**:
+- `maintenance/delete_ghost_companies.py`: 유령 기업 삭제
+- `maintenance/delete_delisted_companies.py`: 상장폐지 기업 삭제
 
 ### 2026-01-21: 조회 기록 및 Trial 이용권 개선
 
@@ -304,4 +325,5 @@ b3cd8d9 fix: Neo4j 없을 때 PostgreSQL fallback으로 임원 경력 조회
 | 스키마 레지스트리 | `scripts/SCHEMA_REGISTRY.md` | 테이블명/컬럼명 |
 | 표준 프로세스 | `scripts/STANDARD_PROCESS.md` | DB 작업 체크리스트 |
 | 파싱 상태 | `scripts/PARSING_STATUS.md` | 파싱 진행 상황 |
+| **기업 관리** | **`scripts/COMPANY_MANAGEMENT.md`** | **데이터 수집 대상 기업 관리** |
 | 환경 변수 | `.env.production` | 프로덕션 설정 |

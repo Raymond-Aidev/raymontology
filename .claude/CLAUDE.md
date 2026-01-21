@@ -4,11 +4,11 @@
 
 ---
 
-## 상태: SCHEMA_REGISTRY 동기화 완료 v2.8 (2026-01-14)
+## 상태: 기업 데이터 정리 완료 v2.9 (2026-01-21)
 전체 **37개 테이블** 데이터 적재 완료. **RaymondsIndex 계산 완료 (5,257건)**.
 **RaymondsIndex 독립 사이트**: https://raymondsindex.konnect-ai.net 배포 완료.
 **RaymondsRisk 앱인토스**: 토스 로그인 연동 완료, 샌드박스 테스트 진행 중.
-**최근 업데이트**: SCHEMA_REGISTRY.md 전면 업데이트 (37개 테이블), 네이버 서치어드바이저 등록 (2026-01-14)
+**최근 업데이트**: 유령기업 39개 + 상장폐지 기업 774개 삭제 (총 813개), 현재 3,109개 기업 관리 중 (2026-01-21)
 
 ---
 
@@ -21,6 +21,7 @@
 | 스키마 레지스트리 | 모든 테이블명/컬럼명 참조 | `scripts/SCHEMA_REGISTRY.md` |
 | 표준 작업 프로세스 | 모든 DB 작업 체크리스트 | `scripts/STANDARD_PROCESS.md` |
 | 파싱 상태 | 상세 파싱 진행 상황 | `scripts/PARSING_STATUS.md` |
+| **기업 관리 문서** | **데이터 수집 대상 기업 관리** | **`scripts/COMPANY_MANAGEMENT.md`** |
 | **앱인토스 가이드** | **토스 앱인앱 연동 개발** | **`docs/APPS_IN_TOSS_GUIDE.md`** |
 | **RaymondsIndex 화면기획** | **독립 사이트 UI/UX 설계** | **`docs/RAYMONDSINDEX_UI_SPEC_v2.md`** |
 | **RaymondsIndex 개발계획** | **독립 사이트 개발 일정** | **`docs/RAYMONDSINDEX_DEVELOPMENT_PLAN.md`** |
@@ -180,27 +181,32 @@ cd raymondsrisk-app && npm run granite:build  # .ait 빌드
 
 ---
 
-## 현재 DB 상태 (2026-01-11 기준)
+## 현재 DB 상태 (2026-01-21 기준) ⭐
 
 | 테이블 | 레코드 수 | 상태 |
 |--------|----------|------|
-| companies | 3,922 | ✅ |
-| officers | 47,444 | ✅ (+2,423 from 426개 기업 보완) |
-| officer_positions | 62,141 | ✅ (+8,670 from 426개 기업 보완) |
-| disclosures | 279,258 | ✅ (+65,954 from 426개 기업 보완) |
+| companies | **3,109** | ✅ (3,021 LISTED + 88 ETF) - 813개 삭제 후 |
+| officers | 47,444 | ✅ |
+| officer_positions | 62,141 | ✅ |
+| disclosures | 279,258 | ✅ |
 | convertible_bonds | 1,133 | ✅ |
 | cb_subscribers | 7,026 | ✅ |
-| financial_statements | 9,820 | ✅ (+386 from 426개 기업 보완) |
+| financial_statements | 9,820 | ✅ |
 | risk_signals | 1,412 | ✅ |
-| risk_scores | 3,912 | ✅ |
+| risk_scores | **3,138** | ✅ (774건 삭제 후) |
 | major_shareholders | 44,574 | ✅ |
-| affiliates | 973 | ✅ |
+| affiliates | **864** | ✅ (109건 삭제 후) |
 | financial_details | 10,288 | ✅ (XBRL v3.0 파서 적용) |
 | **raymonds_index** | **5,257** | ✅ 계산 완료 |
-| **stock_prices** | **127,324** | ✅ |
+| **stock_prices** | **126,506** | ✅ (818건 삭제 후) |
 | **largest_shareholder_info** | **4,599** | ✅ |
 | user_query_usage | - | ✅ |
 | page_contents | - | ✅ |
+
+### 삭제된 기업 (2026-01-21)
+- **유령 기업**: 39개 (LISTED이나 사업보고서 0건)
+- **상장폐지 기업**: 774개 (DELISTED + 사업보고서 0건)
+- **상세 내역**: `scripts/COMPANY_MANAGEMENT.md` 참조
 
 ---
 
@@ -563,9 +569,27 @@ find backend/scripts -name "*cb*" -type f
 
 ---
 
-## 데이터 수집 규칙 (중요!)
+## 데이터 수집 규칙 (중요!) ⭐⭐⭐
 
-### 핵심 원칙: 파이프라인 사용 우선
+### 핵심 원칙 1: 파이프라인 실행 전 기업 관리 문서 확인 필수!
+
+**⚠️ 데이터 수집/파싱 전 반드시 확인:**
+```bash
+# 1. 기업 관리 문서 확인
+cat scripts/COMPANY_MANAGEMENT.md
+
+# 2. 관리 대상 기업만 조회하는 쿼리 사용
+SELECT id, ticker, name FROM companies
+WHERE listing_status = 'LISTED'
+  AND company_type IN ('NORMAL', 'SPAC', 'REIT')
+```
+
+**관리 대상 기업 (2026-01-21 기준):**
+- LISTED 기업: 3,021개 (서비스 대상)
+- ETF: 88개 (제한적 관리)
+- **총 3,109개** (삭제된 813개 제외)
+
+### 핵심 원칙 2: 파이프라인 사용 우선
 
 **새로운 분기 데이터 수집 시 반드시 파이프라인 사용:**
 ```bash
@@ -607,6 +631,53 @@ python -m scripts.pipeline.run_quarterly_pipeline --quarter Q1 --year 2025
 | `db_migrate.py --action=reset` | drop_all |
 
 **위 스크립트들은 `scripts/_deprecated/`로 이동됨**
+
+---
+
+## 데이터 파이프라인 실행 체크리스트 (필수!) ⭐⭐⭐
+
+데이터 수집, 파싱, 적재 작업 전 반드시 다음 순서로 확인:
+
+### 1단계: 기업 관리 문서 확인
+```bash
+cat scripts/COMPANY_MANAGEMENT.md
+```
+
+### 2단계: 현재 관리 대상 기업 수 확인
+```sql
+SELECT
+  listing_status,
+  company_type,
+  COUNT(*)
+FROM companies
+GROUP BY listing_status, company_type
+ORDER BY listing_status, company_type;
+```
+
+### 3단계: company_filter 유틸리티 사용
+```python
+from scripts.utils.company_filter import (
+    should_parse_officers,
+    should_parse_financials,
+    should_calculate_index,
+)
+
+# 파싱 대상 필터링
+for company in companies:
+    if should_parse_officers(company):
+        # 파싱 실행
+```
+
+### 4단계: 파이프라인 실행 (LISTED 기업만)
+```bash
+python -m scripts.pipeline.run_quarterly_pipeline --quarter Q1 --year 2025
+```
+
+### 금지 사항
+- ❌ 전체 companies 테이블 대상 무조건 파싱
+- ❌ listing_status 필터 없이 데이터 수집
+- ❌ 삭제된 기업(DELISTED) 재수집 시도
+- ❌ company_filter 유틸리티 미사용
 
 ---
 
