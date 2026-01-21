@@ -101,6 +101,7 @@ npm run dev
 /api/graph-fallback/*             - Neo4j 없을 때 대체 API
 
 /api/subscription/usage           - 월별 조회 사용량 조회
+/api/subscription/can-query/{id}  - 기업 조회 가능 여부 사전 체크 (2026-01-21)
 /api/admin/users/{id}/subscription - 관리자: 사용자 구독 변경
 /api/companies/view-history/list  - 조회한 기업 목록 (2026-01-21)
 
@@ -172,6 +173,20 @@ Company ──1:N── OfficerPosition ──N:1── Officer
 **관련 스크립트**:
 - `maintenance/delete_ghost_companies.py`: 유령 기업 삭제
 - `maintenance/delete_delisted_companies.py`: 상장폐지 기업 삭제
+
+### 2026-01-21: 이용권 사전 체크 UX 개선
+
+**문제**: 이용권 없는 사용자가 기업 클릭 시 그래프 페이지로 이동 후 "API 연결 실패" 에러 표시
+**해결**: 페이지 이동 전 사전 체크 API 호출하여 조회 불가 시 검색 화면에서 모달 표시
+
+**구현 내용**:
+- `/api/subscription/can-query/{company_id}` 엔드포인트 추가
+- `MainSearchPage.tsx`에서 기업 클릭 시 사전 체크 후 이동
+- 조회 불가 시 서버 메시지로 모달 표시, 검색 화면 유지
+
+**관련 파일**:
+- Backend: `app/routes/subscription.py` (check_can_query 함수)
+- Frontend: `pages/MainSearchPage.tsx` (handleSelectCompany)
 
 ### 2026-01-21: 조회 기록 및 Trial 이용권 개선
 
@@ -314,6 +329,7 @@ b3cd8d9 fix: Neo4j 없을 때 PostgreSQL fallback으로 임원 경력 조회
 - [x] Trial 이용권 30일 만료 로직 - 2026-01-21 완료
 - [x] 조회 제한 UX 개선 - 2026-01-21 완료
 - [x] 공유 Header 전체 적용 - 2026-01-21 완료
+- [x] 이용권 사전 체크 UX 개선 - 2026-01-21 완료 (페이지 이동 전 확인)
 
 ---
 

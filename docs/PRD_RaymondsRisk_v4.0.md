@@ -10,7 +10,7 @@
 | 항목 | 내용 |
 |------|------|
 | 문서명 | RaymondsRisk Service PRD (통합본) |
-| 버전 | 4.5 |
+| 버전 | 4.6 |
 | 작성일 | 2025-12-15 |
 | 최종 수정일 | 2026-01-21 |
 | 이전 문서 | IMPLEMENTATION_PLAN.md, PHASE2_2_FRONTEND_IMPLEMENTATION.md, 화면기획서 v3.0, 관계형 리스크 기획서 v3.2.1 |
@@ -25,6 +25,7 @@
 
 | 버전 | 날짜 | 변경 내용 |
 |------|------|----------|
+| 4.6 | 2026-01-21 | 이용권 사전 체크 UX 개선 - 기업 클릭 시 페이지 이동 전 조회 가능 여부 확인, 조회 불가 시 검색 화면에서 모달 표시 |
 | 4.5 | 2026-01-21 | 조회한 기업 목록 기능 추가, Trial 사용자 30일 만료/재조회 허용, 조회 제한 UX 개선, 공유 Header 전체 적용 |
 | 4.4 | 2026-01-20 | Frontend 상태 85% 업데이트, 다크 테마 적용 완료, 미니 주가 차트 추가 |
 | 4.3 | 2025-12-15 | 초기 작성 |
@@ -1969,21 +1970,53 @@ GET /api/companies/view-history/list
 
 ### 19.5.4 조회 제한 UX 개선 (2026-01-21)
 
-**사전 체크 API** (`graph.ts`):
+**사전 체크 API** (`/api/subscription/can-query/{company_id}`):
+```python
+# Backend: subscription.py
+@router.get("/can-query/{company_id}")
+async def check_can_query(company_id: str, ...):
+    """
+    기업 클릭 시 페이지 이동 전에 호출하여 조회 가능 여부 확인
+
+    Returns:
+        {
+            "allowed": bool,        # 조회 가능 여부
+            "reason": str,          # 사유 메시지
+            "used": int,            # 사용량
+            "limit": int,           # 한도
+            "is_requery": bool      # 이전 조회 기업 재조회 여부
+        }
+    """
+```
+
+**Frontend 구현** (`MainSearchPage.tsx`):
 ```typescript
-// 조회 전 이용권 상태 확인
-checkUsageAvailability(companyId): Promise<{
-  can_view: boolean;
-  reason?: string;
-  is_requery?: boolean;  // 재조회 여부
-}>
+// 기업 클릭 시 사전 체크
+const handleSelectCompany = async (company) => {
+  // 1. 로그인 체크
+  // 2. 관리자 체크 (항상 통과)
+  // 3. 이용권 유효성 체크
+  // 4. 사전 조회 API 호출
+  const response = await apiClient.get(`/api/subscription/can-query/${company.id}`)
+
+  if (!response.data.allowed) {
+    // 모달 표시, 페이지 이동 안 함
+    setNoQuotaMessage(response.data.reason)
+    setShowNoQuotaModal(true)
+    return
+  }
+
+  // 조회 가능 - 관계도 페이지로 이동
+  navigate(`/company/${company.id}/graph`)
+}
 ```
 
 **UX 개선 포인트**:
-1. 조회 버튼 클릭 전 이용권 상태 표시 (UsageIndicator)
-2. 재조회 시 "이전에 조회하셨던 기업입니다" 메시지
-3. 이용권 부족 시 요금제 페이지로 자연스러운 유도
-4. Trial 만료 시 명확한 안내 메시지
+1. **페이지 이동 전 사전 체크**: 기업 클릭 시 API로 조회 가능 여부 먼저 확인
+2. **에러 화면 방지**: 조회 불가 시 그래프 페이지로 이동하지 않고 검색 화면에서 모달 표시
+3. **서버 메시지 표시**: 백엔드에서 상황에 맞는 메시지 반환 (Trial/Free/유료 등)
+4. **재조회 허용**: Trial 사용자가 이전에 조회한 기업은 30일 이내 재조회 가능
+5. **자연스러운 유도**: 모달에서 이용권 구매 페이지로 연결
 
 ### 19.5.5 공유 Header 컴포넌트 (2026-01-21)
 
