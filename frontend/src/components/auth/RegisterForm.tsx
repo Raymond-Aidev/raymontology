@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import apiClient from '../../api/client'
 
@@ -12,6 +12,7 @@ interface RegisterFormProps {
 type TermsModalType = 'terms' | 'privacy' | null
 
 export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
+  const navigate = useNavigate()
   const { register, isLoading, error, clearError } = useAuthStore()
 
   const [username, setUsername] = useState('')
@@ -465,41 +466,40 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
         </div>
       )}
 
-      {/* 회원가입 완료 모달 */}
+      {/* 이메일 인증 안내 모달 */}
       {showSuccessModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-theme-card border border-theme-border rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl animate-scale-in">
-            {/* 성공 아이콘 */}
-            <div className="w-16 h-16 mx-auto mb-4 bg-accent-success/10 rounded-full flex items-center justify-center">
-              <svg className="w-8 h-8 text-accent-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            {/* 이메일 아이콘 */}
+            <div className="w-16 h-16 mx-auto mb-4 bg-accent-primary/10 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-accent-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
             </div>
 
             {/* 제목 */}
             <h3 className="text-xl font-semibold text-text-primary text-center mb-2">
-              회원가입 완료
+              이메일 인증 필요
             </h3>
 
             {/* 설명 */}
             <p className="text-sm text-text-secondary text-center mb-6">
-              회원가입이 완료되었습니다.
+              가입하신 이메일을 확인하여
               <br />
-              로그인 페이지에서 로그인해주세요.
+              회원가입 절차를 완료해야 최종 가입처리 됩니다.
             </p>
 
             {/* 확인 버튼 */}
-            <Link
-              to="/login"
-              className="block w-full py-3 px-4 bg-accent-primary hover:bg-accent-primary/90 text-white font-medium rounded-xl text-center transition-colors"
+            <button
+              type="button"
               onClick={() => {
                 setShowSuccessModal(false)
-                // 로그아웃 상태로 전환 (자동 로그인 방지)
-                useAuthStore.getState().logout()
+                navigate('/')
               }}
+              className="w-full py-3 px-4 bg-accent-primary hover:bg-accent-primary/90 text-white font-medium rounded-xl text-center transition-colors"
             >
-              로그인하러 가기
-            </Link>
+              확인
+            </button>
           </div>
         </div>
       )}
