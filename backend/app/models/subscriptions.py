@@ -1,7 +1,7 @@
 """
 Subscription 모델 - 결제 이력 및 구독 관리
 """
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Enum, UniqueConstraint
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Enum, UniqueConstraint, Index
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -103,6 +103,43 @@ class SubscriptionPayment(Base):
 
     def __repr__(self):
         return f"<SubscriptionPayment(id={self.id}, user_id={self.user_id}, tier='{self.tier}', amount={self.amount}, status='{self.status}')>"
+
+
+class CompanyViewHistory(Base):
+    """
+    사용자 기업 조회 기록 테이블
+    조회한 기업 목록을 저장하여 나중에 다시 볼 수 있도록 함
+    """
+    __tablename__ = "company_view_history"
+
+    # Primary Key
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+    # 사용자 정보
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    # 기업 정보
+    company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    # 조회 당시 정보 스냅샷 (기업 삭제 시에도 표시 가능하도록)
+    company_name = Column(String(200), nullable=True)
+    ticker = Column(String(20), nullable=True)
+    market = Column(String(20), nullable=True)
+
+    # 조회 시간
+    viewed_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    # 인덱스: 사용자별 최근 조회 순 정렬
+    __table_args__ = (
+        Index('ix_company_view_history_user_viewed', 'user_id', 'viewed_at'),
+    )
+
+    # Relationships
+    user = relationship("User", backref="view_history")
+    company = relationship("Company", backref="view_history")
+
+    def __repr__(self):
+        return f"<CompanyViewHistory(user_id={self.user_id}, company_name='{self.company_name}', viewed_at={self.viewed_at})>"
 
 
 # 이용권별 조회 제한 설정

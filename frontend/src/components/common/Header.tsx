@@ -36,6 +36,12 @@ function Header() {
               검색
             </Link>
             <Link
+              to="/viewed-companies"
+              className="px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-dark-hover rounded-lg transition-all"
+            >
+              조회한 기업
+            </Link>
+            <Link
               to="/about"
               className="px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-dark-hover rounded-lg transition-all"
             >
@@ -160,6 +166,13 @@ function Header() {
                 className="px-4 py-2.5 text-sm text-text-secondary hover:text-text-primary hover:bg-dark-hover rounded-lg transition-all"
               >
                 검색
+              </Link>
+              <Link
+                to="/viewed-companies"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="px-4 py-2.5 text-sm text-text-secondary hover:text-text-primary hover:bg-dark-hover rounded-lg transition-all"
+              >
+                조회한 기업
               </Link>
               <Link
                 to="/about"

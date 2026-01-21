@@ -141,3 +141,51 @@ export async function getPlatformStats(): Promise<PlatformStats> {
     }
   }
 }
+
+// 조회 기록 아이템 타입
+export interface ViewHistoryItem {
+  id: string
+  company_id: string
+  company_name: string | null
+  ticker: string | null
+  market: string | null
+  viewed_at: string
+}
+
+// 조회 기록 응답 타입
+export interface ViewHistoryResponse {
+  items: ViewHistoryItem[]
+  total: number
+  page: number
+  page_size: number
+}
+
+// 조회 기록 API 에러 코드
+export type ViewHistoryErrorCode =
+  | 'FREE_USER'
+  | 'TRIAL_EXPIRED'
+  | 'SUBSCRIPTION_EXPIRED'
+  | 'UNAUTHORIZED'
+
+// 조회 기록 API 에러 응답
+export interface ViewHistoryError {
+  message: string
+  code: ViewHistoryErrorCode
+}
+
+/**
+ * 조회한 기업 목록 API
+ * 유료 회원 전용 (trial, light, max)
+ * @param page 페이지 번호 (기본값: 1)
+ * @param pageSize 페이지 크기 (기본값: 20)
+ * @returns 조회 기록 목록
+ */
+export async function getViewHistory(
+  page: number = 1,
+  pageSize: number = 20
+): Promise<ViewHistoryResponse> {
+  const response = await apiClient.get<ViewHistoryResponse>('/api/companies/view-history/list', {
+    params: { page, page_size: pageSize },
+  })
+  return response.data
+}
