@@ -1,9 +1,20 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { SearchInput, MarketBadge, MiniStockChart } from '../components/common'
 import { getHighRiskCompanies, getPlatformStats, type PlatformStats } from '../api/company'
 import { useAuthStore } from '../store/authStore'
+import apiClient from '../api/client'
 import type { CompanySearchResult } from '../types/company'
+
+// 사용량 데이터 타입
+interface UsageData {
+  query: {
+    used: number
+    limit: number
+    remaining: number
+    unlimited: boolean
+  }
+}
 
 // Risk level config for dark theme
 const riskConfig: Record<string, { bg: string; text: string; border: string; label: string }> = {
@@ -37,7 +48,10 @@ function MainSearchPage() {
   const [highRiskError, setHighRiskError] = useState<string | null>(null)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showPaywallModal, setShowPaywallModal] = useState(false)
+  const [showNoQuotaModal, setShowNoQuotaModal] = useState(false)
   const [stats, setStats] = useState<PlatformStats | null>(null)
+  const [usageData, setUsageData] = useState<UsageData | null>(null)
+  const usageLoadedRef = useRef(false)
 
   // 유효한 이용권 확인 (trial, light, max 중 하나이면서 만료 안 됨)
   const hasValidSubscription = () => {
@@ -53,6 +67,18 @@ function MainSearchPage() {
     }
     return tier === 'trial' || tier === 'light' || tier === 'max'
   }
+
+  // 사용량 조회 함수
+  const loadUsage = useCallback(async () => {
+    if (!isAuthenticated) return
+    try {
+      const response = await apiClient.get('/api/subscription/usage')
+      setUsageData(response.data)
+      usageLoadedRef.current = true
+    } catch (error) {
+      console.error('사용량 조회 실패:', error)
+    }
+  }, [isAuthenticated])
 
   useEffect(() => {
     const loadData = async () => {
@@ -77,21 +103,45 @@ function MainSearchPage() {
     loadData()
   }, [])
 
+  // 로그인 시 사용량 조회
+  useEffect(() => {
+    if (isAuthenticated && !usageLoadedRef.current) {
+      loadUsage()
+    }
+  }, [isAuthenticated, loadUsage])
+
   const handleSelectCompany = useCallback((company: CompanySearchResult) => {
     // 로그인하지 않은 경우 로그인 모달 표시
     if (!isAuthenticated) {
       setShowLoginModal(true)
       return
     }
-    // 유효한 이용권이 있으면 관계도 페이지로 이동 (기본 화면)
-    if (hasValidSubscription()) {
+
+    // 관리자는 항상 통과
+    if (user?.is_superuser) {
       navigate(`/company/${company.id}/graph`)
       return
     }
-    // 이용권이 없으면 유료 서비스 모달 표시
-    setShowPaywallModal(true)
+
+    // 유효한 이용권이 없으면 유료 서비스 모달 표시
+    if (!hasValidSubscription()) {
+      setShowPaywallModal(true)
+      return
+    }
+
+    // 사용량 체크: 조회 가능 여부 확인
+    if (usageData) {
+      // 무제한이 아니고 남은 조회 횟수가 0 이하인 경우
+      if (!usageData.query.unlimited && usageData.query.remaining <= 0) {
+        setShowNoQuotaModal(true)
+        return
+      }
+    }
+
+    // 모든 검증 통과 - 관계도 페이지로 이동
+    navigate(`/company/${company.id}/graph`)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, navigate, user])
+  }, [isAuthenticated, navigate, user, usageData])
 
   return (
     <>
@@ -502,6 +552,66 @@ function MainSearchPage() {
               회원가입
             </button>
           </p>
+        </div>
+      </div>
+    )}
+
+    {/* No Quota Modal - 조회 한도 초과 */}
+    {showNoQuotaModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+        <div className="bg-dark-card border border-dark-border rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl animate-scale-in">
+          {/* Icon */}
+          <div className="w-14 h-14 mx-auto mb-4 bg-accent-danger/10 rounded-2xl flex items-center justify-center">
+            <svg className="w-7 h-7 text-accent-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+
+          {/* Title */}
+          <h3 className="text-lg font-semibold text-text-primary text-center mb-2">
+            이용권이 필요합니다
+          </h3>
+
+          {/* Description */}
+          <p className="text-sm text-text-secondary text-center mb-2">
+            {user?.subscription_tier === 'trial'
+              ? '무료 체험 1회를 모두 사용하셨습니다.'
+              : '월 조회 한도를 모두 사용하셨습니다.'}
+          </p>
+          <p className="text-xs text-text-muted text-center mb-6">
+            이용권을 구매하시면 더 많은 기업을 분석할 수 있습니다.
+          </p>
+
+          {/* Usage Info */}
+          {usageData && (
+            <div className="mb-6 p-3 bg-dark-surface rounded-lg border border-dark-border">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-text-muted">이번 달 사용량</span>
+                <span className="text-text-primary font-medium">
+                  {usageData.query.used} / {usageData.query.limit}건
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Buttons */}
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => {
+                setShowNoQuotaModal(false)
+                navigate('/pricing')
+              }}
+              className="w-full py-3 px-4 bg-accent-primary hover:bg-accent-primary/90 text-white font-medium rounded-xl transition-colors"
+            >
+              이용권 확인하기
+            </button>
+            <button
+              onClick={() => setShowNoQuotaModal(false)}
+              className="w-full py-3 px-4 bg-dark-surface hover:bg-dark-hover border border-dark-border text-text-secondary font-medium rounded-xl transition-colors"
+            >
+              닫기
+            </button>
+          </div>
         </div>
       </div>
     )}

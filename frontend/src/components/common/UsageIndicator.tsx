@@ -63,6 +63,31 @@ function UsageIndicator() {
 
   // trial 이용권 (회원가입 1회 무료 체험)
   if (user.subscription_tier === 'trial') {
+    // usage 데이터 로드 중이면 로딩 표시
+    if (isLoading || !usage) {
+      return (
+        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-dark-card border border-dark-border rounded-lg">
+          <div className="w-3 h-3 border-2 border-accent-success border-t-transparent rounded-full animate-spin" />
+        </div>
+      )
+    }
+
+    // 1회 체험 사용 완료 (query_count >= 1)
+    if (usage.query.used >= 1) {
+      return (
+        <Link
+          to="/pricing"
+          className="flex items-center gap-1.5 px-2.5 py-1 bg-accent-danger/10 border border-accent-danger/30 rounded-lg hover:bg-accent-danger/20 transition-colors"
+        >
+          <svg className="w-3.5 h-3.5 text-accent-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="text-xs font-medium text-accent-danger">이용권 필요</span>
+        </Link>
+      )
+    }
+
+    // 1회 체험 사용 가능
     return (
       <Link
         to="/pricing"

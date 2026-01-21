@@ -199,6 +199,29 @@ export interface DateRangeParams {
 export const NODE_LIMIT = 200
 export const DEFAULT_DEPTH = 2  // 관계도 기본 탐색 깊이 (2단계)
 
+// 조회 제한 에러 타입
+export interface QueryLimitError {
+  code: 'QUERY_LIMIT_EXCEEDED'
+  message: string
+  used: number
+  limit: number
+}
+
+// 조회 제한 에러인지 확인
+export function isQueryLimitError(error: unknown): error is { response: { status: number; data: { detail: QueryLimitError } } } {
+  if (!error || typeof error !== 'object') return false
+  const err = error as { response?: { status?: number; data?: { detail?: { code?: string } } } }
+  return err.response?.status === 403 && err.response?.data?.detail?.code === 'QUERY_LIMIT_EXCEEDED'
+}
+
+// 조회 제한 에러 정보 추출
+export function extractQueryLimitError(error: unknown): QueryLimitError | null {
+  if (isQueryLimitError(error)) {
+    return error.response.data.detail
+  }
+  return null
+}
+
 /**
  * 노드 수 제한 적용 (중요도 기준 필터링)
  * 회사 노드 우선, 그 다음 직접 연결된 노드 우선
@@ -297,6 +320,10 @@ export async function getCompanyNetwork(
       originalCount,
     }
   } catch (fallbackError) {
+    // 403 조회 제한 에러는 상위로 전파 (GraphPage에서 처리)
+    if (isQueryLimitError(fallbackError)) {
+      throw fallbackError
+    }
     console.warn('PostgreSQL 폴백 API도 실패:', fallbackError)
     return {
       nodes: [],

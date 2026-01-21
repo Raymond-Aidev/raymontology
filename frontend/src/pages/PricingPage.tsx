@@ -6,6 +6,16 @@ import apiClient from '../api/client'
 // 환경변수로 이용권 기능 활성화 여부 제어 (기본: false = 준비중)
 const PRICING_ENABLED = import.meta.env.VITE_PRICING_ENABLED === 'true'
 
+// 사용량 데이터 타입
+interface UsageData {
+  query: {
+    used: number
+    limit: number
+    remaining: number
+    unlimited: boolean
+  }
+}
+
 interface SubscriptionPlan {
   tier: 'free' | 'light' | 'max'
   name: string
@@ -32,14 +42,20 @@ function PricingPage() {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
   const [selectedDuration, setSelectedDuration] = useState(1) // 1개월 기본
   const [isProcessing, setIsProcessing] = useState(false)
+  const [usageData, setUsageData] = useState<UsageData | null>(null)
 
   useEffect(() => {
     if (PRICING_ENABLED) {
       loadPlans()
       if (isAuthenticated) {
         loadSubscriptionStatus()
+        loadUsage()
       }
     } else {
+      // PRICING_ENABLED가 false여도 trial 사용자의 사용량은 조회
+      if (isAuthenticated) {
+        loadUsage()
+      }
       setIsLoading(false)
     }
   }, [isAuthenticated])
@@ -61,6 +77,15 @@ function PricingPage() {
       setCurrentStatus(response.data)
     } catch (error) {
       console.error('Failed to load subscription status:', error)
+    }
+  }
+
+  const loadUsage = async () => {
+    try {
+      const response = await apiClient.get('/api/subscription/usage')
+      setUsageData(response.data)
+    } catch (error) {
+      console.error('Failed to load usage:', error)
     }
   }
 
@@ -130,6 +155,8 @@ function PricingPage() {
   if (!PRICING_ENABLED) {
     // trial 이용권 사용자에게는 다른 메시지 표시
     const isTrialUser = isAuthenticated && user?.subscription_tier === 'trial'
+    // trial 사용자가 이미 1회를 사용했는지 확인
+    const hasUsedTrial = isTrialUser && usageData && usageData.query.used >= 1
 
     return (
       <div className="bg-theme-bg">
@@ -137,9 +164,41 @@ function PricingPage() {
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="bg-theme-card border border-theme-border rounded-2xl p-8">
             <div className="text-center py-20">
-              {isTrialUser ? (
+              {isTrialUser && hasUsedTrial ? (
                 <>
-                  {/* Trial 사용자 안내 */}
+                  {/* Trial 사용 완료 안내 */}
+                  <div className="w-16 h-16 bg-accent-danger/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <svg className="w-8 h-8 text-accent-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <h1 className="text-2xl font-bold text-text-primary mb-4">무료 체험 완료</h1>
+                  <p className="text-accent-danger text-lg font-medium">
+                    1회 무료 체험을 이미 사용하셨습니다
+                  </p>
+                  <p className="text-text-secondary text-sm mt-3">
+                    이용권을 구매하시면 더 많은 기업을 분석할 수 있습니다.
+                  </p>
+
+                  {/* 사용량 정보 */}
+                  <div className="mt-6 p-4 bg-dark-surface rounded-lg border border-dark-border inline-block">
+                    <div className="flex items-center gap-4 text-sm">
+                      <span className="text-text-muted">사용량</span>
+                      <span className="text-text-primary font-medium">
+                        {usageData?.query.used} / {usageData?.query.limit}건
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-8">
+                    <p className="text-text-muted text-xs mb-4">
+                      유료 이용권 서비스 준비 중입니다. 빠른 시일 내에 오픈 예정입니다.
+                    </p>
+                  </div>
+                </>
+              ) : isTrialUser ? (
+                <>
+                  {/* Trial 사용 가능 안내 */}
                   <div className="w-16 h-16 bg-accent-success/10 rounded-full flex items-center justify-center mx-auto mb-6">
                     <svg className="w-8 h-8 text-accent-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />

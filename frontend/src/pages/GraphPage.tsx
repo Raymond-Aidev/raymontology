@@ -4,7 +4,7 @@ import * as d3 from 'd3'
 import { ForceGraph, NodeDetailPanel, GraphControls, NavigationButtons, Breadcrumb, MiniStockChart } from '../components/graph'
 import type { ForceGraphRef } from '../components/graph'
 import type { GraphNode, GraphData, NodeType } from '../types/graph'
-import { NODE_LIMIT, DEFAULT_DEPTH, type DateRangeParams } from '../api/graph'
+import { NODE_LIMIT, DEFAULT_DEPTH, type DateRangeParams, extractQueryLimitError, type QueryLimitError } from '../api/graph'
 import { DateRangePicker, type DateRange, BottomSheet, MarketBadge } from '../components/common'
 import { useGraphQuery } from '../hooks/useGraphQuery'
 import { useGraphStore, selectCanGoBack, selectCanGoForward } from '../store'
@@ -85,6 +85,9 @@ function GraphPage() {
 
   // RaymondsIndex 데이터
   const [raymondsIndex, setRaymondsIndex] = useState<RaymondsIndexData | null>(null)
+
+  // 조회 제한 에러 정보
+  const [queryLimitInfo, setQueryLimitInfo] = useState<QueryLimitError | null>(null)
 
   // 날짜를 YYYY-MM-DD 형식으로 변환
   const formatDateParam = (date: Date | string | null | undefined): string | undefined => {
@@ -204,6 +207,16 @@ function GraphPage() {
 
   // API 연결 상태
   const isApiConnected = !error && actualGraphData.nodes.length > 0
+
+  // 조회 제한 에러 감지
+  useEffect(() => {
+    if (error) {
+      const limitError = extractQueryLimitError(error)
+      if (limitError) {
+        setQueryLimitInfo(limitError)
+      }
+    }
+  }, [error])
 
   // 노드 클릭 핸들러
   const handleNodeClick = useCallback((node: GraphNode | null) => {
@@ -717,6 +730,27 @@ function GraphPage() {
               <div className="flex flex-col items-center gap-3">
                 <div className="w-10 h-10 border-2 border-accent-primary border-t-transparent rounded-full animate-spin" />
                 <p className="text-text-secondary text-sm">그래프 로딩 중...</p>
+              </div>
+            </div>
+          ) : error && queryLimitInfo ? (
+            // 조회 제한 에러 - 별도 UI 표시 (모달은 아래에서 처리)
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-4 text-center max-w-sm px-4">
+                <div className="w-16 h-16 rounded-full bg-accent-warning/20 flex items-center justify-center">
+                  <svg className="w-8 h-8 text-accent-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-text-primary mb-2">이용권이 필요합니다</h3>
+                  <p className="text-text-secondary text-sm">{queryLimitInfo.message}</p>
+                </div>
+                <button
+                  onClick={() => navigate('/pricing')}
+                  className="px-6 py-2.5 bg-accent-primary hover:bg-accent-primary/90 text-white text-sm font-medium rounded-lg transition-all"
+                >
+                  이용권 확인하기
+                </button>
               </div>
             </div>
           ) : error ? (
