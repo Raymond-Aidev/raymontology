@@ -67,7 +67,7 @@ async def get_company_network_fallback(
     """
     # 로그인 사용자 조회 제한 체크
     if current_user:
-        allowed, message, current_count, limit = await check_query_limit(db, current_user.id, "query")
+        allowed, message, current_count, query_limit = await check_query_limit(db, current_user.id, "query")
         if not allowed:
             raise HTTPException(
                 status_code=403,
@@ -75,7 +75,7 @@ async def get_company_network_fallback(
                     "message": message,
                     "code": "QUERY_LIMIT_EXCEEDED",
                     "used": current_count,
-                    "limit": limit
+                    "limit": query_limit
                 }
             )
 
