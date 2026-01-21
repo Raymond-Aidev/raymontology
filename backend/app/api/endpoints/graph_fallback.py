@@ -14,6 +14,7 @@ from app.database import AsyncSessionLocal
 from app.core.security import get_current_user_optional
 from app.models.users import User
 from app.routes.view_history import save_view_history
+from app.services.usage_service import check_query_limit, increment_usage
 
 logger = logging.getLogger(__name__)
 
@@ -62,13 +63,27 @@ async def get_company_network_fallback(
     - depth 2: 1단계 + CB 인수자
     - depth 3: 2단계 + 임원 타사 경력
 
-    로그인한 사용자의 경우 조회 기록이 저장됩니다.
+    로그인한 사용자의 경우 조회 기록이 저장되고 조회 횟수가 차감됩니다.
     """
+    # 로그인 사용자 조회 제한 체크
+    if current_user:
+        allowed, message, current_count, limit = await check_query_limit(db, current_user.id, "query")
+        if not allowed:
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "message": message,
+                    "code": "QUERY_LIMIT_EXCEEDED",
+                    "used": current_count,
+                    "limit": limit
+                }
+            )
+
     nodes = []
     relationships = []
     seen_node_ids = set()
     rel_counter = 0
-    
+
     # company_id가 corp_code인지 UUID인지 확인
     is_corp_code = len(company_id) == 8 and company_id.isdigit()
     
@@ -368,9 +383,14 @@ async def get_company_network_fallback(
                     properties={"share_ratio": float(sh.share_ratio) if sh.share_ratio else 0}
                 ))
         
-        # 조회 기록 저장 (로그인 사용자만)
+        # 조회 기록 저장 및 사용량 증가 (로그인 사용자만)
         if current_user:
             try:
+                # 1. 조회 횟수 증가
+                await increment_usage(db, current_user.id, "query")
+                logger.info(f"Usage incremented for user {current_user.id}")
+
+                # 2. 조회 기록 저장
                 await save_view_history(
                     db=db,
                     user_id=current_user.id,
@@ -381,7 +401,7 @@ async def get_company_network_fallback(
                 )
                 logger.info(f"View history saved for user {current_user.id}, company {center_id}")
             except Exception as e:
-                logger.warning(f"Failed to save view history: {e}")
+                logger.warning(f"Failed to save view history or increment usage: {e}")
 
         return GraphResponse(
             nodes=nodes,
