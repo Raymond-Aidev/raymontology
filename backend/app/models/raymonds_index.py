@@ -122,6 +122,7 @@ class RaymondsIndex(Base):
     # ═══════════════════════════════════════════════════════════════
     # 메타데이터
     # ═══════════════════════════════════════════════════════════════
+    algorithm_version = Column(String(10), nullable=False, server_default='2.1')  # 계산 알고리즘 버전 (2.1, 3.0)
     data_quality_score = Column(Numeric(3, 2), nullable=True)  # 데이터 품질 점수 (0-1)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
@@ -150,6 +151,7 @@ class RaymondsIndex(Base):
             "calculation_date": self.calculation_date.isoformat() if self.calculation_date else None,
             "total_score": float(self.total_score) if self.total_score else None,
             "grade": self.grade,
+            "algorithm_version": self.algorithm_version or '2.1',
             # Sub-Index 점수
             "cei_score": float(self.cei_score) if self.cei_score else None,
             "rii_score": float(self.rii_score) if self.rii_score else None,

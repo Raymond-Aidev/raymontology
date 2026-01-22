@@ -7,11 +7,13 @@ RaymondsIndex 계산
 사용법:
     python -m scripts.pipeline.calculate_index --year 2025
     python -m scripts.pipeline.calculate_index --year 2025 --sample 100
+    python -m scripts.pipeline.calculate_index --year 2025 --version 3.0
     python -m scripts.pipeline.calculate_index --stats
 
 옵션:
     --year: 대상 연도 (해당 연도 재무 데이터 기준)
     --sample: 샘플 개수 (테스트용)
+    --version: 알고리즘 버전 (2.1 또는 3.0, 기본값: 2.1)
     --stats: 계산 없이 현재 통계만 출력
 """
 
@@ -32,12 +34,34 @@ logger = logging.getLogger(__name__)
 
 
 class RaymondsIndexCalculator:
-    """RaymondsIndex 계산기"""
+    """RaymondsIndex 계산기
 
-    def __init__(self, database_url: Optional[str] = None):
+    v2.1 (기본): 기존 산술평균 기반 계산
+    v3.0: HDI 방식 기하평균 + 클램핑 + V-Score
+    """
+
+    def __init__(self, database_url: Optional[str] = None, version: str = '2.1'):
         self.database_url = database_url or os.getenv('DATABASE_URL')
         if not self.database_url:
             raise ValueError("DATABASE_URL 환경 변수가 설정되지 않았습니다")
+
+        # asyncpg용 URL로 변환 (SQLAlchemy 형식 → 순수 PostgreSQL 형식)
+        if self.database_url.startswith('postgresql+asyncpg://'):
+            self.database_url = self.database_url.replace('postgresql+asyncpg://', 'postgresql://')
+
+        self.version = version
+        self._v3_calculator = None
+
+        # v3.0 사용 시 v3 모듈 로드
+        if version == '3.0':
+            try:
+                from app.services.raymonds_index_v3.engine import RaymondsIndexCalculatorV3
+                self._v3_calculator = RaymondsIndexCalculatorV3()
+                logger.info("RaymondsIndex v3.0 계산기 로드 완료")
+            except ImportError as e:
+                logger.error(f"v3.0 모듈 로드 실패: {e}")
+                logger.info("v2.1 모드로 폴백합니다")
+                self.version = '2.1'
 
     async def calculate(
         self,
@@ -55,7 +79,7 @@ class RaymondsIndexCalculator:
         Returns:
             계산 결과 통계
         """
-        logger.info(f"=== RaymondsIndex 계산 시작 ===")
+        logger.info(f"=== RaymondsIndex 계산 시작 (v{self.version}) ===")
 
         conn = await asyncpg.connect(self.database_url)
 
@@ -96,9 +120,15 @@ class RaymondsIndexCalculator:
                     logger.info(f"진행: {i+1}/{len(companies)}")
 
                 try:
-                    result = await self._calculate_for_company(
-                        conn, company['id'], company['name'], year
-                    )
+                    # 버전에 따라 다른 계산기 사용
+                    if self.version == '3.0' and self._v3_calculator:
+                        result = await self._calculate_v3(
+                            conn, company['id'], company['name'], year
+                        )
+                    else:
+                        result = await self._calculate_for_company(
+                            conn, company['id'], company['name'], year
+                        )
 
                     if result:
                         stats['calculated'] += 1
@@ -234,6 +264,98 @@ class RaymondsIndexCalculator:
 
         return {'score': score, 'grade': grade}
 
+    async def _calculate_v3(
+        self,
+        conn: asyncpg.Connection,
+        company_id: str,
+        company_name: str,
+        year: Optional[int] = None
+    ) -> Optional[Dict[str, Any]]:
+        """v3.0 알고리즘으로 개별 회사 RaymondsIndex 계산
+
+        HDI 방식 기하평균 + 클램핑 + V-Score 적용
+        ⚠️ 옵션 A: 별도 테이블 (raymonds_index_v3)에 저장
+           → 기존 raymonds_index 테이블 영향 없음
+        """
+        # 재무 데이터 조회 (5년치)
+        query = """
+            SELECT fiscal_year, revenue, operating_income, net_income,
+                   total_assets, total_liabilities, total_equity,
+                   operating_cash_flow, investing_cash_flow, financing_cash_flow,
+                   capex, r_and_d_expense, dividend_paid,
+                   cash_and_equivalents, short_term_investments, tangible_assets
+            FROM financial_details
+            WHERE company_id = $1
+        """
+        params = [company_id]
+
+        if year:
+            query += " AND fiscal_year <= $2"
+            params.append(year)
+
+        query += " ORDER BY fiscal_year DESC LIMIT 5"
+
+        financials = await conn.fetch(query, *params)
+
+        if len(financials) < 2:  # 최소 2년 데이터 필요
+            return None
+
+        # 리스트 형태로 변환 (오래된 순서로 정렬)
+        financial_data = [dict(row) for row in reversed(financials)]
+
+        # v3.0 계산기로 계산
+        try:
+            result = self._v3_calculator.calculate(str(company_id), financial_data)
+
+            # ⭐ 별도 테이블 (raymonds_index_v3)에 저장
+            # 기존 raymonds_index 테이블은 변경하지 않음
+            await conn.execute("""
+                INSERT INTO raymonds_index_v3 (
+                    id, company_id, fiscal_year, total_score, grade,
+                    cei_score, rii_score, cgi_score, mai_score,
+                    investment_gap, cash_cagr, capex_growth,
+                    asset_turnover, reinvestment_rate,
+                    algorithm_version, data_quality_score, calculation_date
+                )
+                VALUES (
+                    gen_random_uuid(), $1, $2, $3, $4,
+                    $5, $6, $7, $8,
+                    $9, $10, $11,
+                    $12, $13,
+                    $14, $15, CURRENT_DATE
+                )
+                ON CONFLICT (company_id, fiscal_year)
+                DO UPDATE SET
+                    total_score = $3, grade = $4,
+                    cei_score = $5, rii_score = $6, cgi_score = $7, mai_score = $8,
+                    investment_gap = $9, cash_cagr = $10, capex_growth = $11,
+                    asset_turnover = $12, reinvestment_rate = $13,
+                    algorithm_version = $14, data_quality_score = $15,
+                    calculation_date = CURRENT_DATE
+            """,
+                company_id,
+                result.fiscal_year,
+                result.total_score,
+                result.grade,
+                result.cei_score,
+                result.rii_score,
+                result.cgi_score,
+                result.mai_score,
+                result.investment_gap,
+                result.raw_metrics.get('cash_cagr') if result.raw_metrics else None,
+                result.raw_metrics.get('capex_growth') if result.raw_metrics else None,
+                result.raw_metrics.get('asset_turnover') if result.raw_metrics else None,
+                result.raw_metrics.get('reinvestment_rate') if result.raw_metrics else None,
+                '3.0',
+                result.data_quality_score,
+            )
+
+            return {'score': result.total_score, 'grade': result.grade}
+
+        except Exception as e:
+            logger.error(f"v3.0 계산 오류 {company_name}: {e}")
+            return None
+
     def _get_grade(self, score: float) -> str:
         """점수 → 등급 변환"""
         if score >= 95:
@@ -293,11 +415,13 @@ async def main():
     parser = argparse.ArgumentParser(description='RaymondsIndex 계산')
     parser.add_argument('--year', type=int, help='대상 연도')
     parser.add_argument('--sample', type=int, help='샘플 개수 (테스트용)')
+    parser.add_argument('--version', type=str, default='2.1', choices=['2.1', '3.0'],
+                        help='알고리즘 버전 (2.1 또는 3.0, 기본값: 2.1)')
     parser.add_argument('--stats', action='store_true', help='현재 통계만 출력')
 
     args = parser.parse_args()
 
-    calculator = RaymondsIndexCalculator()
+    calculator = RaymondsIndexCalculator(version=args.version)
 
     if args.stats:
         stats = await calculator.get_stats()
