@@ -70,6 +70,8 @@ function SubIndexItem({
 }
 
 export function SubIndexRadar({ cei, rii, cgi, mai }: SubIndexRadarProps) {
+  // v3.1: 핵심 3개 Sub-Index (CEI 45%, CGI 45%, RII 10%)
+  // MAI는 가중치 0%이므로 레이더 차트에서 제외, 참고용으로만 표시
   const data = [
     {
       subject: `CEI (${SUB_INDEX_INFO.CEI.weight}%)`,
@@ -84,11 +86,6 @@ export function SubIndexRadar({ cei, rii, cgi, mai }: SubIndexRadarProps) {
     {
       subject: `CGI (${SUB_INDEX_INFO.CGI.weight}%)`,
       value: cgi || 0,
-      fullMark: 100,
-    },
-    {
-      subject: `MAI (${SUB_INDEX_INFO.MAI.weight}%)`,
-      value: mai || 0,
       fullMark: 100,
     },
   ];
@@ -136,11 +133,32 @@ export function SubIndexRadar({ cei, rii, cgi, mai }: SubIndexRadarProps) {
         </div>
 
         {/* Sub-Index Legend with Tooltips */}
+        {/* v3.1: CEI, CGI 핵심 지표로 강조 */}
         <div className="grid grid-cols-2 gap-3 mt-4">
-          <SubIndexItem code="CEI" value={cei} />
-          <SubIndexItem code="RII" value={rii} highlighted />
-          <SubIndexItem code="CGI" value={cgi} />
-          <SubIndexItem code="MAI" value={mai} />
+          <SubIndexItem code="CEI" value={cei} highlighted />
+          <SubIndexItem code="CGI" value={cgi} highlighted />
+          <SubIndexItem code="RII" value={rii} />
+          {/* MAI: 참고용 (가중치 0%) */}
+          <div className="text-center p-2 bg-gray-100 rounded opacity-60">
+            <div className="flex items-center justify-center gap-1">
+              <p className="text-xs text-gray-400">MAI</p>
+              <TooltipProvider delayDuration={0}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="text-gray-300 hover:text-gray-500 focus:outline-none">
+                      <HelpCircle className="w-3 h-3" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs">
+                    <p className="text-sm font-medium mb-1">{SUB_INDEX_INFO.MAI.label} (참고용)</p>
+                    <p className="text-sm text-gray-600">{SUB_INDEX_INFO.MAI.description}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <p className="font-semibold text-gray-500">{mai?.toFixed(1) || '-'}</p>
+            <p className="text-xs text-gray-400">{SUB_INDEX_INFO.MAI.label}</p>
+          </div>
         </div>
       </CardContent>
     </Card>
