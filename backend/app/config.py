@@ -146,6 +146,9 @@ class Settings(BaseSettings):
                 "https://www.konnect-ai.net",
                 "https://konnect-ai.net",
                 "https://raymondsindex.konnect-ai.net",
+                # 앱인토스 (Apps in Toss) 도메인
+                "https://raymondsrisk.apps.tossmini.com",
+                "https://raymondsrisk.private-apps.tossmini.com",
             ]
         if self.environment == "staging":
             return [
