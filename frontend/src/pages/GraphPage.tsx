@@ -789,7 +789,9 @@ function GraphPage() {
                 width={dimensions.width}
                 height={dimensions.height}
                 onNodeClick={handleNodeClick}
+                onNavigateToCompany={handleNavigateToCompany}
                 selectedNodeId={selectedNode?.id}
+                centerCompanyId={companyId}
               />
               <GraphControls
                 onZoomIn={handleZoomIn}
@@ -822,6 +824,7 @@ function GraphPage() {
             onClose={() => selectNode(null)}
             onRecenter={handleRecenter}
             onNavigateToCompany={handleNavigateToCompany}
+            centerCompanyId={companyId}
           />
         </div>
       </div>
@@ -841,6 +844,7 @@ function GraphPage() {
               onClose={() => selectNode(null)}
               onRecenter={handleRecenter}
               onNavigateToCompany={handleNavigateToCompany}
+              centerCompanyId={companyId}
             />
           </div>
         </BottomSheet>
@@ -998,7 +1002,9 @@ function GraphPage() {
               width={window.innerWidth}
               height={window.innerHeight}
               onNodeClick={handleNodeClick}
+              onNavigateToCompany={handleNavigateToCompany}
               selectedNodeId={selectedNode?.id}
+              centerCompanyId={companyId}
             />
           </div>
 

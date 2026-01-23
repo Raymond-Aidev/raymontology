@@ -16,13 +16,18 @@ const COMPANY_TEXT_COLOR = '#000000'     // black
 const DEFICIT_BADGE_COLOR = '#F97316'    // orange-500
 const DEFICIT_BADGE_STROKE = '#EA580C'   // orange-600
 
+// 이동 가능한 기업 노드 표시 (DB에 있는 기업)
+const NAVIGABLE_COMPANY_GLOW = '#60A5FA'  // blue-400 (호버 시 글로우)
+
 interface ForceGraphProps {
   data: GraphData
   width: number
   height: number
   onNodeClick?: (node: GraphNode) => void
   onNodeDoubleClick?: (node: GraphNode) => void
+  onNavigateToCompany?: (node: GraphNode) => void  // 기업 관계도 이동 콜백
   selectedNodeId?: string | null
+  centerCompanyId?: string | null  // 현재 그래프 중심 기업 ID
 }
 
 export interface ForceGraphRef {
@@ -35,7 +40,9 @@ const ForceGraph = forwardRef<ForceGraphRef, ForceGraphProps>(({
   height,
   onNodeClick,
   onNodeDoubleClick,
+  onNavigateToCompany,
   selectedNodeId,
+  centerCompanyId,
 }, ref) => {
   const svgRef = useRef<SVGSVGElement>(null)
   const simulationRef = useRef<d3.Simulation<GraphNode, GraphLink> | null>(null)
@@ -43,6 +50,14 @@ const ForceGraph = forwardRef<ForceGraphRef, ForceGraphProps>(({
 
   // 클릭되어 채워진 노드들 (선택된 노드와 별개로 유지)
   const [filledNodeIds, setFilledNodeIds] = useState<Set<string>>(new Set())
+
+  // DB에 등록된 기업인지 확인 (corp_code 존재 여부)
+  // 현재 중심 기업은 네비게이션 대상에서 제외
+  const isNavigableCompany = useCallback((node: GraphNode): boolean => {
+    return node.type === 'company' &&
+           !!node.corp_code &&
+           node.id !== centerCompanyId
+  }, [centerCompanyId])
 
   // 노드가 채워져야 하는지 결정 (임원 경력 3개 이상 또는 클릭됨)
   const shouldFillNode = useCallback((node: GraphNode): boolean => {
@@ -234,7 +249,7 @@ const ForceGraph = forwardRef<ForceGraphRef, ForceGraphProps>(({
         return `${typeLabel}: ${d.name}`
       })
       .attr('tabindex', 0)
-      .style('cursor', 'pointer')
+      .style('cursor', d => isNavigableCompany(d) ? 'pointer' : 'default')
       .call(d3.drag<SVGGElement, GraphNode>()
         .on('start', (event, d) => {
           if (!event.active) simulation.alphaTarget(0.3).restart()
@@ -407,19 +422,58 @@ const ForceGraph = forwardRef<ForceGraphRef, ForceGraphProps>(({
       onNodeClick?.(d)
     })
 
-    // 더블클릭 이벤트 (Re-center)
+    // 더블클릭 이벤트: DB 기업 → 네비게이션, 그 외 → Re-center
     node.on('dblclick', (event, d) => {
       event.stopPropagation()
-      centerOnNodeFn(d)
-      onNodeDoubleClick?.(d)
+
+      // DB에 등록된 기업이면 해당 기업 관계도로 이동
+      if (isNavigableCompany(d)) {
+        onNavigateToCompany?.(d)
+      } else {
+        // 그 외 노드는 재중심
+        centerOnNodeFn(d)
+        onNodeDoubleClick?.(d)
+      }
     })
 
-    // 키보드 접근성: Enter/Space로 노드 선택
+    // 키보드 접근성: Enter/Space로 노드 선택, DB 기업은 Enter로 이동
     node.on('keydown', (event: KeyboardEvent, d) => {
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault()
         event.stopPropagation()
-        onNodeClick?.(d)
+
+        // Enter 키로 DB 기업 관계도 이동
+        if (event.key === 'Enter' && isNavigableCompany(d)) {
+          onNavigateToCompany?.(d)
+        } else {
+          onNodeClick?.(d)
+        }
+      }
+    })
+
+    // 호버 이벤트: 이동 가능한 기업 노드에 글로우 효과
+    node.on('mouseenter', function(_event, d) {
+      if (isNavigableCompany(d)) {
+        const nodeGroup = d3.select(this)
+        // 글로우 링 활성화
+        nodeGroup.select('.glow-ring')
+          .attr('stroke', NAVIGABLE_COMPANY_GLOW)
+          .attr('stroke-opacity', 0.8)
+          .attr('stroke-width', 3)
+        // 커서를 pointer로 변경 (이미 설정되어 있지만 명시적으로)
+        nodeGroup.style('cursor', 'pointer')
+      }
+    })
+
+    node.on('mouseleave', function(_event, d) {
+      if (isNavigableCompany(d)) {
+        const nodeGroup = d3.select(this)
+        // 글로우 링 비활성화 (선택된 노드가 아니면)
+        if (d.id !== selectedNodeId) {
+          nodeGroup.select('.glow-ring')
+            .attr('stroke', 'transparent')
+            .attr('stroke-opacity', 0.5)
+        }
       }
     })
 
@@ -445,7 +499,7 @@ const ForceGraph = forwardRef<ForceGraphRef, ForceGraphProps>(({
     // Note: filledNodeIds, getNodeFillColor, shouldFillNode are intentionally excluded
     // Click handler updates node visuals directly via D3, no re-render needed
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, width, height, onNodeClick, onNodeDoubleClick, selectedNodeId, getNodeRadius, centerOnNodeFn, getNodeStrokeColor])
+  }, [data, width, height, onNodeClick, onNodeDoubleClick, onNavigateToCompany, selectedNodeId, getNodeRadius, centerOnNodeFn, getNodeStrokeColor, isNavigableCompany])
 
   // 선택 노드 변경 시 하이라이트 업데이트
   useEffect(() => {

@@ -32,8 +32,13 @@ const shareholderTypeLabels: Record<string, string> = {
   institution: '기관투자자',
 }
 
-export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateToCompany: _onNavigateToCompany }: NodeDetailPanelProps) {
-  // Note: _onNavigateToCompany is available for future use when company cards are clickable
+interface NodeDetailPanelExtendedProps extends NodeDetailPanelProps {
+  centerCompanyId?: string | null  // 현재 그래프 중심 기업 ID (자기 자신 제외용)
+}
+
+export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateToCompany, centerCompanyId }: NodeDetailPanelExtendedProps) {
+  // DB에 등록된 기업인지 확인 (corp_code 존재 여부) - 현재 중심 기업 제외
+  const isNavigableCompany = node?.type === 'company' && !!node.corp_code && node.id !== centerCompanyId
   // 임원 경력 상태
   const [career, setCareer] = useState<OfficerCareer[]>([])
   const [careerRawText, setCareerRawText] = useState<string | null>(null)  // 사업보고서 주요경력 원문 (v2.4)
@@ -821,6 +826,18 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l-4 4m0 0l-4-4m4 4V3m0 18a9 9 0 110-18 9 9 0 010 18z" />
             </svg>
             노드로 이동
+          </button>
+        )}
+        {/* 이 회사 관계도 보기 버튼 (DB에 있는 기업 노드만, 중심 기업 제외) */}
+        {isNavigableCompany && onNavigateToCompany && (
+          <button
+            onClick={() => onNavigateToCompany(node)}
+            className="w-full py-2.5 px-4 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition-all flex items-center justify-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+            </svg>
+            이 회사 관계도 보기
           </button>
         )}
         {/* 분석 보고서 링크 (회사 노드만) */}
