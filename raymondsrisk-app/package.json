@@ -12,7 +12,7 @@
     "granite:build": "npx granite build"
   },
   "dependencies": {
-    "@apps-in-toss/web-framework": "^1.8.0",
+    "@apps-in-toss/web-framework": "^1.6.2",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@tanstack/react-query": "^5.90.15",
