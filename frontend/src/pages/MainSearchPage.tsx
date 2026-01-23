@@ -198,9 +198,9 @@ function MainSearchPage() {
           </div>
 
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-text-primary mb-6 tracking-tight leading-tight">
-            누구와 엮여 있는가,
+            누구와 엮여 있는가
             <br />
-            <span className="text-gradient">리스크는 관계를 타고 번진다.</span>
+            <span className="text-gradient">리스크는 관계를 타고 번진다</span>
           </h1>
           <p className="text-lg md:text-xl text-text-secondary max-w-2xl mx-auto leading-relaxed">
             3단계 관계망 분석으로 임원 이력, CB 인수자, 숨겨진 연결고리까지.
