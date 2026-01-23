@@ -136,7 +136,7 @@ export default function BottomSheet({
       {/* 바텀시트 */}
       <div
         ref={sheetRef}
-        className={`fixed bottom-0 left-0 right-0 z-50 bg-dark-card border-t border-dark-border rounded-t-2xl md:hidden
+        className={`fixed bottom-0 left-0 right-0 z-50 bg-theme-card border-t border-theme-border rounded-t-2xl md:hidden
                    ${isDragging ? '' : 'transition-all duration-300 ease-out'}`}
         style={{
           height: `${effectiveHeight}vh`,
@@ -151,16 +151,16 @@ export default function BottomSheet({
           onTouchEnd={handleTouchEnd}
           onMouseDown={handleMouseDown}
         >
-          <div className="w-10 h-1 bg-dark-border rounded-full mx-auto" />
+          <div className="w-10 h-1 bg-theme-border rounded-full mx-auto" />
         </div>
 
         {/* 헤더 */}
         {title && (
-          <div className="px-4 pb-3 border-b border-dark-border flex items-center justify-between">
+          <div className="px-4 pb-3 border-b border-theme-border flex items-center justify-between">
             <h3 className="font-semibold text-text-primary">{title}</h3>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg hover:bg-dark-hover text-text-muted"
+              className="p-1.5 rounded-lg hover:bg-theme-hover text-text-muted"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

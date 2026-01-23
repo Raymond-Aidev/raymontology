@@ -477,7 +477,7 @@ const ForceGraph = forwardRef<ForceGraphRef, ForceGraphProps>(({
       ref={svgRef}
       width={width}
       height={height}
-      className="bg-dark-bg rounded-lg"
+      className="bg-theme-bg rounded-lg"
       style={{
         background: 'radial-gradient(circle at center, #171717 0%, #0a0a0a 100%)'
       }}

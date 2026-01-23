@@ -183,15 +183,15 @@ function MainSearchPage() {
         <div className="relative z-10 text-center mb-10 animate-fade-in">
           {/* Feature badges */}
           <div className="flex flex-wrap items-center justify-center gap-2 mb-8">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-dark-card border border-dark-border rounded-full">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-theme-card border border-theme-border rounded-full">
               <span className="text-sm">🔍</span>
               <span className="text-xs font-medium text-text-secondary">3단계 관계망 분석</span>
             </div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-dark-card border border-dark-border rounded-full">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-theme-card border border-theme-border rounded-full">
               <span className="text-sm">⚡</span>
               <span className="text-xs font-medium text-text-secondary">실시간 리스크 탐지</span>
             </div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-dark-card border border-dark-border rounded-full">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-theme-card border border-theme-border rounded-full">
               <span className="text-sm">📊</span>
               <span className="text-xs font-medium text-text-secondary">RaymondsRisk 스코어</span>
             </div>
@@ -220,11 +220,11 @@ function MainSearchPage() {
 
         {/* Search hint */}
         <p className="relative z-10 mt-4 text-xs text-text-muted font-mono">
-          <kbd className="px-1.5 py-0.5 bg-dark-card border border-dark-border rounded text-text-tertiary">↑↓</kbd>
+          <kbd className="px-1.5 py-0.5 bg-theme-card border border-theme-border rounded text-text-tertiary">↑↓</kbd>
           {' '}탐색{' '}
-          <kbd className="px-1.5 py-0.5 bg-dark-card border border-dark-border rounded text-text-tertiary">Enter</kbd>
+          <kbd className="px-1.5 py-0.5 bg-theme-card border border-theme-border rounded text-text-tertiary">Enter</kbd>
           {' '}선택{' '}
-          <kbd className="px-1.5 py-0.5 bg-dark-card border border-dark-border rounded text-text-tertiary">Esc</kbd>
+          <kbd className="px-1.5 py-0.5 bg-theme-card border border-theme-border rounded text-text-tertiary">Esc</kbd>
           {' '}닫기
         </p>
 
@@ -236,28 +236,28 @@ function MainSearchPage() {
             </p>
             <p className="text-xs text-text-muted uppercase tracking-wider">분석 기업</p>
           </div>
-          <div className="w-px h-10 bg-dark-border hidden sm:block" />
+          <div className="w-px h-10 bg-theme-border hidden sm:block" />
           <div className="text-center">
             <p className="text-xl md:text-2xl font-bold font-mono text-text-primary">
               {stats ? stats.convertible_bonds.toLocaleString() : '1,463'}
             </p>
             <p className="text-xs text-text-muted uppercase tracking-wider">CB 발행</p>
           </div>
-          <div className="w-px h-10 bg-dark-border hidden sm:block" />
+          <div className="w-px h-10 bg-theme-border hidden sm:block" />
           <div className="text-center">
             <p className="text-xl md:text-2xl font-bold font-mono text-text-primary">
               {stats ? (stats.officers >= 1000 ? `${Math.floor(stats.officers / 1000)}K+` : stats.officers.toLocaleString()) : '44K+'}
             </p>
             <p className="text-xs text-text-muted uppercase tracking-wider">임원 데이터</p>
           </div>
-          <div className="w-px h-10 bg-dark-border hidden sm:block" />
+          <div className="w-px h-10 bg-theme-border hidden sm:block" />
           <div className="text-center">
             <p className="text-xl md:text-2xl font-bold font-mono text-text-primary">
               {stats ? (stats.major_shareholders >= 1000 ? `${Math.floor(stats.major_shareholders / 1000)}K+` : stats.major_shareholders.toLocaleString()) : '95K+'}
             </p>
             <p className="text-xs text-text-muted uppercase tracking-wider">주주변동</p>
           </div>
-          <div className="w-px h-10 bg-dark-border hidden sm:block" />
+          <div className="w-px h-10 bg-theme-border hidden sm:block" />
           <div className="text-center">
             <p className="text-xl md:text-2xl font-bold font-mono text-text-primary">
               {stats ? stats.financial_statements.toLocaleString() : '9,432'}
@@ -284,7 +284,7 @@ function MainSearchPage() {
                 </p>
               </div>
             </div>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-text-primary bg-dark-card border border-dark-border rounded-lg hover:border-accent-primary/50 transition-all">
+            <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-text-primary bg-theme-card border border-theme-border rounded-lg hover:border-accent-primary/50 transition-all">
               전체 보기
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -305,7 +305,7 @@ function MainSearchPage() {
           {/* Error */}
           {highRiskError && !isLoadingHighRisk && highRiskCompanies.length === 0 && (
             <div className="text-center py-16">
-              <div className="w-16 h-16 mx-auto mb-4 bg-dark-card border border-dark-border rounded-xl flex items-center justify-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-theme-card border border-theme-border rounded-xl flex items-center justify-center">
                 <svg className="w-8 h-8 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                         d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -324,7 +324,7 @@ function MainSearchPage() {
           {/* Empty */}
           {!isLoadingHighRisk && !highRiskError && highRiskCompanies.length === 0 && (
             <div className="text-center py-16">
-              <div className="w-16 h-16 mx-auto mb-4 bg-dark-card border border-dark-border rounded-xl flex items-center justify-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-theme-card border border-theme-border rounded-xl flex items-center justify-center">
                 <svg className="w-8 h-8 text-accent-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                         d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -345,7 +345,7 @@ function MainSearchPage() {
                   <button
                     key={company.id}
                     onClick={() => handleSelectCompany(company)}
-                    className="group bg-dark-card border border-dark-border rounded-xl p-4
+                    className="group bg-theme-card border border-theme-border rounded-xl p-4
                                hover:border-accent-primary/50 hover:shadow-glow
                                transition-all duration-300 text-left
                                animate-fade-in-up"
@@ -401,7 +401,7 @@ function MainSearchPage() {
                     </div>
 
                     {/* Hover indicator */}
-                    <div className="mt-3 pt-3 border-t border-dark-border opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end text-xs text-accent-primary">
+                    <div className="mt-3 pt-3 border-t border-theme-border opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end text-xs text-accent-primary">
                       관계도 분석
                       <svg className="w-3.5 h-3.5 ml-1 transform group-hover:translate-x-1 transition-transform"
                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -417,7 +417,7 @@ function MainSearchPage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-16 px-4 border-t border-dark-border">
+      <section className="py-16 px-4 border-t border-theme-border">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-xl font-semibold text-center text-text-primary mb-12">
             분석 영역
@@ -425,7 +425,7 @@ function MainSearchPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* CB Network */}
-            <div className="group p-6 bg-dark-card border border-dark-border rounded-xl hover:border-accent-purple/50 hover:shadow-glow-purple transition-all">
+            <div className="group p-6 bg-theme-card border border-theme-border rounded-xl hover:border-accent-purple/50 hover:shadow-glow-purple transition-all">
               <div className="w-12 h-12 mb-4 bg-accent-purple/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <svg className="w-6 h-6 text-accent-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
@@ -436,7 +436,7 @@ function MainSearchPage() {
               <p className="text-sm text-text-secondary leading-relaxed">
                 전환사채 발행 이력과 인수인 간 연결관계를 분석합니다
               </p>
-              <div className="mt-4 pt-4 border-t border-dark-border">
+              <div className="mt-4 pt-4 border-t border-theme-border">
                 <div className="flex items-center gap-2 text-xs text-text-muted">
                   <span className="font-mono">1,435</span>
                   <span>건의 CB 발행 분석</span>
@@ -445,7 +445,7 @@ function MainSearchPage() {
             </div>
 
             {/* Officer Network */}
-            <div className="group p-6 bg-dark-card border border-dark-border rounded-xl hover:border-accent-success/50 hover:shadow-glow-green transition-all">
+            <div className="group p-6 bg-theme-card border border-theme-border rounded-xl hover:border-accent-success/50 hover:shadow-glow-green transition-all">
               <div className="w-12 h-12 mb-4 bg-accent-success/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <svg className="w-6 h-6 text-accent-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
@@ -456,7 +456,7 @@ function MainSearchPage() {
               <p className="text-sm text-text-secondary leading-relaxed">
                 임원진의 타사 겸직 및 과거 이력을 통한 회사 간 연결고리를 파악합니다
               </p>
-              <div className="mt-4 pt-4 border-t border-dark-border">
+              <div className="mt-4 pt-4 border-t border-theme-border">
                 <div className="flex items-center gap-2 text-xs text-text-muted">
                   <span className="font-mono">38,125</span>
                   <span>명의 임원 데이터</span>
@@ -465,7 +465,7 @@ function MainSearchPage() {
             </div>
 
             {/* Financial Risk */}
-            <div className="group p-6 bg-dark-card border border-dark-border rounded-xl hover:border-accent-warning/50 transition-all">
+            <div className="group p-6 bg-theme-card border border-theme-border rounded-xl hover:border-accent-warning/50 transition-all">
               <div className="w-12 h-12 mb-4 bg-accent-warning/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <svg className="w-6 h-6 text-accent-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
@@ -476,7 +476,7 @@ function MainSearchPage() {
               <p className="text-sm text-text-secondary leading-relaxed">
                 부채비율, 영업이익, 자산규모 등 핵심 재무지표를 종합 평가합니다
               </p>
-              <div className="mt-4 pt-4 border-t border-dark-border">
+              <div className="mt-4 pt-4 border-t border-theme-border">
                 <div className="flex items-center gap-2 text-xs text-text-muted">
                   <span className="font-mono">9,432</span>
                   <span>건의 재무제표</span>
@@ -491,7 +491,7 @@ function MainSearchPage() {
     {/* Paywall Modal */}
     {showPaywallModal && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
-        <div className="bg-dark-card border border-dark-border rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl animate-scale-in">
+        <div className="bg-theme-card border border-theme-border rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl animate-scale-in">
           {/* Icon */}
           <div className="w-14 h-14 mx-auto mb-4 bg-accent-warning/10 rounded-2xl flex items-center justify-center">
             <svg className="w-7 h-7 text-accent-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -526,7 +526,7 @@ function MainSearchPage() {
     {/* Login Required Modal */}
     {showLoginModal && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
-        <div className="bg-dark-card border border-dark-border rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl animate-scale-in">
+        <div className="bg-theme-card border border-theme-border rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl animate-scale-in">
           {/* Icon */}
           <div className="w-14 h-14 mx-auto mb-4 bg-accent-primary/10 rounded-2xl flex items-center justify-center">
             <svg className="w-7 h-7 text-accent-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -559,7 +559,7 @@ function MainSearchPage() {
             </button>
             <button
               onClick={() => setShowLoginModal(false)}
-              className="w-full py-3 px-4 bg-dark-surface hover:bg-dark-hover border border-dark-border text-text-secondary font-medium rounded-xl transition-colors"
+              className="w-full py-3 px-4 bg-theme-surface hover:bg-theme-hover border border-theme-border text-text-secondary font-medium rounded-xl transition-colors"
             >
               취소
             </button>
@@ -585,7 +585,7 @@ function MainSearchPage() {
     {/* No Quota Modal - 조회 한도 초과 */}
     {showNoQuotaModal && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
-        <div className="bg-dark-card border border-dark-border rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl animate-scale-in">
+        <div className="bg-theme-card border border-theme-border rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl animate-scale-in">
           {/* Icon */}
           <div className="w-14 h-14 mx-auto mb-4 bg-accent-danger/10 rounded-2xl flex items-center justify-center">
             <svg className="w-7 h-7 text-accent-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -607,7 +607,7 @@ function MainSearchPage() {
 
           {/* Usage Info */}
           {usageData && (
-            <div className="mb-6 p-3 bg-dark-surface rounded-lg border border-dark-border">
+            <div className="mb-6 p-3 bg-theme-surface rounded-lg border border-theme-border">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-text-muted">이번 달 사용량</span>
                 <span className="text-text-primary font-medium">
@@ -630,7 +630,7 @@ function MainSearchPage() {
             </button>
             <button
               onClick={() => setShowNoQuotaModal(false)}
-              className="w-full py-3 px-4 bg-dark-surface hover:bg-dark-hover border border-dark-border text-text-secondary font-medium rounded-xl transition-colors"
+              className="w-full py-3 px-4 bg-theme-surface hover:bg-theme-hover border border-theme-border text-text-secondary font-medium rounded-xl transition-colors"
             >
               닫기
             </button>

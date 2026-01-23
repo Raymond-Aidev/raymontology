@@ -707,7 +707,7 @@ function AdminPage() {
     return (
       <div className="min-h-screen bg-theme-bg flex flex-col">
         {/* Header */}
-        <header className="bg-dark-surface/80 backdrop-blur-xl border-b border-dark-border">
+        <header className="bg-theme-surface/80 backdrop-blur-xl border-b border-theme-border">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-center h-14">
               <RaymondsRiskLogo size="sm" variant="compact" />
@@ -817,7 +817,7 @@ function AdminPage() {
   return (
     <div className="min-h-screen bg-theme-bg">
       {/* Header */}
-      <header className="bg-dark-surface/80 backdrop-blur-xl border-b border-dark-border sticky top-0 z-50">
+      <header className="bg-theme-surface/80 backdrop-blur-xl border-b border-theme-border sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14">
             <div className="flex items-center gap-4">
@@ -830,7 +830,7 @@ function AdminPage() {
             </div>
             <button
               onClick={() => navigate('/')}
-              className="px-3 py-1.5 text-sm text-text-secondary hover:text-text-primary hover:bg-dark-hover rounded-lg transition-colors"
+              className="px-3 py-1.5 text-sm text-text-secondary hover:text-text-primary hover:bg-theme-hover rounded-lg transition-colors"
             >
               메인으로
             </button>

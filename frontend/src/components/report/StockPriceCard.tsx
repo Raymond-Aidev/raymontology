@@ -103,7 +103,7 @@ export default function StockPriceCard({ companyId }: StockPriceCardProps) {
     return (
       <div className="flex flex-col items-center justify-center p-4 md:p-6">
         <div className="text-sm text-text-muted mb-2">최근 1년 주가 차트</div>
-        <div className="w-full h-24 bg-dark-hover rounded animate-pulse" />
+        <div className="w-full h-24 bg-theme-hover rounded animate-pulse" />
       </div>
     )
   }

@@ -13,7 +13,7 @@ function Header() {
   const displayName = useAuthStore(selectUserName)
 
   return (
-    <header className="bg-dark-surface/80 backdrop-blur-xl border-b border-dark-border sticky top-0 z-50">
+    <header className="bg-theme-surface/80 backdrop-blur-xl border-b border-theme-border sticky top-0 z-50">
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14">
           {/* Logo + API Status */}
@@ -22,7 +22,7 @@ function Header() {
               <RaymondsRiskLogo size="md" variant="compact" />
             </Link>
             {/* API Status */}
-            <div className="hidden sm:flex items-center gap-2 px-2 py-1 bg-dark-card rounded-full border border-dark-border">
+            <div className="hidden sm:flex items-center gap-2 px-2 py-1 bg-theme-card rounded-full border border-theme-border">
               <ApiStatusDot className="scale-75" />
             </div>
           </div>
@@ -31,31 +31,31 @@ function Header() {
           <nav className="hidden md:flex items-center gap-1">
             <Link
               to="/"
-              className="px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-dark-hover rounded-lg transition-all"
+              className="px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-theme-hover rounded-lg transition-all"
             >
               검색
             </Link>
             <Link
               to="/viewed-companies"
-              className="px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-dark-hover rounded-lg transition-all"
+              className="px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-theme-hover rounded-lg transition-all"
             >
               조회한 기업
             </Link>
             <Link
               to="/about"
-              className="px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-dark-hover rounded-lg transition-all"
+              className="px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-theme-hover rounded-lg transition-all"
             >
               서비스 소개
             </Link>
             <Link
               to="/contact"
-              className="px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-dark-hover rounded-lg transition-all"
+              className="px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-theme-hover rounded-lg transition-all"
             >
               문의
             </Link>
             <Link
               to="/service-application"
-              className="px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-dark-hover rounded-lg transition-all"
+              className="px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-theme-hover rounded-lg transition-all"
             >
               서비스 이용신청
             </Link>
@@ -70,12 +70,12 @@ function Header() {
               <div className="relative">
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-dark-card border border-dark-border rounded-lg hover:border-dark-hover transition-all"
+                  className="flex items-center gap-2 px-3 py-1.5 bg-theme-card border border-theme-border rounded-lg hover:border-theme-hover transition-all"
                 >
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
                     user.is_superuser
                       ? 'bg-gradient-to-br from-accent-primary to-purple-500'
-                      : 'bg-dark-hover'
+                      : 'bg-theme-hover'
                   }`}>
                     <span className="text-xs font-medium text-white">
                       {displayName.charAt(0).toUpperCase()}
@@ -89,8 +89,8 @@ function Header() {
 
                 {/* Dropdown */}
                 {isUserMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-dark-card border border-dark-border rounded-xl shadow-card-hover py-1 animate-scale-in">
-                    <div className="px-4 py-3 border-b border-dark-border">
+                  <div className="absolute right-0 mt-2 w-56 bg-theme-card border border-theme-border rounded-xl shadow-card-hover py-1 animate-scale-in">
+                    <div className="px-4 py-3 border-b border-theme-border">
                       <p className="text-sm font-medium text-text-primary">{displayName}</p>
                       <p className="text-xs text-text-muted mt-0.5">{user.email}</p>
                       {user.is_superuser && (
@@ -128,7 +128,7 @@ function Header() {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2 rounded-lg hover:bg-dark-hover text-text-secondary"
+            className="md:hidden p-2 rounded-lg hover:bg-theme-hover text-text-secondary"
             aria-label="메뉴 열기"
           >
             <svg
@@ -158,51 +158,51 @@ function Header() {
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-dark-border py-4 animate-slide-down">
+          <div className="md:hidden border-t border-theme-border py-4 animate-slide-down">
             <nav className="flex flex-col gap-1">
               <Link
                 to="/"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="px-4 py-2.5 text-sm text-text-secondary hover:text-text-primary hover:bg-dark-hover rounded-lg transition-all"
+                className="px-4 py-2.5 text-sm text-text-secondary hover:text-text-primary hover:bg-theme-hover rounded-lg transition-all"
               >
                 검색
               </Link>
               <Link
                 to="/viewed-companies"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="px-4 py-2.5 text-sm text-text-secondary hover:text-text-primary hover:bg-dark-hover rounded-lg transition-all"
+                className="px-4 py-2.5 text-sm text-text-secondary hover:text-text-primary hover:bg-theme-hover rounded-lg transition-all"
               >
                 조회한 기업
               </Link>
               <Link
                 to="/about"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="px-4 py-2.5 text-sm text-text-secondary hover:text-text-primary hover:bg-dark-hover rounded-lg transition-all"
+                className="px-4 py-2.5 text-sm text-text-secondary hover:text-text-primary hover:bg-theme-hover rounded-lg transition-all"
               >
                 서비스 소개
               </Link>
               <Link
                 to="/contact"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="px-4 py-2.5 text-sm text-text-secondary hover:text-text-primary hover:bg-dark-hover rounded-lg transition-all"
+                className="px-4 py-2.5 text-sm text-text-secondary hover:text-text-primary hover:bg-theme-hover rounded-lg transition-all"
               >
                 문의
               </Link>
               <Link
                 to="/service-application"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="px-4 py-2.5 text-sm text-text-secondary hover:text-text-primary hover:bg-dark-hover rounded-lg transition-all"
+                className="px-4 py-2.5 text-sm text-text-secondary hover:text-text-primary hover:bg-theme-hover rounded-lg transition-all"
               >
                 서비스 이용신청
               </Link>
-              <div className="my-2 border-t border-dark-border" />
+              <div className="my-2 border-t border-theme-border" />
               {isAuthenticated && user ? (
                 <div className="px-4 space-y-3">
                   <div className="flex items-center gap-3 py-2">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                       user.is_superuser
                         ? 'bg-gradient-to-br from-accent-primary to-purple-500'
-                        : 'bg-dark-hover'
+                        : 'bg-theme-hover'
                     }`}>
                       <span className="text-sm font-medium text-white">
                         {displayName.charAt(0).toUpperCase()}

@@ -175,7 +175,7 @@ function ReportPage() {
       </div>
 
       {/* 관계형 리스크 대시보드 - 모바일 최적화 */}
-      <div className="bg-dark-card border border-dark-border rounded-xl shadow-card p-4 md:p-6 mb-4 md:mb-6">
+      <div className="bg-theme-card border border-theme-border rounded-xl shadow-card p-4 md:p-6 mb-4 md:mb-6">
         <h2 className="text-base md:text-lg font-bold text-text-primary mb-4 md:mb-6">관계형 리스크 대시보드</h2>
 
         {/* 5개 박스 그리드: 종합리스크, 관계형리스크등급, RaymondsIndex, 주가차트, 구성요소 */}
@@ -203,7 +203,7 @@ function ReportPage() {
                 grade={raymondsIndex.grade}
               />
             ) : (
-              <div className="flex flex-col items-center justify-center p-6 bg-dark-surface rounded-xl border border-dark-border text-center h-full min-h-[160px]">
+              <div className="flex flex-col items-center justify-center p-6 bg-theme-surface rounded-xl border border-theme-border text-center h-full min-h-[160px]">
                 <span className="text-sm text-text-secondary mb-2">RaymondsIndex</span>
                 <span className="text-text-muted text-sm">데이터 없음</span>
               </div>
@@ -213,7 +213,7 @@ function ReportPage() {
           {/* 4. 최근 1년 주가 차트 */}
           <div className="flex justify-center items-center">
             {companyId && (
-              <div className="bg-dark-surface/50 rounded-xl border border-dark-border/50 w-full h-full">
+              <div className="bg-theme-surface/50 rounded-xl border border-theme-border/50 w-full h-full">
                 <StockPriceCard companyId={companyId} companyName={reportData.companyName} />
               </div>
             )}
@@ -244,14 +244,14 @@ function ReportPage() {
       </div>
 
       {/* 리스크 신호 목록 - 모바일 최적화 */}
-      <div className="bg-dark-card border border-dark-border rounded-xl shadow-card p-4 md:p-6 mb-4 md:mb-6">
+      <div className="bg-theme-card border border-theme-border rounded-xl shadow-card p-4 md:p-6 mb-4 md:mb-6">
         <h2 className="text-base md:text-lg font-bold text-text-primary mb-3 md:mb-4">리스크 신호 탐지</h2>
         <RiskSignalList signals={reportData.riskSignals} />
       </div>
 
       {/* RaymondsIndex 섹션 - 데이터가 있을 때만 표시 */}
       {raymondsIndex && (
-        <div className="bg-dark-card border border-dark-border rounded-xl shadow-card p-4 md:p-6 mb-4 md:mb-6">
+        <div className="bg-theme-card border border-theme-border rounded-xl shadow-card p-4 md:p-6 mb-4 md:mb-6">
           <div className="flex items-center justify-between mb-4 md:mb-6">
             <h2 className="text-base md:text-lg font-bold text-text-primary">
               자본 배분 효율성 (RaymondsIndex)
@@ -303,7 +303,7 @@ function ReportPage() {
       )}
 
       {/* 데이터 탭 - 모바일 최적화 */}
-      <div className="bg-dark-card border border-dark-border rounded-xl shadow-card p-4 md:p-6">
+      <div className="bg-theme-card border border-theme-border rounded-xl shadow-card p-4 md:p-6">
         <h2 className="text-base md:text-lg font-bold text-text-primary mb-4 md:mb-6">세부 데이터</h2>
         <DataTabs
           cbIssuances={reportData.cbIssuances}
@@ -316,7 +316,7 @@ function ReportPage() {
       </div>
 
       {/* 면책조항 - 모바일 최적화 */}
-      <div className="mt-4 md:mt-6 p-3 md:p-4 bg-dark-surface border border-dark-border rounded-lg text-[10px] md:text-xs text-text-muted">
+      <div className="mt-4 md:mt-6 p-3 md:p-4 bg-theme-surface border border-theme-border rounded-lg text-[10px] md:text-xs text-text-muted">
         <p className="font-semibold mb-1 text-text-secondary">면책조항</p>
         <p className="leading-relaxed">
           본 보고서는 금융감독원 DART 공시 데이터를 기반으로 자동 생성되었으며, 투자 권유를 목적으로 하지 않습니다.

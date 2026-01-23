@@ -215,10 +215,10 @@ export default function SearchInput({
           placeholder={placeholder}
           autoFocus={autoFocus}
           className={`w-full ${sizeStyles[size]}
-                     bg-dark-card border border-dark-border rounded-xl
+                     bg-theme-card border border-theme-border rounded-xl
                      text-text-primary placeholder-text-muted
                      focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/20
-                     hover:border-dark-hover hover:bg-dark-surface
+                     hover:border-theme-hover hover:bg-theme-surface
                      transition-all duration-200 outline-none`}
         />
 
@@ -248,13 +248,13 @@ export default function SearchInput({
 
       {/* 드롭다운 - 다크 테마 */}
       {showResults && (showRecentSearches || showSearchResults || showNoResults) && (
-        <div className="absolute w-full mt-2 bg-dark-card border border-dark-border rounded-xl shadow-card-hover
+        <div className="absolute w-full mt-2 bg-theme-card border border-theme-border rounded-xl shadow-card-hover
                       max-h-96 overflow-y-auto z-50 animate-slide-down backdrop-blur-xl">
 
           {/* 최근 검색어 */}
           {showRecentSearches && (
             <div>
-              <div className="px-4 py-2 bg-dark-surface border-b border-dark-border flex items-center justify-between">
+              <div className="px-4 py-2 bg-theme-surface border-b border-theme-border flex items-center justify-between">
                 <span className="text-xs font-medium text-text-muted flex items-center gap-1">
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -278,7 +278,7 @@ export default function SearchInput({
                       onClick={() => handleSelectCompany(company)}
                       onMouseEnter={() => setSelectedIndex(index)}
                       className={`w-full px-4 py-3 flex items-center justify-between
-                                 hover:bg-dark-hover transition-colors text-left
+                                 hover:bg-theme-hover transition-colors text-left
                                  ${selectedIndex === index ? 'bg-accent-primary/10 border-l-2 border-accent-primary' : ''}`}
                     >
                       <div className="flex-1 min-w-0">
@@ -315,7 +315,7 @@ export default function SearchInput({
                     onClick={() => handleSelectCompany(company)}
                     onMouseEnter={() => setSelectedIndex(index)}
                     className={`w-full px-4 py-3 flex items-center justify-between
-                               hover:bg-dark-hover transition-colors text-left
+                               hover:bg-theme-hover transition-colors text-left
                                ${selectedIndex === index ? 'bg-accent-primary/10 border-l-2 border-accent-primary' : ''}`}
                   >
                     <div className="flex-1 min-w-0">

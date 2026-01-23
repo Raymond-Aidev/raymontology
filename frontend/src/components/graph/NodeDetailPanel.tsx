@@ -156,7 +156,7 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
   if (!node) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-text-muted p-6">
-        <div className="w-16 h-16 mb-4 rounded-full bg-dark-hover flex items-center justify-center">
+        <div className="w-16 h-16 mb-4 rounded-full bg-theme-hover flex items-center justify-center">
           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -173,7 +173,7 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
   return (
     <div className="h-full flex flex-col">
       {/* 헤더 */}
-      <div className="flex items-center justify-between pb-4 border-b border-dark-border">
+      <div className="flex items-center justify-between pb-4 border-b border-theme-border">
         <div className="flex items-center gap-2">
           <span
             className="w-3 h-3 rounded-full"
@@ -183,7 +183,7 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
         </div>
         <button
           onClick={onClose}
-          className="text-text-muted hover:text-text-primary transition-colors p-1 rounded hover:bg-dark-hover"
+          className="text-text-muted hover:text-text-primary transition-colors p-1 rounded hover:bg-theme-hover"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -192,7 +192,7 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
       </div>
 
       {/* 이름 */}
-      <div className="py-4 border-b border-dark-border">
+      <div className="py-4 border-b border-theme-border">
         <h2 className="text-lg font-semibold text-text-primary">{node.name}</h2>
         {node.corp_code && (
           <p className="text-xs text-text-muted mt-1 font-mono">기업코드: {node.corp_code}</p>
@@ -234,7 +234,7 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
             )}
 
             {/* 경력 타임라인 섹션 */}
-            <div className="pt-4 border-t border-dark-border">
+            <div className="pt-4 border-t border-theme-border">
               <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-3">경력 이력</h3>
 
               {/* 로딩 스켈레톤 */}
@@ -242,8 +242,8 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
                 <div className="space-y-3">
                   {[1, 2, 3].map(i => (
                     <div key={i} className="animate-pulse">
-                      <div className="h-4 bg-dark-hover rounded w-3/4 mb-1" />
-                      <div className="h-3 bg-dark-surface rounded w-1/2" />
+                      <div className="h-4 bg-theme-hover rounded w-3/4 mb-1" />
+                      <div className="h-3 bg-theme-surface rounded w-1/2" />
                     </div>
                   ))}
                 </div>
@@ -281,7 +281,7 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
                                 className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 ${
                                   item.is_current && (item.start_date || item.end_date)
                                     ? 'bg-accent-success border-accent-success'
-                                    : 'bg-dark-card border-accent-primary'
+                                    : 'bg-theme-card border-accent-primary'
                                 }`}
                               />
                               <div className={`${item.is_current && (item.start_date || item.end_date) ? 'bg-accent-success/10 rounded-lg p-2 -ml-1' : ''}`}>
@@ -334,7 +334,7 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
                         <span className="text-xs font-medium text-amber-500">사업보고서 주요경력</span>
                         <span className="text-xs text-text-muted">(원문)</span>
                       </div>
-                      <div className="bg-dark-surface rounded-lg p-3">
+                      <div className="bg-theme-surface rounded-lg p-3">
                         <pre className="whitespace-pre-wrap text-xs text-text-secondary leading-relaxed font-sans">
                           {careerRawText}
                         </pre>
@@ -355,7 +355,7 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
                           {career.filter(c => c.source === 'disclosure').map((item, index) => (
                             <div key={`disc-${index}`} className="relative pl-6">
                               <div className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 ${
-                                item.is_current ? 'bg-amber-500 border-amber-500' : 'bg-dark-card border-amber-500/50'
+                                item.is_current ? 'bg-amber-500 border-amber-500' : 'bg-theme-card border-amber-500/50'
                               }`} />
                               <div>
                                 <div className="flex items-center gap-2 flex-wrap">
@@ -364,7 +364,7 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
                                     <span className="text-xs bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded">現</span>
                                   )}
                                   {!item.is_current && (
-                                    <span className="text-xs bg-dark-surface text-text-muted px-1.5 py-0.5 rounded">前</span>
+                                    <span className="text-xs bg-theme-surface text-text-muted px-1.5 py-0.5 rounded">前</span>
                                   )}
                                 </div>
                                 <p className="text-xs text-text-secondary mt-0.5">{item.position}</p>
@@ -400,7 +400,7 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
             )}
 
             {/* 인수자 목록 섹션 */}
-            <div className="pt-4 border-t border-dark-border">
+            <div className="pt-4 border-t border-theme-border">
               <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-3">인수자 목록</h3>
 
               {/* 로딩 스켈레톤 */}
@@ -408,8 +408,8 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
                 <div className="space-y-2">
                   {[1, 2, 3].map(i => (
                     <div key={i} className="animate-pulse flex justify-between">
-                      <div className="h-4 bg-dark-hover rounded w-1/3" />
-                      <div className="h-4 bg-dark-surface rounded w-1/4" />
+                      <div className="h-4 bg-theme-hover rounded w-1/3" />
+                      <div className="h-4 bg-theme-surface rounded w-1/4" />
                     </div>
                   ))}
                 </div>
@@ -431,7 +431,7 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
                   {cbSubscribers.map((sub, index) => (
                     <div
                       key={index}
-                      className={`rounded-lg p-2 ${sub.is_related_party ? 'bg-accent-danger/10 border border-accent-danger/30' : 'bg-dark-surface'}`}
+                      className={`rounded-lg p-2 ${sub.is_related_party ? 'bg-accent-danger/10 border border-accent-danger/30' : 'bg-theme-surface'}`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
@@ -465,7 +465,7 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
                   ))}
 
                   {/* 총 인수금액 */}
-                  <div className="pt-2 mt-2 border-t border-dark-border flex justify-between items-center">
+                  <div className="pt-2 mt-2 border-t border-theme-border flex justify-between items-center">
                     <span className="text-xs text-text-muted uppercase tracking-wide">총 인수금액</span>
                     <span className="text-sm font-bold text-text-primary font-mono">
                       {(cbSubscribers.reduce((sum, sub) => sum + (sub.subscription_amount || 0), 0) / 100000000).toFixed(1)}억원
@@ -531,9 +531,9 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
 
             {/* 법인/단체 기본정보 */}
             {(node.representative_name || node.gp_name || node.largest_shareholder_name) && (
-              <div className="pt-4 border-t border-dark-border">
+              <div className="pt-4 border-t border-theme-border">
                 <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-3">법인/단체 기본정보</h3>
-                <div className="space-y-2 bg-dark-surface rounded-lg p-3">
+                <div className="space-y-2 bg-theme-surface rounded-lg p-3">
                   {node.representative_name && (
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-text-muted">대표이사</span>
@@ -557,7 +557,7 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
             )}
 
             {/* 타사 CB 투자 이력 섹션 */}
-            <div className="pt-4 border-t border-dark-border">
+            <div className="pt-4 border-t border-theme-border">
               <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-3">타사 CB 투자 이력</h3>
 
               {/* 로딩 스켈레톤 */}
@@ -565,8 +565,8 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
                 <div className="space-y-2">
                   {[1, 2, 3].map(i => (
                     <div key={i} className="animate-pulse flex justify-between">
-                      <div className="h-4 bg-dark-hover rounded w-1/3" />
-                      <div className="h-4 bg-dark-surface rounded w-1/4" />
+                      <div className="h-4 bg-theme-hover rounded w-1/3" />
+                      <div className="h-4 bg-theme-surface rounded w-1/4" />
                     </div>
                   ))}
                 </div>
@@ -606,7 +606,7 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
                       {otherInvestments.map((inv, index) => (
                         <div
                           key={index}
-                          className="bg-dark-surface rounded-lg p-2"
+                          className="bg-theme-surface rounded-lg p-2"
                         >
                           <div className="flex items-center justify-between">
                             <span className="font-medium text-text-primary text-sm">
@@ -630,7 +630,7 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
                       ))}
 
                       {/* 총 타사 투자금액 */}
-                      <div className="pt-2 mt-2 border-t border-dark-border flex justify-between items-center">
+                      <div className="pt-2 mt-2 border-t border-theme-border flex justify-between items-center">
                         <span className="text-xs text-text-muted uppercase tracking-wide">총 타사 투자금액</span>
                         <span className="text-sm font-bold text-text-primary font-mono">
                           {(otherInvestments.reduce((sum, inv) => sum + inv.amount, 0) / 100000000).toFixed(1)}억원
@@ -654,8 +654,8 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
               <div className="space-y-4">
                 {[1, 2, 3, 4].map(i => (
                   <div key={i} className="animate-pulse flex justify-between">
-                    <div className="h-4 bg-dark-hover rounded w-1/3" />
-                    <div className="h-4 bg-dark-surface rounded w-1/4" />
+                    <div className="h-4 bg-theme-hover rounded w-1/3" />
+                    <div className="h-4 bg-theme-surface rounded w-1/4" />
                   </div>
                 ))}
               </div>
@@ -714,7 +714,7 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
                 )}
 
                 {/* 변동 이력 섹션 */}
-                <div className="pt-4 border-t border-dark-border">
+                <div className="pt-4 border-t border-theme-border">
                   <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-3">지분 변동 이력</h3>
 
                   {shareholderHistory.length === 0 ? (
@@ -722,7 +722,7 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
                   ) : (
                     <div className="space-y-2">
                       {shareholderHistory.map((hist, index) => (
-                        <div key={index} className="bg-dark-surface rounded-lg p-2">
+                        <div key={index} className="bg-theme-surface rounded-lg p-2">
                           <div className="flex items-center justify-between">
                             <span className="text-xs text-text-secondary font-mono">{hist.date || '-'}</span>
                             <div className="flex items-center gap-2">
@@ -744,7 +744,7 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
                 </div>
 
                 {/* 관련 회사 섹션 */}
-                <div className="pt-4 border-t border-dark-border">
+                <div className="pt-4 border-t border-theme-border">
                   <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-3">보유 지분 현황</h3>
 
                   {shareholderCompanies.length === 0 ? (
@@ -752,7 +752,7 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
                   ) : (
                     <div className="space-y-2">
                       {shareholderCompanies.map((company, index) => (
-                        <div key={index} className="bg-dark-surface rounded-lg p-2">
+                        <div key={index} className="bg-theme-surface rounded-lg p-2">
                           <div className="flex items-center justify-between">
                             <Link
                               to={`/company/${company.company_id}/report`}
@@ -788,7 +788,7 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
       </div>
 
       {/* 액션 버튼 */}
-      <div className="pt-4 border-t border-dark-border space-y-2">
+      <div className="pt-4 border-t border-theme-border space-y-2">
         {/* 노드로 이동 버튼 */}
         {onRecenter && (
           <button

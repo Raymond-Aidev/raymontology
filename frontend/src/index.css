@@ -172,11 +172,11 @@ body {
   }
 
   .glass {
-    @apply bg-dark-card/80 backdrop-blur-xl border border-dark-border;
+    @apply bg-theme-card/80 backdrop-blur-xl border border-theme-border;
   }
 
   .glass-hover {
-    @apply hover:bg-dark-hover/90 transition-all duration-200;
+    @apply hover:bg-theme-hover/90 transition-all duration-200;
   }
 
   .glow-border {
@@ -196,7 +196,7 @@ body {
   }
 
   .card-dark {
-    @apply bg-dark-card border border-dark-border rounded-xl;
+    @apply bg-theme-card border border-theme-border rounded-xl;
   }
 
   .btn-primary {
@@ -207,12 +207,12 @@ body {
 
   .btn-ghost {
     @apply px-4 py-2 text-text-secondary hover:text-text-primary
-           hover:bg-dark-hover rounded-lg transition-all duration-200
+           hover:bg-theme-hover rounded-lg transition-all duration-200
            font-medium text-sm;
   }
 
   .input-dark {
-    @apply bg-dark-surface border border-dark-border rounded-lg px-4 py-2
+    @apply bg-theme-surface border border-theme-border rounded-lg px-4 py-2
            text-text-primary placeholder-text-muted
            focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/50
            transition-all duration-200;
@@ -261,7 +261,7 @@ body {
 
 /* Selection highlight */
 .selection-ring {
-  @apply ring-2 ring-accent-primary ring-offset-2 ring-offset-dark-bg;
+  @apply ring-2 ring-accent-primary ring-offset-2 ring-offset-theme-bg;
 }
 
 /* Grid background pattern */
@@ -283,7 +283,7 @@ body {
 
 /* Focus styles */
 *:focus-visible {
-  @apply outline-none ring-2 ring-accent-primary/50 ring-offset-2 ring-offset-dark-bg;
+  @apply outline-none ring-2 ring-accent-primary/50 ring-offset-2 ring-offset-theme-bg;
 }
 
 /* Number formatting */

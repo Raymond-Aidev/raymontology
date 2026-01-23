@@ -181,7 +181,7 @@ function PricingPage() {
                   </p>
 
                   {/* 사용량 정보 */}
-                  <div className="mt-6 p-4 bg-dark-surface rounded-lg border border-dark-border inline-block">
+                  <div className="mt-6 p-4 bg-theme-surface rounded-lg border border-theme-border inline-block">
                     <div className="flex items-center gap-4 text-sm">
                       <span className="text-text-muted">사용량</span>
                       <span className="text-text-primary font-medium">

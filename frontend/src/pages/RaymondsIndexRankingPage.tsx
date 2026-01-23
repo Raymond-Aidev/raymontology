@@ -76,7 +76,7 @@ function RaymondsIndexRankingPage() {
   }
 
   return (
-    <div className="bg-dark-bg">
+    <div className="bg-theme-bg">
       <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Page Title */}
         <div className="mb-8">
@@ -86,21 +86,21 @@ function RaymondsIndexRankingPage() {
         {/* 통계 카드 */}
         {statistics && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+            <div className="bg-theme-card border border-theme-border rounded-lg p-4">
               <p className="text-xs text-text-secondary mb-1">총 기업</p>
               <p className="text-2xl font-bold text-text-primary">{statistics.total_companies?.toLocaleString() || 0}</p>
             </div>
-            <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+            <div className="bg-theme-card border border-theme-border rounded-lg p-4">
               <p className="text-xs text-text-secondary mb-1">평균 점수</p>
               <p className="text-2xl font-bold text-text-primary">{statistics.average_score?.toFixed(1) || 0}</p>
             </div>
-            <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+            <div className="bg-theme-card border border-theme-border rounded-lg p-4">
               <p className="text-xs text-text-secondary mb-1">A+ 등급</p>
               <p className="text-2xl font-bold text-emerald-400">
                 {statistics.grade_distribution?.['A+'] || 0}
               </p>
             </div>
-            <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+            <div className="bg-theme-card border border-theme-border rounded-lg p-4">
               <p className="text-xs text-text-secondary mb-1">평균 투자괴리율</p>
               <p className="text-2xl font-bold text-text-primary">
                 {statistics.average_investment_gap?.toFixed(1) || 0}%
@@ -124,7 +124,7 @@ function RaymondsIndexRankingPage() {
                   className={`px-3 py-1 text-sm font-medium rounded-full border transition-all ${
                     isSelected
                       ? `${config.bg} ${config.text} ${config.border}`
-                      : 'bg-dark-card border-dark-border text-text-secondary hover:border-dark-border-hover'
+                      : 'bg-theme-card border-theme-border text-text-secondary hover:border-theme-border-hover'
                   }`}
                 >
                   {grade}
@@ -139,7 +139,7 @@ function RaymondsIndexRankingPage() {
             <select
               value={sortBy}
               onChange={e => setSortBy(e.target.value as typeof sortBy)}
-              className="bg-dark-card border border-dark-border rounded-lg px-3 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent-primary"
+              className="bg-theme-card border border-theme-border rounded-lg px-3 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent-primary"
             >
               <option value="score_desc">점수 높은순</option>
               <option value="score_asc">점수 낮은순</option>
@@ -154,7 +154,7 @@ function RaymondsIndexRankingPage() {
             <select
               value={limit}
               onChange={e => setLimit(Number(e.target.value))}
-              className="bg-dark-card border border-dark-border rounded-lg px-3 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent-primary"
+              className="bg-theme-card border border-theme-border rounded-lg px-3 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent-primary"
             >
               <option value={20}>20개</option>
               <option value={50}>50개</option>
@@ -179,11 +179,11 @@ function RaymondsIndexRankingPage() {
 
         {/* 랭킹 테이블 */}
         {!isLoading && !error && rankings.length > 0 && (
-          <div className="bg-dark-card border border-dark-border rounded-lg overflow-hidden">
+          <div className="bg-theme-card border border-theme-border rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-dark-border bg-dark-bg/50">
+                  <tr className="border-b border-theme-border bg-theme-bg/50">
                     <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                       순위
                     </th>
@@ -223,7 +223,7 @@ function RaymondsIndexRankingPage() {
                       <tr
                         key={item.company_id}
                         onClick={() => handleCompanyClick(item.company_id)}
-                        className="hover:bg-dark-bg/50 cursor-pointer transition-colors"
+                        className="hover:bg-theme-bg/50 cursor-pointer transition-colors"
                       >
                         <td className="px-4 py-4">
                           <span className={`text-sm font-medium ${
@@ -276,13 +276,13 @@ function RaymondsIndexRankingPage() {
 
         {/* 데이터 없음 */}
         {!isLoading && !error && rankings.length === 0 && (
-          <div className="bg-dark-card border border-dark-border rounded-lg p-8 text-center">
+          <div className="bg-theme-card border border-theme-border rounded-lg p-8 text-center">
             <p className="text-text-secondary">데이터가 없습니다</p>
           </div>
         )}
 
         {/* 범례 */}
-        <div className="mt-8 bg-dark-card border border-dark-border rounded-lg p-6">
+        <div className="mt-8 bg-theme-card border border-theme-border rounded-lg p-6">
           <h3 className="text-sm font-medium text-text-primary mb-4">Sub-Index 설명</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
             <div>

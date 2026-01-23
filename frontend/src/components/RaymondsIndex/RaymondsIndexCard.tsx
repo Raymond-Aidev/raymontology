@@ -50,7 +50,7 @@ export const RaymondsIndexCard: React.FC<RaymondsIndexCardProps> = ({
 
   if (compact) {
     return (
-      <div className="bg-dark-card rounded-lg border border-dark-border p-4">
+      <div className="bg-theme-card rounded-lg border border-theme-border p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="text-center">
@@ -89,7 +89,7 @@ export const RaymondsIndexCard: React.FC<RaymondsIndexCardProps> = ({
   }
 
   return (
-    <div className="bg-dark-card rounded-xl shadow-card border border-dark-border p-6">
+    <div className="bg-theme-card rounded-xl shadow-card border border-theme-border p-6">
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-text-primary">RaymondsIndex</h3>
@@ -114,7 +114,7 @@ export const RaymondsIndexCard: React.FC<RaymondsIndexCardProps> = ({
       </div>
 
       {/* 투자괴리율 */}
-      <div className="bg-dark-surface rounded-lg p-4 mb-4">
+      <div className="bg-theme-surface rounded-lg p-4 mb-4">
         <div className="flex items-center justify-between">
           <span className="text-sm text-text-secondary">투자괴리율</span>
           <span className={`text-lg font-bold ${getGapStatusColor(gapInterpretation.status)}`}>

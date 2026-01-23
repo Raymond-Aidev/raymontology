@@ -66,7 +66,7 @@ function UsageIndicator() {
     // usage 데이터 로드 중이면 로딩 표시
     if (isLoading || !usage) {
       return (
-        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-dark-card border border-dark-border rounded-lg">
+        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-theme-card border border-theme-border rounded-lg">
           <div className="w-3 h-3 border-2 border-accent-success border-t-transparent rounded-full animate-spin" />
         </div>
       )
@@ -103,7 +103,7 @@ function UsageIndicator() {
 
   if (isLoading || !usage) {
     return (
-      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-dark-card border border-dark-border rounded-lg">
+      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-theme-card border border-theme-border rounded-lg">
         <div className="w-3 h-3 border-2 border-accent-primary border-t-transparent rounded-full animate-spin" />
       </div>
     )
@@ -138,7 +138,7 @@ function UsageIndicator() {
       }`}
     >
       {/* Progress bar */}
-      <div className="w-12 h-1.5 bg-dark-bg rounded-full overflow-hidden">
+      <div className="w-12 h-1.5 bg-theme-bg rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full transition-all ${
             isLow ? 'bg-accent-danger' : isWarning ? 'bg-accent-warning' : 'bg-blue-400'

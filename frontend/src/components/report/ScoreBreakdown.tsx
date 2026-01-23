@@ -31,7 +31,7 @@ export default function ScoreBreakdown({ scores }: ScoreBreakdownProps) {
                 {value}점
               </span>
             </div>
-            <div className="h-3 bg-dark-surface rounded-full overflow-hidden">
+            <div className="h-3 bg-theme-surface rounded-full overflow-hidden">
               <div
                 className="h-full rounded-full transition-all duration-500 ease-out"
                 style={{
@@ -45,7 +45,7 @@ export default function ScoreBreakdown({ scores }: ScoreBreakdownProps) {
       })}
 
       {/* 범례 */}
-      <div className="mt-6 pt-4 border-t border-dark-border">
+      <div className="mt-6 pt-4 border-t border-theme-border">
         <div className="flex items-center justify-between text-xs text-text-muted">
           <span>0 (안전)</span>
           <span>50 (주의)</span>

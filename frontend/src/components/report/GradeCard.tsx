@@ -9,7 +9,7 @@ export default function GradeCard({ grade }: GradeCardProps) {
   const config = gradeConfig[grade]
 
   return (
-    <div className="flex flex-col items-center p-6 bg-dark-surface rounded-xl border border-dark-border">
+    <div className="flex flex-col items-center p-6 bg-theme-surface rounded-xl border border-theme-border">
       <span className="text-sm text-text-secondary mb-2">관계형리스크등급</span>
       <span
         className="text-5xl font-bold"

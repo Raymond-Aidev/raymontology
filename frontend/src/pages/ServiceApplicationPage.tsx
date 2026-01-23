@@ -196,7 +196,7 @@ function ServiceApplicationPage() {
   return (
     <div className="min-h-screen bg-theme-bg">
       {/* Header */}
-      <header className="bg-dark-surface/80 backdrop-blur-xl border-b border-dark-border sticky top-0 z-50">
+      <header className="bg-theme-surface/80 backdrop-blur-xl border-b border-theme-border sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14">
             <Link to="/" className="inline-block">

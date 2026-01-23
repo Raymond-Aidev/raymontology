@@ -3,7 +3,7 @@ import { Header, Footer } from '../components/common'
 
 function MainLayout() {
   return (
-    <div className="min-h-screen flex flex-col bg-dark-bg">
+    <div className="min-h-screen flex flex-col bg-theme-bg">
       {/* Header */}
       <Header />
 

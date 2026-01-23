@@ -27,7 +27,7 @@ export default function RaymondsIndexMiniCard({ score, grade }: RaymondsIndexMin
   }
 
   return (
-    <div className="flex flex-col items-center p-6 bg-dark-surface rounded-xl border border-dark-border">
+    <div className="flex flex-col items-center p-6 bg-theme-surface rounded-xl border border-theme-border">
       <span className="text-sm text-text-secondary mb-2">RaymondsIndex</span>
       <div className="flex items-center gap-3 mb-2">
         <span

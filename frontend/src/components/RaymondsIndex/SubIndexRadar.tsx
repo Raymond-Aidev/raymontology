@@ -52,7 +52,7 @@ export const SubIndexRadar: React.FC<SubIndexRadarProps> = ({
   const gridLevels = [20, 40, 60, 80, 100]
 
   return (
-    <div className="bg-dark-card rounded-xl shadow-card border border-dark-border p-6">
+    <div className="bg-theme-card rounded-xl shadow-card border border-theme-border p-6">
       <h3 className="text-lg font-semibold text-text-primary mb-4">Sub-Index 분석</h3>
 
       <div className="flex flex-col items-center">
@@ -145,7 +145,7 @@ export const SubIndexRadar: React.FC<SubIndexRadarProps> = ({
         {/* 상세 점수 */}
         <div className="mt-4 grid grid-cols-2 gap-3 w-full">
           {SUB_INDEX_LABELS.map((item, i) => (
-            <div key={item.key} className="flex items-center justify-between bg-dark-surface rounded-lg px-3 py-2">
+            <div key={item.key} className="flex items-center justify-between bg-theme-surface rounded-lg px-3 py-2">
               <div>
                 <span className="text-sm font-medium text-text-secondary">{item.shortLabel}</span>
                 <span className="text-xs text-text-muted ml-1">{item.label}</span>

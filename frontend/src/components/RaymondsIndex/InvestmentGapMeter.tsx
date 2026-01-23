@@ -39,7 +39,7 @@ export const InvestmentGapMeter: React.FC<InvestmentGapMeterProps> = ({
       case 'red': return 'bg-red-500/20 text-red-400 border border-red-500/30'
       case 'blue': return 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
       case 'purple': return 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-      default: return 'bg-dark-surface text-text-secondary border border-dark-border'
+      default: return 'bg-theme-surface text-text-secondary border border-theme-border'
     }
   }
 
@@ -66,7 +66,7 @@ export const InvestmentGapMeter: React.FC<InvestmentGapMeterProps> = ({
   }
 
   return (
-    <div className="bg-dark-card rounded-xl shadow-card border border-dark-border p-6">
+    <div className="bg-theme-card rounded-xl shadow-card border border-theme-border p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-text-primary">투자괴리율</h3>
         <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeColor()}`}>
@@ -87,7 +87,7 @@ export const InvestmentGapMeter: React.FC<InvestmentGapMeterProps> = ({
 
         {/* 현재 위치 인디케이터 */}
         <div
-          className={`absolute top-0 w-4 h-4 rounded-full ${getIndicatorColor()} border-2 border-dark-card shadow-md transform -translate-x-1/2`}
+          className={`absolute top-0 w-4 h-4 rounded-full ${getIndicatorColor()} border-2 border-theme-card shadow-md transform -translate-x-1/2`}
           style={{ left: `${percentage}%` }}
         />
 
@@ -130,7 +130,7 @@ export const InvestmentGapMeter: React.FC<InvestmentGapMeterProps> = ({
       </div>
 
       {/* 해석 */}
-      <div className="mt-4 text-sm text-text-secondary bg-dark-surface rounded-lg p-3">
+      <div className="mt-4 text-sm text-text-secondary bg-theme-surface rounded-lg p-3">
         {gap >= -5 && gap <= 5 && (
           <span>✅ 현금 증가와 투자가 균형을 이루고 있습니다.</span>
         )}

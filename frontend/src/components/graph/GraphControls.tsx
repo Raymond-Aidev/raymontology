@@ -24,10 +24,10 @@ export default memo(function GraphControls({
   return (
     <div className="absolute top-4 left-4 flex-col gap-2 hidden md:flex">
       {/* 줌 컨트롤 */}
-      <div className="bg-dark-card rounded-lg border border-dark-border overflow-hidden">
+      <div className="bg-theme-card rounded-lg border border-theme-border overflow-hidden">
         <button
           onClick={onZoomIn}
-          className="w-10 h-10 flex items-center justify-center hover:bg-blue-500/10 transition-colors border-b border-dark-border text-text-muted hover:text-blue-400"
+          className="w-10 h-10 flex items-center justify-center hover:bg-blue-500/10 transition-colors border-b border-theme-border text-text-muted hover:text-blue-400"
           title="확대"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -36,7 +36,7 @@ export default memo(function GraphControls({
         </button>
         <button
           onClick={onZoomOut}
-          className="w-10 h-10 flex items-center justify-center hover:bg-blue-500/10 transition-colors border-b border-dark-border text-text-muted hover:text-blue-400"
+          className="w-10 h-10 flex items-center justify-center hover:bg-blue-500/10 transition-colors border-b border-theme-border text-text-muted hover:text-blue-400"
           title="축소"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -55,7 +55,7 @@ export default memo(function GraphControls({
       </div>
 
       {/* 범례 + 필터 */}
-      <div className="bg-dark-card rounded-lg border border-dark-border p-3 mt-2">
+      <div className="bg-theme-card rounded-lg border border-theme-border p-3 mt-2">
         <p className="text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">
           {onToggleNodeType ? '필터' : '범례'}
         </p>
@@ -73,8 +73,8 @@ export default memo(function GraphControls({
                   onClick={() => onToggleNodeType(type)}
                   className={`flex items-center gap-2 w-full px-2 py-1.5 rounded transition-all
                              ${isVisible
-                               ? 'bg-dark-surface hover:bg-dark-hover'
-                               : 'bg-dark-bg opacity-50'}`}
+                               ? 'bg-theme-surface hover:bg-theme-hover'
+                               : 'bg-theme-bg opacity-50'}`}
                 >
                   <span
                     className={`w-3 h-3 rounded-full transition-transform ${isVisible ? 'scale-100' : 'scale-75'}`}
@@ -114,7 +114,7 @@ export default memo(function GraphControls({
 
         {/* 전체 선택/해제 버튼 */}
         {onToggleNodeType && visibleNodeTypes && (
-          <div className="mt-3 pt-2 border-t border-dark-border flex gap-2">
+          <div className="mt-3 pt-2 border-t border-theme-border flex gap-2">
             <button
               onClick={() => {
                 nodeTypes.forEach(type => {

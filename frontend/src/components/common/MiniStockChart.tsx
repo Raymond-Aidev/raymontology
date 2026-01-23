@@ -99,11 +99,11 @@ export function MiniStockChart({
     return (
       <div className="flex items-center gap-2">
         <div
-          className="bg-dark-hover rounded animate-pulse"
+          className="bg-theme-hover rounded animate-pulse"
           style={{ width, height }}
         />
         {showReturnRate && (
-          <div className="w-10 h-4 bg-dark-hover rounded animate-pulse" />
+          <div className="w-10 h-4 bg-theme-hover rounded animate-pulse" />
         )}
       </div>
     )
@@ -114,7 +114,7 @@ export function MiniStockChart({
     return (
       <div className="flex items-center gap-2">
         <div
-          className="flex items-center justify-center bg-dark-surface/50 rounded"
+          className="flex items-center justify-center bg-theme-surface/50 rounded"
           style={{ width, height }}
         >
           <span className="text-xs text-text-muted">—</span>

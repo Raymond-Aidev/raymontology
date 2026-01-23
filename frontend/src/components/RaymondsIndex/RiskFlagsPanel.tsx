@@ -24,12 +24,12 @@ export const RiskFlagsPanel: React.FC<RiskFlagsPanelProps> = ({
   const hasFlags = redFlags.length > 0 || yellowFlags.length > 0
 
   return (
-    <div className="bg-dark-card rounded-xl shadow-card border border-dark-border p-6">
+    <div className="bg-theme-card rounded-xl shadow-card border border-theme-border p-6">
       <h3 className="text-lg font-semibold text-text-primary mb-4">리스크 분석</h3>
 
       {/* 한 줄 요약 */}
       {verdict && (
-        <div className="mb-4 p-3 bg-dark-surface rounded-lg">
+        <div className="mb-4 p-3 bg-theme-surface rounded-lg">
           <p className="text-sm text-text-secondary font-medium">{verdict}</p>
         </div>
       )}
@@ -88,7 +88,7 @@ export const RiskFlagsPanel: React.FC<RiskFlagsPanelProps> = ({
       {keyRisk && (
         <div className="mb-3">
           <h4 className="text-sm font-medium text-text-secondary mb-1">핵심 리스크</h4>
-          <p className="text-sm text-text-secondary bg-dark-surface p-2 rounded">{keyRisk}</p>
+          <p className="text-sm text-text-secondary bg-theme-surface p-2 rounded">{keyRisk}</p>
         </div>
       )}
 

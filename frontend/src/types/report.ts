@@ -104,7 +104,7 @@ export interface RiskSignal {
 export const severityConfig: Record<RiskSignalSeverity, { bg: string; text: string; border: string; label: string }> = {
   HIGH: { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/30', label: '높음' },
   MEDIUM: { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/30', label: '보통' },
-  LOW: { bg: 'bg-dark-surface', text: 'text-text-muted', border: 'border-dark-border', label: '낮음' },
+  LOW: { bg: 'bg-theme-surface', text: 'text-text-muted', border: 'border-theme-border', label: '낮음' },
 }
 
 // 계열회사 관계 유형

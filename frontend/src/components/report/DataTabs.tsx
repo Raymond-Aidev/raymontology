@@ -54,7 +54,7 @@ export default function DataTabs({ cbIssuances, cbSubscribers, officers, financi
   return (
     <div>
       {/* 탭 헤더 - 모바일 스크롤 가능 */}
-      <div className="flex gap-1 border-b border-dark-border mb-4 overflow-x-auto scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
+      <div className="flex gap-1 border-b border-theme-border mb-4 overflow-x-auto scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
         {tabs.map(tab => (
           <button
             key={tab.key}
@@ -83,13 +83,13 @@ export default function DataTabs({ cbIssuances, cbSubscribers, officers, financi
               {/* 모바일 카드 뷰 */}
               <div className="md:hidden space-y-3">
                 {cbIssuances.map((cb, index) => (
-                  <div key={`${cb.id}-${index}`} className="bg-dark-surface border border-dark-border rounded-lg p-3">
+                  <div key={`${cb.id}-${index}`} className="bg-theme-surface border border-theme-border rounded-lg p-3">
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-medium text-accent-primary">{cb.issue_round || '-'}</span>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                         cb.status === 'active' ? 'bg-green-500/20 text-green-400' :
                         cb.status === 'converted' ? 'bg-blue-500/20 text-blue-400' :
-                        'bg-dark-card text-text-secondary'
+                        'bg-theme-card text-text-secondary'
                       }`}>
                         {cb.status === 'active' ? '유효' : cb.status === 'converted' ? '전환' : '상환'}
                       </span>
@@ -118,7 +118,7 @@ export default function DataTabs({ cbIssuances, cbSubscribers, officers, financi
               {/* 데스크톱 테이블 */}
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-dark-card">
+                  <thead className="bg-theme-card">
                     <tr>
                       <th className="px-4 py-3 text-left font-medium text-text-secondary">발행회차</th>
                       <th className="px-4 py-3 text-left font-medium text-text-secondary">발행일</th>
@@ -131,7 +131,7 @@ export default function DataTabs({ cbIssuances, cbSubscribers, officers, financi
                   </thead>
                   <tbody className="divide-y divide-dark-border">
                     {cbIssuances.map((cb, index) => (
-                      <tr key={`${cb.id}-${index}`} className="hover:bg-dark-hover">
+                      <tr key={`${cb.id}-${index}`} className="hover:bg-theme-hover">
                         <td className="px-4 py-3 font-medium text-accent-primary">{cb.issue_round || '-'}</td>
                         <td className="px-4 py-3 text-text-primary">{cb.issue_date}</td>
                         <td className="px-4 py-3 text-right font-medium text-text-primary">{formatCurrency(cb.amount)}</td>
@@ -142,7 +142,7 @@ export default function DataTabs({ cbIssuances, cbSubscribers, officers, financi
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                             cb.status === 'active' ? 'bg-green-500/20 text-green-400' :
                             cb.status === 'converted' ? 'bg-blue-500/20 text-blue-400' :
-                            'bg-dark-card text-text-secondary'
+                            'bg-theme-card text-text-secondary'
                           }`}>
                             {cb.status === 'active' ? '유효' : cb.status === 'converted' ? '전환' : '상환'}
                           </span>
@@ -169,13 +169,13 @@ export default function DataTabs({ cbIssuances, cbSubscribers, officers, financi
               {/* 모바일 카드 뷰 */}
               <div className="md:hidden space-y-3">
                 {cbSubscribers.map((sub, index) => (
-                  <div key={`${sub.id}-${index}`} className="bg-dark-surface border border-dark-border rounded-lg p-3">
+                  <div key={`${sub.id}-${index}`} className="bg-theme-surface border border-theme-border rounded-lg p-3">
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-medium text-text-primary">{sub.name}</span>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                         sub.type === 'institution' ? 'bg-blue-500/20 text-blue-400' :
                         sub.type === 'related' ? 'bg-orange-500/20 text-orange-400' :
-                        'bg-dark-card text-text-secondary'
+                        'bg-theme-card text-text-secondary'
                       }`}>
                         {sub.type === 'institution' ? '기관' : sub.type === 'related' ? '특수관계인' : '개인'}
                       </span>
@@ -205,7 +205,7 @@ export default function DataTabs({ cbIssuances, cbSubscribers, officers, financi
               {/* 데스크톱 테이블 */}
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-dark-card">
+                  <thead className="bg-theme-card">
                     <tr>
                       <th className="px-4 py-3 text-left font-medium text-text-secondary">인수인</th>
                       <th className="px-4 py-3 text-left font-medium text-text-secondary">발행회차</th>
@@ -216,7 +216,7 @@ export default function DataTabs({ cbIssuances, cbSubscribers, officers, financi
                   </thead>
                   <tbody className="divide-y divide-dark-border">
                     {cbSubscribers.map((sub, index) => (
-                      <tr key={`${sub.id}-${index}`} className="hover:bg-dark-hover">
+                      <tr key={`${sub.id}-${index}`} className="hover:bg-theme-hover">
                         <td className="px-4 py-3 font-medium text-text-primary">{sub.name}</td>
                         <td className="px-4 py-3">
                           {sub.issue_rounds && sub.issue_rounds.length > 0 ? (
@@ -237,7 +237,7 @@ export default function DataTabs({ cbIssuances, cbSubscribers, officers, financi
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                             sub.type === 'institution' ? 'bg-blue-500/20 text-blue-400' :
                             sub.type === 'related' ? 'bg-orange-500/20 text-orange-400' :
-                            'bg-dark-card text-text-secondary'
+                            'bg-theme-card text-text-secondary'
                           }`}>
                             {sub.type === 'institution' ? '기관' : sub.type === 'related' ? '특수관계인' : '개인'}
                           </span>
@@ -264,13 +264,13 @@ export default function DataTabs({ cbIssuances, cbSubscribers, officers, financi
               {/* 모바일 카드 뷰 */}
               <div className="md:hidden space-y-3">
                 {officers.map((officer, index) => (
-                  <div key={`${officer.id}-${index}`} className="bg-dark-surface border border-dark-border rounded-lg p-3">
+                  <div key={`${officer.id}-${index}`} className="bg-theme-surface border border-theme-border rounded-lg p-3">
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-medium text-text-primary">{officer.name}</span>
                       {officer.is_current ? (
                         <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-500/20 text-green-400">재직</span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-dark-card text-text-muted">퇴임</span>
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-theme-card text-text-muted">퇴임</span>
                       )}
                     </div>
                     <p className="text-sm text-accent-primary mb-2">{officer.position}</p>
@@ -290,7 +290,7 @@ export default function DataTabs({ cbIssuances, cbSubscribers, officers, financi
               {/* 데스크톱 테이블 */}
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-dark-card">
+                  <thead className="bg-theme-card">
                     <tr>
                       <th className="px-4 py-3 text-left font-medium text-text-secondary">성명</th>
                       <th className="px-4 py-3 text-left font-medium text-text-secondary">직책</th>
@@ -302,7 +302,7 @@ export default function DataTabs({ cbIssuances, cbSubscribers, officers, financi
                   </thead>
                   <tbody className="divide-y divide-dark-border">
                     {officers.map((officer, index) => (
-                      <tr key={`${officer.id}-${index}`} className="hover:bg-dark-hover">
+                      <tr key={`${officer.id}-${index}`} className="hover:bg-theme-hover">
                         <td className="px-4 py-3 font-medium text-text-primary">{officer.name}</td>
                         <td className="px-4 py-3 text-text-primary">{officer.position}</td>
                         <td className="px-4 py-3 text-text-primary">{officer.tenure_start}</td>
@@ -345,7 +345,7 @@ export default function DataTabs({ cbIssuances, cbSubscribers, officers, financi
                 {financials.map((fin, index) => {
                   const debtRatio = fin.debt_ratio ?? (fin.equity > 0 ? (fin.total_liabilities / fin.equity) * 100 : 0)
                   return (
-                    <div key={`${fin.year}-${fin.quarter || 'annual'}-${index}`} className="bg-dark-surface border border-dark-border rounded-lg p-3">
+                    <div key={`${fin.year}-${fin.quarter || 'annual'}-${index}`} className="bg-theme-surface border border-theme-border rounded-lg p-3">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-accent-primary text-lg">{fin.year}</span>
@@ -396,7 +396,7 @@ export default function DataTabs({ cbIssuances, cbSubscribers, officers, financi
               {/* 데스크톱 테이블 */}
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-dark-card">
+                  <thead className="bg-theme-card">
                     <tr>
                       <th className="px-4 py-3 text-left font-medium text-text-secondary">기간</th>
                       <th className="px-4 py-3 text-right font-medium text-text-secondary">매출액</th>
@@ -411,7 +411,7 @@ export default function DataTabs({ cbIssuances, cbSubscribers, officers, financi
                     {financials.map((fin, index) => {
                       const debtRatio = fin.debt_ratio ?? (fin.equity > 0 ? (fin.total_liabilities / fin.equity) * 100 : 0)
                       return (
-                        <tr key={`${fin.year}-${fin.quarter || 'annual'}-${index}`} className="hover:bg-dark-hover">
+                        <tr key={`${fin.year}-${fin.quarter || 'annual'}-${index}`} className="hover:bg-theme-hover">
                           <td className="px-4 py-3 font-medium text-text-primary">
                             <div className="flex items-center gap-2">
                               {fin.year}
@@ -466,7 +466,7 @@ export default function DataTabs({ cbIssuances, cbSubscribers, officers, financi
                 {sortedShareholders.map((sh, index) => {
                   const typeConfig = shareholderTypeConfig[sh.type]
                   return (
-                    <div key={`${sh.id}-${index}`} className="bg-dark-surface border border-dark-border rounded-lg p-3">
+                    <div key={`${sh.id}-${index}`} className="bg-theme-surface border border-theme-border rounded-lg p-3">
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-medium text-text-primary">{sh.name}</span>
                         {typeConfig && (
@@ -486,7 +486,7 @@ export default function DataTabs({ cbIssuances, cbSubscribers, officers, financi
               {/* 데스크톱 테이블 */}
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-dark-card">
+                  <thead className="bg-theme-card">
                     <tr>
                       <th className="px-4 py-3 text-left font-medium text-text-secondary">주주명</th>
                       <th className="px-4 py-3 text-right font-medium text-text-secondary">주식 수</th>
@@ -498,7 +498,7 @@ export default function DataTabs({ cbIssuances, cbSubscribers, officers, financi
                     {sortedShareholders.map((sh, index) => {
                       const typeConfig = shareholderTypeConfig[sh.type]
                       return (
-                        <tr key={`${sh.id}-${index}`} className="hover:bg-dark-hover">
+                        <tr key={`${sh.id}-${index}`} className="hover:bg-theme-hover">
                           <td className="px-4 py-3 font-medium text-text-primary">{sh.name}</td>
                           <td className="px-4 py-3 text-right text-text-primary">{formatShares(sh.shares)}</td>
                           <td className="px-4 py-3 text-right font-medium text-text-primary">{formatPercentage(sh.percentage)}</td>
@@ -537,7 +537,7 @@ export default function DataTabs({ cbIssuances, cbSubscribers, officers, financi
                 {sortedAffiliates.map((aff, index) => {
                   const relationConfig = affiliateRelationConfig[aff.relation]
                   return (
-                    <div key={`${aff.id}-${index}`} className="bg-dark-surface border border-dark-border rounded-lg p-3">
+                    <div key={`${aff.id}-${index}`} className="bg-theme-surface border border-theme-border rounded-lg p-3">
                       <div className="flex items-center justify-between mb-2">
                         {aff.company_id ? (
                           <Link
@@ -564,7 +564,7 @@ export default function DataTabs({ cbIssuances, cbSubscribers, officers, financi
               {/* 데스크톱 테이블 */}
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-dark-card">
+                  <thead className="bg-theme-card">
                     <tr>
                       <th className="px-4 py-3 text-left font-medium text-text-secondary">회사명</th>
                       <th className="px-4 py-3 text-center font-medium text-text-secondary">관계</th>
@@ -577,7 +577,7 @@ export default function DataTabs({ cbIssuances, cbSubscribers, officers, financi
                     {sortedAffiliates.map((aff, index) => {
                       const relationConfig = affiliateRelationConfig[aff.relation]
                       return (
-                        <tr key={`${aff.id}-${index}`} className="hover:bg-dark-hover">
+                        <tr key={`${aff.id}-${index}`} className="hover:bg-theme-hover">
                           <td className="px-4 py-3 font-medium">
                             {aff.company_id ? (
                               <Link

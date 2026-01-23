@@ -99,7 +99,7 @@ export default function MiniStockChart({ companyId, companyName }: MiniStockChar
     return (
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium text-text-muted whitespace-nowrap">최근 1년 주가</span>
-        <div className="w-20 h-6 bg-dark-hover rounded animate-pulse" />
+        <div className="w-20 h-6 bg-theme-hover rounded animate-pulse" />
       </div>
     )
   }
