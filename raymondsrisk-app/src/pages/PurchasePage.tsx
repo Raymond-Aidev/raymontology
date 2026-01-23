@@ -243,23 +243,26 @@ export default function PurchasePage() {
       purchaseCleanupRef.current = IAP.createOneTimePurchaseOrder({
         options: {
           sku: normalizedSku,  // 정규화된 SKU 사용
-          processProductGrant: ({ orderId }) => {
-            // 동기적으로 즉시 true 반환 (SDK 타임아웃 방지)
+          processProductGrant: async ({ orderId }) => {
+            // SDK 1.1.3+ 스펙: async 함수로 실제 상품 지급 결과 반환
             console.log('[PurchasePage] processProductGrant 호출됨, orderId:', orderId)
 
-            // 백엔드 호출은 비동기로 처리 (fire-and-forget)
-            // SDK가 true 반환을 기다리지 않도록 함
-            creditService.purchaseCredits(selectedProduct, orderId)
-              .then(result => {
-                console.log('[PurchasePage] 백엔드 응답 (비동기):', JSON.stringify(result))
-              })
-              .catch(err => {
-                console.error('[PurchasePage] 백엔드 오류 (비동기):', err)
-              })
+            try {
+              // 백엔드 API 호출하여 이용권 충전
+              const result = await creditService.purchaseCredits(selectedProduct, orderId)
+              console.log('[PurchasePage] 백엔드 응답:', JSON.stringify(result))
 
-            // 즉시 true 반환
-            console.log('[PurchasePage] processProductGrant 즉시 true 반환')
-            return true
+              if (result.success) {
+                console.log('[PurchasePage] 이용권 충전 성공')
+                return true
+              } else {
+                console.error('[PurchasePage] 이용권 충전 실패:', result.message)
+                return false  // SDK에 실패 알림 → PRODUCT_NOT_GRANTED_BY_PARTNER 에러
+              }
+            } catch (err) {
+              console.error('[PurchasePage] 백엔드 API 오류:', err)
+              return false  // SDK에 실패 알림
+            }
           },
         },
         onEvent: async (event: unknown) => {
