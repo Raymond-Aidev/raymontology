@@ -96,11 +96,11 @@ async def get_company_network_fallback(
     is_corp_code = len(company_id) == 8 and company_id.isdigit()
     
     try:
-        # 1. 중심 회사 조회 (investment_grade 포함)
+        # 1. 중심 회사 조회 (investment_grade, trading_status 포함)
         if is_corp_code:
             company_query = text("""
                 SELECT c.id::text, c.name, c.corp_code, c.ticker, c.market, c.sector,
-                       rs.investment_grade
+                       c.trading_status, rs.investment_grade
                 FROM companies c
                 LEFT JOIN risk_scores rs ON c.id = rs.company_id
                 WHERE c.corp_code = :company_id
@@ -108,7 +108,7 @@ async def get_company_network_fallback(
         else:
             company_query = text("""
                 SELECT c.id::text, c.name, c.corp_code, c.ticker, c.market, c.sector,
-                       rs.investment_grade
+                       c.trading_status, rs.investment_grade
                 FROM companies c
                 LEFT JOIN risk_scores rs ON c.id = rs.company_id
                 WHERE c.id::text = :company_id
@@ -130,6 +130,7 @@ async def get_company_network_fallback(
                 "ticker": company.ticker,
                 "market": company.market,
                 "sector": company.sector,
+                "trading_status": company.trading_status,
                 "investment_grade": company.investment_grade
             }
         ))
@@ -310,6 +311,7 @@ async def get_company_network_fallback(
             if officer_names:
                 careers_query = text("""
                     SELECT DISTINCT c.id::text as company_id, c.name as company_name,
+                           c.trading_status,
                            o.id::text as officer_id, o.name as officer_name,
                            o.birth_date, op.position
                     FROM officer_positions op
@@ -336,6 +338,7 @@ async def get_company_network_fallback(
                             type="Company",
                             properties={
                                 "name": career.company_name,
+                                "trading_status": career.trading_status,
                                 "relation_type": "officer_career"
                             }
                         ))
