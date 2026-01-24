@@ -1,3 +1,6 @@
+// 거래 상태 타입
+export type TradingStatus = 'NORMAL' | 'SUSPENDED' | 'TRADING_HALT'
+
 // 회사 검색 결과 타입
 export interface CompanySearchResult {
   id: string
@@ -6,6 +9,8 @@ export interface CompanySearchResult {
   cb_count: number
   risk_level: string | null
   investment_grade: string | null
+  trading_status?: TradingStatus  // 거래 상태 (NORMAL, SUSPENDED, TRADING_HALT)
+  market?: string  // 시장 (KOSPI, KOSDAQ, KONEX)
 }
 
 // 리스크 레벨 타입

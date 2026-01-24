@@ -1,7 +1,6 @@
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useCallback } from 'react'
 import { searchCompanies } from '../api/company'
-import { useAuth } from '../contexts/AuthContext'
 import type { CompanySearchResult } from '../types/company'
 import { riskLevelConfig, type RiskLevel } from '../types/company'
 import { colors } from '../constants/colors'
@@ -9,7 +8,6 @@ import { colors } from '../constants/colors'
 export default function SearchPage() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const { isAuthenticated, credits } = useAuth()
   const query = searchParams.get('q') || ''
 
   const [searchInput, setSearchInput] = useState(query)
@@ -17,23 +15,14 @@ export default function SearchPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // 기업 클릭 핸들러 - 인증/이용권 체크 후 이동
+  // 기업 클릭 핸들러 - 상세 페이지로 이동 (이용권 체크는 ReportPage에서)
   const handleCompanyClick = useCallback((company: CompanySearchResult) => {
-    // 미인증 또는 이용권 없으면 Paywall로 이동
-    if (!isAuthenticated || credits <= 0) {
-      navigate('/paywall', {
-        state: {
-          returnTo: `/report/${company.corp_code}`,
-          companyName: company.name
-        }
-      })
-    } else {
-      // 인증됨 + 이용권 있음 → 리포트로 이동
-      navigate(`/report/${company.corp_code}`, {
-        state: { companyName: company.name }
-      })
-    }
-  }, [isAuthenticated, credits, navigate])
+    // 항상 리포트 페이지로 이동 (이용권 체크는 리포트 페이지에서 수행)
+    // 이렇게 하면 사용자가 기업 검색 결과를 볼 수 있고, 상세 조회 시점에 이용권 확인
+    navigate(`/report/${company.corp_code}`, {
+      state: { companyName: company.name }
+    })
+  }, [navigate])
 
   useEffect(() => {
     if (query) {
@@ -366,13 +355,16 @@ function CompanyListRow({
 
   const badgeColors = riskConfig ? getBadgeColors(riskConfig.color) : null
 
+  // 거래정지 여부 확인
+  const isSuspended = company.trading_status === 'SUSPENDED' || company.trading_status === 'TRADING_HALT'
+
   return (
     <div
       onClick={onClick}
       onKeyDown={(e) => e.key === 'Enter' && onClick()}
       role="button"
       tabIndex={0}
-      aria-label={`${company.name} 상세 보기`}
+      aria-label={`${company.name} 상세 보기${isSuspended ? ' (거래정지)' : ''}`}
       style={{
         padding: '16px 0',
         borderBottom: isLast ? 'none' : `1px solid ${colors.gray100}`,
@@ -388,9 +380,25 @@ function CompanyListRow({
           fontSize: '16px',
           fontWeight: '500',
           color: colors.gray900,
-          marginBottom: '4px'
+          marginBottom: '4px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
         }}>
           {company.name}
+          {isSuspended && (
+            <span style={{
+              padding: '2px 6px',
+              borderRadius: '4px',
+              fontSize: '10px',
+              fontWeight: '600',
+              backgroundColor: '#FEE2E2',
+              color: '#DC2626',
+              whiteSpace: 'nowrap',
+            }}>
+              거래정지
+            </span>
+          )}
         </div>
         <div style={{
           fontSize: '14px',

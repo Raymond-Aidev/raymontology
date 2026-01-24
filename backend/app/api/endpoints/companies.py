@@ -35,6 +35,7 @@ class CompanyListItem(BaseModel):
     cb_count: int = 0
     officer_count: int = 0
     listing_status: Optional[str] = None  # LISTED, DELISTED, ETF 등
+    trading_status: Optional[str] = None  # NORMAL, SUSPENDED, TRADING_HALT
 
 
 class CompanyDetailResponse(BaseModel):
@@ -249,7 +250,8 @@ async def list_companies(
                 market_cap=c.market_cap,
                 cb_count=cb_counts.get(str(c.id), 0),
                 officer_count=officer_counts.get(str(c.id), 0),
-                listing_status=c.listing_status
+                listing_status=c.listing_status,
+                trading_status=c.trading_status
             )
             for c in companies
         ]
@@ -354,7 +356,8 @@ async def search_companies(
                 market=c.market,
                 market_cap=c.market_cap,
                 cb_count=cb_counts.get(str(c.id), 0),
-                officer_count=officer_counts.get(str(c.id), 0)
+                officer_count=officer_counts.get(str(c.id), 0),
+                trading_status=c.trading_status
             )
             for c in companies
         ]
@@ -411,6 +414,7 @@ async def get_high_risk_companies(
                 c.market,
                 c.market_cap,
                 c.listing_status,
+                c.trading_status,
                 rs.investment_grade,
                 rs.total_score,
                 COUNT(cb.id) as cb_count,
@@ -423,7 +427,7 @@ async def get_high_risk_companies(
             AND c.listing_status = 'LISTED'
             AND c.market IN ('KOSPI', 'KOSDAQ')
             GROUP BY c.id, c.name, c.ticker, c.corp_code, c.sector, c.market,
-                     c.market_cap, c.listing_status, rs.investment_grade, rs.total_score
+                     c.market_cap, c.listing_status, c.trading_status, rs.investment_grade, rs.total_score
             HAVING (:has_cb = false OR COUNT(cb.id) > 0)
             ORDER BY RANDOM()
             LIMIT :limit
@@ -448,7 +452,8 @@ async def get_high_risk_companies(
                 market_cap=row.market_cap,
                 cb_count=row.cb_count,
                 officer_count=row.officer_count,
-                listing_status=row.listing_status
+                listing_status=row.listing_status,
+                trading_status=row.trading_status
             )
             for row in rows
         ]

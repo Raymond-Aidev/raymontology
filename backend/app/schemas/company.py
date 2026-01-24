@@ -54,6 +54,7 @@ class CompanyListItem(CompanyBase):
     """회사 목록 아이템"""
     market_cap: Optional[float]
     ownership_concentration: Optional[float]
+    trading_status: Optional[str] = None  # NORMAL, SUSPENDED, TRADING_HALT
 
 
 class CompanySearchResult(BaseModel):
