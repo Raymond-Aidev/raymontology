@@ -326,6 +326,11 @@ export default function SearchInput({
                         <span className="text-xs text-text-muted font-mono">
                           {highlightMatch(company.corp_code, query)}
                         </span>
+                        {company.trading_status && company.trading_status !== 'NORMAL' && (
+                          <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-red-500 text-white">
+                            거래정지
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-xs text-text-secondary">

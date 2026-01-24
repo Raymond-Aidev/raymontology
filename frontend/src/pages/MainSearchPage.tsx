@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { SearchInput, MarketBadge, MiniStockChart } from '../components/common'
+import { SearchInput, MarketBadge, TradingStatusBadge, MiniStockChart } from '../components/common'
 import { getHighRiskCompanies, getPlatformStats, type PlatformStats } from '../api/company'
 import { useAuthStore } from '../store/authStore'
 import apiClient from '../api/client'
@@ -364,6 +364,9 @@ function MainSearchPage() {
                               tradingStatus={company.trading_status}
                               size="sm"
                             />
+                          )}
+                          {company.trading_status && company.trading_status !== 'NORMAL' && (
+                            <TradingStatusBadge status={company.trading_status} />
                           )}
                         </div>
                         <p className="text-xs font-mono text-text-muted mt-0.5">{company.corp_code}</p>
