@@ -5,7 +5,7 @@ import { ForceGraph, NodeDetailPanel, GraphControls, NavigationButtons, Breadcru
 import type { ForceGraphRef } from '../components/graph'
 import type { GraphNode, GraphData, NodeType } from '../types/graph'
 import { NODE_LIMIT, DEFAULT_DEPTH, type DateRangeParams, extractQueryLimitError, type QueryLimitError } from '../api/graph'
-import { DateRangePicker, type DateRange, BottomSheet, MarketBadge } from '../components/common'
+import { DateRangePicker, type DateRange, BottomSheet, MarketBadge, TradingStatusBadge } from '../components/common'
 import { useGraphQuery } from '../hooks/useGraphQuery'
 import { useGraphStore, selectCanGoBack, selectCanGoForward } from '../store'
 import { getRaymondsIndexById } from '../api/raymondsIndex'
@@ -450,6 +450,9 @@ function GraphPage() {
                   size="sm"
                   className="flex-shrink-0"
                 />
+              )}
+              {centerCompany?.tradingStatus && centerCompany.tradingStatus !== 'NORMAL' && (
+                <TradingStatusBadge status={centerCompany.tradingStatus} className="flex-shrink-0" />
               )}
               <span className="hidden md:inline text-text-muted font-normal flex-shrink-0">관계도</span>
             </h1>
