@@ -176,7 +176,11 @@ class OfficerParser(BaseParser):
             fih_match = re.search(r'AUNIT="SH5_FIH"[^>]*AUNITVALUE="(\d{8})"', row_xml)
             if fih_match:
                 try:
-                    officer['term_end_date'] = datetime.strptime(fih_match.group(1), '%Y%m%d').date()
+                    term_end = datetime.strptime(fih_match.group(1), '%Y%m%d').date()
+                    officer['term_end_date'] = term_end
+                    # 취임일/재직기간이 없고 만료일만 있는 경우 표시용 필드 생성
+                    if not officer.get('term_start_date') and not officer.get('tenure_text'):
+                        officer['tenure_display'] = f"~ {term_end.strftime('%Y.%m.%d')}"
                 except:
                     pass
 

@@ -437,6 +437,12 @@ async def get_officer_career_fallback(
 ):
     """임원 경력 조회 (PostgreSQL 폴백)
 
+    v2.6 개선:
+    - tenure_display: 재직기간 표시 형식 추가
+      - 만료일만 있는 경우: "~ 2025.12.31"
+      - 시작일만 있는 경우: "2020.01.01 ~"
+      - 둘 다 있는 경우: "2020.01.01 ~ 2025.12.31"
+
     v2.4 개선:
     - career_raw_text: 사업보고서 '주요경력' 원문 텍스트 추가
     - 패턴 파싱 실패해도 원문은 항상 표시 가능
@@ -473,12 +479,40 @@ async def get_officer_career_fallback(
         current_careers = []
         past_careers = []
         for c in careers:
+            # 만료일만 있고 시작일 없는 경우 "~ YYYY.MM.DD" 형식으로 표시
+            tenure_display = None
+            if c.term_end_date and not c.term_start_date:
+                try:
+                    from datetime import datetime
+                    end_dt = datetime.strptime(c.term_end_date, '%Y-%m-%d')
+                    tenure_display = f"~ {end_dt.strftime('%Y.%m.%d')}"
+                except:
+                    pass
+            elif c.term_start_date and c.term_end_date:
+                # 시작일과 만료일 모두 있는 경우
+                try:
+                    from datetime import datetime
+                    start_dt = datetime.strptime(c.term_start_date, '%Y-%m-%d')
+                    end_dt = datetime.strptime(c.term_end_date, '%Y-%m-%d')
+                    tenure_display = f"{start_dt.strftime('%Y.%m.%d')} ~ {end_dt.strftime('%Y.%m.%d')}"
+                except:
+                    pass
+            elif c.term_start_date and not c.term_end_date:
+                # 시작일만 있는 경우
+                try:
+                    from datetime import datetime
+                    start_dt = datetime.strptime(c.term_start_date, '%Y-%m-%d')
+                    tenure_display = f"{start_dt.strftime('%Y.%m.%d')} ~"
+                except:
+                    pass
+
             career_item = {
                 "company_id": c.company_id,
                 "company_name": c.company_name,
                 "position": c.position,
                 "start_date": c.term_start_date,
                 "end_date": c.term_end_date,
+                "tenure_display": tenure_display,  # v2.6: 재직기간 표시 형식 추가
                 "is_current": c.is_current,
                 "is_listed": True,
                 "source": "db",
