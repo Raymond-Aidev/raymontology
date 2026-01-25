@@ -178,6 +178,48 @@ class RaymondsIndexCalculator:
         }
     }
 
+    @staticmethod
+    def linear_score(value: float, breakpoints: List[Tuple[float, float]]) -> float:
+        """
+        구간별 선형 보간 점수 계산 (연속 함수)
+
+        Args:
+            value: 입력값 (예: 투자괴리율 %)
+            breakpoints: (입력값, 점수) 튜플 리스트, 입력값 오름차순 정렬
+                         예: [(-50, 100), (-20, 85), (0, 60), (20, 30), (50, 0)]
+
+        Returns:
+            선형 보간된 점수 (0-100)
+
+        예시:
+            투자괴리율 -15% → -20과 0 사이에서 보간
+            → 85 + (-15 - (-20)) / (0 - (-20)) * (60 - 85)
+            → 85 + (5/20) * (-25) = 85 - 6.25 = 78.75
+        """
+        if not breakpoints:
+            return 50.0
+
+        # 정렬 확인 (입력값 기준 오름차순)
+        sorted_bp = sorted(breakpoints, key=lambda x: x[0])
+
+        # 범위 밖 처리
+        if value <= sorted_bp[0][0]:
+            return sorted_bp[0][1]
+        if value >= sorted_bp[-1][0]:
+            return sorted_bp[-1][1]
+
+        # 구간 찾기 및 선형 보간
+        for i in range(len(sorted_bp) - 1):
+            x1, y1 = sorted_bp[i]
+            x2, y2 = sorted_bp[i + 1]
+
+            if x1 <= value <= x2:
+                # 선형 보간: y = y1 + (value - x1) / (x2 - x1) * (y2 - y1)
+                ratio = (value - x1) / (x2 - x1)
+                return y1 + ratio * (y2 - y1)
+
+        return 50.0  # 기본값
+
     def __init__(self, industry_sector: str = None):
         self.industry_sector = industry_sector
         self.adjusted_weights = self._get_adjusted_weights(industry_sector)
@@ -871,23 +913,20 @@ class RaymondsIndexCalculator:
         # 2. 투자괴리율 점수 (30%) ⭐v2.1 방식 (현금 CAGR - CAPEX 성장률)
         # 양수(+): 현금 축적 > 투자 (위험) → 낮은 점수
         # 음수(-): 투자 > 현금 축적 (긍정) → 높은 점수
+        # v2.2: 연속 함수(선형 보간)로 변경 - 구간 경계값 점프 제거
         gap_v21 = core_metrics.investment_gap_v21
-        if gap_v21 > 40:
-            gap_score = 0  # 극심한 현금 축적
-        elif gap_v21 > 30:
-            gap_score = 15
-        elif gap_v21 > 20:
-            gap_score = 30
-        elif gap_v21 > 10:
-            gap_score = 45
-        elif gap_v21 > 0:
-            gap_score = 60
-        elif gap_v21 > -10:
-            gap_score = 75  # 투자 > 현금 축적 (양호)
-        elif gap_v21 > -20:
-            gap_score = 85  # 적극 투자 (우수)
-        else:
-            gap_score = 95  # 매우 적극적 투자 (최우수)
+        gap_breakpoints = [
+            (-50, 100),  # 매우 적극적 투자 → 최고점
+            (-20, 95),   # 적극 투자 (우수)
+            (-10, 85),   # 투자 > 현금 축적 (양호)
+            (0, 75),     # 균형
+            (10, 60),    # 소폭 현금 축적
+            (20, 45),    # 현금 축적 경향
+            (30, 30),    # 현금 축적
+            (40, 15),    # 심한 현금 축적
+            (50, 0),     # 극심한 현금 축적 → 최저점
+        ]
+        gap_score = self.linear_score(gap_v21, gap_breakpoints)
         rii_components.append(gap_score * 0.30)
 
         # 3. 재투자율 점수 (25%)
