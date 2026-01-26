@@ -41,10 +41,32 @@ export const api = {
       searchParams.set('limit', size.toString());
       searchParams.set('offset', offset.toString());
 
+      // 기본 필터
       if (params.grade) searchParams.set('grade', params.grade);
+      if (params.market) searchParams.set('market', params.market);
       if (params.sort) searchParams.set('sort', params.sort);
-      if (params.min_score) searchParams.set('min_score', params.min_score.toString());
-      if (params.max_score) searchParams.set('max_score', params.max_score.toString());
+      if (params.year) searchParams.set('year', params.year.toString());
+
+      // 점수 범위 필터
+      if (params.min_score !== undefined) searchParams.set('min_score', params.min_score.toString());
+      if (params.max_score !== undefined) searchParams.set('max_score', params.max_score.toString());
+
+      // Sub-Index 필터 (확장 스크리너)
+      if (params.min_cei !== undefined) searchParams.set('min_cei', params.min_cei.toString());
+      if (params.max_cei !== undefined) searchParams.set('max_cei', params.max_cei.toString());
+      if (params.min_rii !== undefined) searchParams.set('min_rii', params.min_rii.toString());
+      if (params.max_rii !== undefined) searchParams.set('max_rii', params.max_rii.toString());
+      if (params.min_cgi !== undefined) searchParams.set('min_cgi', params.min_cgi.toString());
+      if (params.max_cgi !== undefined) searchParams.set('max_cgi', params.max_cgi.toString());
+      if (params.min_mai !== undefined) searchParams.set('min_mai', params.min_mai.toString());
+      if (params.max_mai !== undefined) searchParams.set('max_mai', params.max_mai.toString());
+
+      // 투자괴리율 필터
+      if (params.min_gap !== undefined) searchParams.set('min_gap', params.min_gap.toString());
+      if (params.max_gap !== undefined) searchParams.set('max_gap', params.max_gap.toString());
+
+      // Red Flag 필터
+      if (params.has_red_flags !== undefined) searchParams.set('has_red_flags', params.has_red_flags.toString());
 
       const query = searchParams.toString();
       const data = await fetchAPI<{

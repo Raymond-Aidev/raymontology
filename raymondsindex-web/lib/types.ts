@@ -95,13 +95,35 @@ export interface SearchResult {
 export interface RankingParams {
   page?: number;
   size?: number;
-  grade?: string;
+  grade?: string;                     // 등급 (쉼표 구분: A++,A+,A)
   sector?: string;
-  market?: string;                    // KOSPI, KOSDAQ, KONEX 필터
+  market?: string;                    // KOSPI, KOSDAQ 필터 (쉼표 구분)
   company_type?: string;              // NORMAL, SPAC, REIT, ETF 필터
+  year?: number;                      // 연도 필터
+
+  // 점수 범위 필터
   min_score?: number;
   max_score?: number;
-  sort?: 'score_desc' | 'score_asc' | 'name_asc' | 'name_desc';
+
+  // Sub-Index 필터 (확장 스크리너용)
+  min_cei?: number;
+  max_cei?: number;
+  min_rii?: number;
+  max_rii?: number;
+  min_cgi?: number;
+  max_cgi?: number;
+  min_mai?: number;
+  max_mai?: number;
+
+  // 투자괴리율 필터
+  min_gap?: number;
+  max_gap?: number;
+
+  // 위험신호 필터
+  has_red_flags?: boolean;
+
+  // 정렬
+  sort?: 'score_desc' | 'score_asc' | 'name_asc' | 'name_desc' | 'gap_asc' | 'gap_desc' | 'cei_desc' | 'rii_desc' | 'cgi_desc' | 'mai_desc';
 }
 
 // 주가 데이터 타입

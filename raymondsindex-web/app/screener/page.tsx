@@ -1,15 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRanking } from '@/hooks/use-ranking';
 import { GradeBadge } from '@/components/grade-badge';
 import { MarketBadge } from '@/components/market-badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import {
   Table,
@@ -26,71 +24,146 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Filter, RotateCcw, ChevronLeft, ChevronRight, Search } from 'lucide-react';
-import { GRADE_ORDER, type Grade } from '@/lib/constants';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import { Filter, RotateCcw, ChevronLeft, ChevronRight, ChevronDown, AlertTriangle } from 'lucide-react';
+import { GRADE_ORDER } from '@/lib/constants';
 import type { RankingParams } from '@/lib/types';
 
 const PAGE_SIZE = 20;
-const MARKETS = ['KOSPI', 'KOSDAQ'] as const;  // KONEX 제외
+const MARKETS = ['KOSPI', 'KOSDAQ'] as const;
+
+// 필터 상태 타입 정의 (확장 가능)
+interface FilterState {
+  grades: string[];
+  markets: string[];
+  scoreRange: [number, number];
+  // Sub-Index 필터 (확장)
+  ceiRange: [number, number];
+  riiRange: [number, number];
+  cgiRange: [number, number];
+  maiRange: [number, number];
+  // 기타 필터
+  gapRange: [number, number];
+  hasRedFlags: boolean | null;
+}
+
+const DEFAULT_FILTERS: FilterState = {
+  grades: [],
+  markets: [],
+  scoreRange: [0, 100],
+  ceiRange: [0, 100],
+  riiRange: [0, 100],
+  cgiRange: [0, 100],
+  maiRange: [0, 100],
+  gapRange: [-100, 100],
+  hasRedFlags: null,
+};
 
 export default function ScreenerPage() {
-  const [params, setParams] = useState<RankingParams>({
-    page: 1,
-    size: PAGE_SIZE,
-    sort: 'score_desc',
-  });
-  const [selectedGrades, setSelectedGrades] = useState<string[]>([]);
-  const [selectedMarkets, setSelectedMarkets] = useState<string[]>([]);
-  const [scoreRange, setScoreRange] = useState<[number, number]>([0, 100]);
+  const [page, setPage] = useState(1);
+  const [sort, setSort] = useState<RankingParams['sort']>('score_desc');
+  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
-  const { data, isLoading } = useRanking({
-    ...params,
-    grade: selectedGrades.length === 1 ? selectedGrades[0] : undefined,
-    min_score: scoreRange[0] > 0 ? scoreRange[0] : undefined,
-    max_score: scoreRange[1] < 100 ? scoreRange[1] : undefined,
-  });
+  // API 파라미터 구성 (서버 사이드 필터링)
+  const buildParams = useCallback((): RankingParams => {
+    const params: RankingParams = {
+      page,
+      size: PAGE_SIZE,
+      sort,
+    };
 
+    // 등급 필터 (복수 지원)
+    if (filters.grades.length > 0) {
+      params.grade = filters.grades.join(',');
+    }
+
+    // 시장 필터 (복수 지원)
+    if (filters.markets.length > 0) {
+      params.market = filters.markets.join(',');
+    }
+
+    // 점수 범위 필터
+    if (filters.scoreRange[0] > 0) {
+      params.min_score = filters.scoreRange[0];
+    }
+    if (filters.scoreRange[1] < 100) {
+      params.max_score = filters.scoreRange[1];
+    }
+
+    // Sub-Index 필터 (고급)
+    if (filters.ceiRange[0] > 0) params.min_cei = filters.ceiRange[0];
+    if (filters.ceiRange[1] < 100) params.max_cei = filters.ceiRange[1];
+    if (filters.riiRange[0] > 0) params.min_rii = filters.riiRange[0];
+    if (filters.riiRange[1] < 100) params.max_rii = filters.riiRange[1];
+    if (filters.cgiRange[0] > 0) params.min_cgi = filters.cgiRange[0];
+    if (filters.cgiRange[1] < 100) params.max_cgi = filters.cgiRange[1];
+    if (filters.maiRange[0] > 0) params.min_mai = filters.maiRange[0];
+    if (filters.maiRange[1] < 100) params.max_mai = filters.maiRange[1];
+
+    // 투자괴리율 필터
+    if (filters.gapRange[0] > -100) params.min_gap = filters.gapRange[0];
+    if (filters.gapRange[1] < 100) params.max_gap = filters.gapRange[1];
+
+    // Red Flag 필터
+    if (filters.hasRedFlags !== null) {
+      params.has_red_flags = filters.hasRedFlags;
+    }
+
+    return params;
+  }, [page, sort, filters]);
+
+  const { data, isLoading } = useRanking(buildParams());
+
+  // 필터 토글 핸들러
   const handleGradeToggle = (grade: string) => {
-    setSelectedGrades((prev) =>
-      prev.includes(grade)
-        ? prev.filter((g) => g !== grade)
-        : [...prev, grade]
-    );
-    setParams((prev) => ({ ...prev, page: 1 }));
+    setFilters((prev) => ({
+      ...prev,
+      grades: prev.grades.includes(grade)
+        ? prev.grades.filter((g) => g !== grade)
+        : [...prev.grades, grade],
+    }));
+    setPage(1);
   };
 
   const handleMarketToggle = (market: string) => {
-    setSelectedMarkets((prev) =>
-      prev.includes(market)
-        ? prev.filter((m) => m !== market)
-        : [...prev, market]
-    );
-    setParams((prev) => ({ ...prev, page: 1 }));
+    setFilters((prev) => ({
+      ...prev,
+      markets: prev.markets.includes(market)
+        ? prev.markets.filter((m) => m !== market)
+        : [...prev.markets, market],
+    }));
+    setPage(1);
   };
 
   const handleReset = () => {
-    setSelectedGrades([]);
-    setSelectedMarkets([]);
-    setScoreRange([0, 100]);
-    setParams({ page: 1, size: PAGE_SIZE, sort: 'score_desc' });
+    setFilters(DEFAULT_FILTERS);
+    setSort('score_desc');
+    setPage(1);
   };
 
   const handlePageChange = (newPage: number) => {
-    setParams((prev) => ({ ...prev, page: newPage }));
+    setPage(newPage);
   };
 
-  const filteredItems = data?.items.filter((item) => {
-    if (selectedGrades.length > 0 && !selectedGrades.includes(item.grade)) {
-      return false;
-    }
-    if (selectedMarkets.length > 0 && item.market && !selectedMarkets.includes(item.market)) {
-      return false;
-    }
-    return true;
-  }) || [];
+  // 활성 필터 카운트
+  const activeFilterCount =
+    filters.grades.length +
+    filters.markets.length +
+    (filters.scoreRange[0] > 0 || filters.scoreRange[1] < 100 ? 1 : 0) +
+    (filters.ceiRange[0] > 0 || filters.ceiRange[1] < 100 ? 1 : 0) +
+    (filters.riiRange[0] > 0 || filters.riiRange[1] < 100 ? 1 : 0) +
+    (filters.cgiRange[0] > 0 || filters.cgiRange[1] < 100 ? 1 : 0) +
+    (filters.maiRange[0] > 0 || filters.maiRange[1] < 100 ? 1 : 0) +
+    (filters.gapRange[0] > -100 || filters.gapRange[1] < 100 ? 1 : 0) +
+    (filters.hasRedFlags !== null ? 1 : 0);
 
   const totalPages = data?.total_pages || 1;
-  const currentPage = params.page || 1;
+  const currentPage = page;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -105,22 +178,27 @@ export default function ScreenerPage() {
         {/* Filter Panel */}
         <Card className="lg:col-span-1 h-fit">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Filter className="w-5 h-5" />
-              필터 조건
+            <CardTitle className="flex items-center justify-between text-lg">
+              <span className="flex items-center gap-2">
+                <Filter className="w-5 h-5" />
+                필터 조건
+              </span>
+              {activeFilterCount > 0 && (
+                <Badge variant="secondary">{activeFilterCount}</Badge>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Market Filter */}
             <div>
-              <h4 className="font-medium text-gray-900 mb-3">거래소 필터</h4>
+              <h4 className="font-medium text-gray-900 mb-3">거래소</h4>
               <div className="flex gap-2">
                 {MARKETS.map((market) => (
                   <button
                     key={market}
                     onClick={() => handleMarketToggle(market)}
                     className={`px-3 py-1.5 text-sm font-medium rounded border transition-colors ${
-                      selectedMarkets.includes(market)
+                      filters.markets.includes(market)
                         ? 'bg-blue-600 text-white border-blue-600'
                         : 'bg-white text-gray-700 border-gray-200 hover:border-blue-400'
                     }`}
@@ -133,14 +211,14 @@ export default function ScreenerPage() {
 
             {/* Grade Filter */}
             <div>
-              <h4 className="font-medium text-gray-900 mb-3">등급 필터</h4>
+              <h4 className="font-medium text-gray-900 mb-3">등급</h4>
               <div className="grid grid-cols-3 gap-2">
                 {GRADE_ORDER.map((grade) => (
                   <button
                     key={grade}
                     onClick={() => handleGradeToggle(grade)}
                     className={`px-2 py-1.5 text-sm font-medium rounded border transition-colors ${
-                      selectedGrades.includes(grade)
+                      filters.grades.includes(grade)
                         ? 'bg-blue-600 text-white border-blue-600'
                         : 'bg-white text-gray-700 border-gray-200 hover:border-blue-400'
                     }`}
@@ -153,22 +231,62 @@ export default function ScreenerPage() {
 
             {/* Score Range */}
             <div>
-              <h4 className="font-medium text-gray-900 mb-3">점수 범위</h4>
+              <h4 className="font-medium text-gray-900 mb-3">종합 점수</h4>
               <div className="px-1">
                 <Slider
-                  value={scoreRange}
+                  value={filters.scoreRange}
                   onValueChange={(value) => {
-                    setScoreRange(value as [number, number]);
-                    setParams((prev) => ({ ...prev, page: 1 }));
+                    setFilters((prev) => ({ ...prev, scoreRange: value as [number, number] }));
+                    setPage(1);
                   }}
                   min={0}
                   max={100}
                   step={5}
                 />
                 <div className="flex justify-between text-sm text-gray-500 mt-2">
-                  <span>{scoreRange[0]}점</span>
-                  <span>{scoreRange[1]}점</span>
+                  <span>{filters.scoreRange[0]}점</span>
+                  <span>{filters.scoreRange[1]}점</span>
                 </div>
+              </div>
+            </div>
+
+            {/* Red Flag Filter */}
+            <div>
+              <h4 className="font-medium text-gray-900 mb-3">위험 신호</h4>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setFilters((prev) => ({
+                      ...prev,
+                      hasRedFlags: prev.hasRedFlags === false ? null : false,
+                    }));
+                    setPage(1);
+                  }}
+                  className={`px-3 py-1.5 text-sm font-medium rounded border transition-colors ${
+                    filters.hasRedFlags === false
+                      ? 'bg-green-600 text-white border-green-600'
+                      : 'bg-white text-gray-700 border-gray-200 hover:border-green-400'
+                  }`}
+                >
+                  없음
+                </button>
+                <button
+                  onClick={() => {
+                    setFilters((prev) => ({
+                      ...prev,
+                      hasRedFlags: prev.hasRedFlags === true ? null : true,
+                    }));
+                    setPage(1);
+                  }}
+                  className={`flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded border transition-colors ${
+                    filters.hasRedFlags === true
+                      ? 'bg-red-600 text-white border-red-600'
+                      : 'bg-white text-gray-700 border-gray-200 hover:border-red-400'
+                  }`}
+                >
+                  <AlertTriangle className="w-3 h-3" />
+                  있음
+                </button>
               </div>
             </div>
 
@@ -176,10 +294,11 @@ export default function ScreenerPage() {
             <div>
               <h4 className="font-medium text-gray-900 mb-3">정렬</h4>
               <Select
-                value={params.sort}
-                onValueChange={(value) =>
-                  setParams((prev) => ({ ...prev, sort: value as RankingParams['sort'] }))
-                }
+                value={sort}
+                onValueChange={(value) => {
+                  setSort(value as RankingParams['sort']);
+                  setPage(1);
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -189,15 +308,126 @@ export default function ScreenerPage() {
                   <SelectItem value="score_asc">점수 낮은 순</SelectItem>
                   <SelectItem value="name_asc">이름순 (ㄱ-ㅎ)</SelectItem>
                   <SelectItem value="name_desc">이름순 (ㅎ-ㄱ)</SelectItem>
+                  <SelectItem value="cei_desc">CEI 높은 순</SelectItem>
+                  <SelectItem value="rii_desc">RII 높은 순</SelectItem>
+                  <SelectItem value="cgi_desc">CGI 높은 순</SelectItem>
+                  <SelectItem value="mai_desc">MAI 높은 순</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Advanced Filters (Collapsible) */}
+            <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" className="w-full justify-between">
+                  <span>고급 필터</span>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${advancedOpen ? 'rotate-180' : ''}`} />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-4 pt-4">
+                {/* CEI Range */}
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">CEI (자본효율성)</h4>
+                  <Slider
+                    value={filters.ceiRange}
+                    onValueChange={(value) => {
+                      setFilters((prev) => ({ ...prev, ceiRange: value as [number, number] }));
+                      setPage(1);
+                    }}
+                    min={0}
+                    max={100}
+                    step={5}
+                  />
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>{filters.ceiRange[0]}</span>
+                    <span>{filters.ceiRange[1]}</span>
+                  </div>
+                </div>
+
+                {/* RII Range */}
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">RII (재투자)</h4>
+                  <Slider
+                    value={filters.riiRange}
+                    onValueChange={(value) => {
+                      setFilters((prev) => ({ ...prev, riiRange: value as [number, number] }));
+                      setPage(1);
+                    }}
+                    min={0}
+                    max={100}
+                    step={5}
+                  />
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>{filters.riiRange[0]}</span>
+                    <span>{filters.riiRange[1]}</span>
+                  </div>
+                </div>
+
+                {/* CGI Range */}
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">CGI (현금거버넌스)</h4>
+                  <Slider
+                    value={filters.cgiRange}
+                    onValueChange={(value) => {
+                      setFilters((prev) => ({ ...prev, cgiRange: value as [number, number] }));
+                      setPage(1);
+                    }}
+                    min={0}
+                    max={100}
+                    step={5}
+                  />
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>{filters.cgiRange[0]}</span>
+                    <span>{filters.cgiRange[1]}</span>
+                  </div>
+                </div>
+
+                {/* MAI Range */}
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">MAI (시장정렬)</h4>
+                  <Slider
+                    value={filters.maiRange}
+                    onValueChange={(value) => {
+                      setFilters((prev) => ({ ...prev, maiRange: value as [number, number] }));
+                      setPage(1);
+                    }}
+                    min={0}
+                    max={100}
+                    step={5}
+                  />
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>{filters.maiRange[0]}</span>
+                    <span>{filters.maiRange[1]}</span>
+                  </div>
+                </div>
+
+                {/* Investment Gap Range */}
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">투자괴리율 (%)</h4>
+                  <Slider
+                    value={filters.gapRange}
+                    onValueChange={(value) => {
+                      setFilters((prev) => ({ ...prev, gapRange: value as [number, number] }));
+                      setPage(1);
+                    }}
+                    min={-100}
+                    max={100}
+                    step={10}
+                  />
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>{filters.gapRange[0]}%</span>
+                    <span>{filters.gapRange[1]}%</span>
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
 
             {/* Reset Button */}
             <Button
               variant="outline"
               onClick={handleReset}
               className="w-full"
+              disabled={activeFilterCount === 0 && sort === 'score_desc'}
             >
               <RotateCcw className="w-4 h-4 mr-2" />
               필터 초기화
@@ -212,15 +442,18 @@ export default function ScreenerPage() {
               <CardTitle>
                 검색 결과: {data?.total?.toLocaleString() || 0}개 기업
               </CardTitle>
-              {selectedGrades.length > 0 && (
-                <div className="flex gap-1">
-                  {selectedGrades.map((grade) => (
-                    <Badge key={grade} variant="secondary">
-                      {grade}
-                    </Badge>
-                  ))}
-                </div>
-              )}
+              <div className="flex gap-1 flex-wrap">
+                {filters.grades.map((grade) => (
+                  <Badge key={grade} variant="secondary">
+                    {grade}
+                  </Badge>
+                ))}
+                {filters.markets.map((market) => (
+                  <Badge key={market} variant="outline">
+                    {market}
+                  </Badge>
+                ))}
+              </div>
             </CardHeader>
             <CardContent>
               {isLoading ? (
@@ -245,7 +478,7 @@ export default function ScreenerPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredItems.map((company) => (
+                      {data?.items.map((company) => (
                         <TableRow key={company.id}>
                           <TableCell>
                             <div className="flex items-center gap-2">
@@ -256,6 +489,11 @@ export default function ScreenerPage() {
                                   tradingStatus={company.trading_status}
                                   size="sm"
                                 />
+                              )}
+                              {company.red_flags && company.red_flags.length > 0 && (
+                                <span title="위험 신호 있음">
+                                  <AlertTriangle className="w-4 h-4 text-red-500" />
+                                </span>
                               )}
                             </div>
                             <p className="text-xs text-gray-500">{company.stock_code}</p>
@@ -291,6 +529,16 @@ export default function ScreenerPage() {
                       ))}
                     </TableBody>
                   </Table>
+
+                  {/* Empty State */}
+                  {data?.items.length === 0 && (
+                    <div className="text-center py-12 text-gray-500">
+                      <p>조건에 맞는 기업이 없습니다.</p>
+                      <Button variant="link" onClick={handleReset}>
+                        필터 초기화하기
+                      </Button>
+                    </div>
+                  )}
 
                   {/* Pagination */}
                   {totalPages > 1 && (

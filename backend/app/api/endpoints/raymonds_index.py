@@ -293,65 +293,146 @@ async def get_raymonds_index_history(
 
 @router.get("/ranking/list")
 async def get_raymonds_index_ranking(
-    sort: str = Query("score_desc", regex="^(score_desc|score_asc|gap_asc|gap_desc)$"),
+    sort: str = Query("score_desc", regex="^(score_desc|score_asc|gap_asc|gap_desc|name_asc|name_desc|cei_desc|rii_desc|cgi_desc|mai_desc)$"),
     grade: Optional[str] = None,
+    market: Optional[str] = None,
     year: Optional[int] = None,
+    # 점수 범위 필터 (확장성)
+    min_score: Optional[float] = None,
+    max_score: Optional[float] = None,
+    # Sub-Index 필터 (확장성)
+    min_cei: Optional[float] = None,
+    max_cei: Optional[float] = None,
+    min_rii: Optional[float] = None,
+    max_rii: Optional[float] = None,
+    min_cgi: Optional[float] = None,
+    max_cgi: Optional[float] = None,
+    min_mai: Optional[float] = None,
+    max_mai: Optional[float] = None,
+    # 투자괴리율 필터
+    min_gap: Optional[float] = None,
+    max_gap: Optional[float] = None,
+    # 위험신호 필터
+    has_red_flags: Optional[bool] = None,
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    RaymondsIndex 전체 랭킹
+    RaymondsIndex 전체 랭킹 (확장 가능 스크리너)
 
-    - sort: 정렬 기준 (score_desc, score_asc, gap_asc, gap_desc)
-    - grade: 등급 필터 (A+,A,B,C,D 쉼표 구분)
+    ## 기본 필터
+    - sort: 정렬 기준 (score_desc, score_asc, gap_asc, gap_desc, name_asc, name_desc, cei_desc, rii_desc, cgi_desc, mai_desc)
+    - grade: 등급 필터 (A++,A+,A,A-,B+,B,B-,C+,C 쉼표 구분)
+    - market: 시장 필터 (KOSPI, KOSDAQ 쉼표 구분)
     - year: 연도 필터
-    - limit: 조회 개수
-    - offset: 시작 위치
+
+    ## 점수 범위 필터
+    - min_score, max_score: 종합 점수 범위 (0-100)
+    - min_cei, max_cei: CEI 점수 범위
+    - min_rii, max_rii: RII 점수 범위
+    - min_cgi, max_cgi: CGI 점수 범위
+    - min_mai, max_mai: MAI 점수 범위
+
+    ## 기타 필터
+    - min_gap, max_gap: 투자괴리율 범위
+    - has_red_flags: Red Flag 유무 (true/false)
     """
     try:
-        # 기본 쿼리 - 최신 연도만 조회
-        if year:
-            subquery = (
-                select(RaymondsIndex.company_id)
-                .where(RaymondsIndex.fiscal_year == year)
+        # 각 회사의 최신 연도 조회용 서브쿼리
+        latest_subquery = (
+            select(
+                RaymondsIndex.company_id,
+                func.max(RaymondsIndex.fiscal_year).label('max_year')
             )
-        else:
-            # 각 회사의 최신 연도만 조회
-            subquery = (
-                select(
-                    RaymondsIndex.company_id,
-                    func.max(RaymondsIndex.fiscal_year).label('max_year')
-                )
-                .group_by(RaymondsIndex.company_id)
-            ).subquery()
+            .group_by(RaymondsIndex.company_id)
+        ).subquery()
 
+        # 기본 쿼리
         query = (
             select(RaymondsIndex, Company)
             .join(Company, RaymondsIndex.company_id == Company.id)
             .where(Company.market != 'KONEX')  # KONEX 제외
         )
 
+        # 연도 필터
         if year:
             query = query.where(RaymondsIndex.fiscal_year == year)
         else:
             query = query.join(
-                subquery,
-                (RaymondsIndex.company_id == subquery.c.company_id) &
-                (RaymondsIndex.fiscal_year == subquery.c.max_year)
+                latest_subquery,
+                (RaymondsIndex.company_id == latest_subquery.c.company_id) &
+                (RaymondsIndex.fiscal_year == latest_subquery.c.max_year)
             )
 
-        # 등급 필터
+        # 등급 필터 (복수 지원)
         if grade:
             grades = [g.strip() for g in grade.split(',')]
             query = query.where(RaymondsIndex.grade.in_(grades))
 
-        # 정렬
+        # 시장 필터 (복수 지원)
+        if market:
+            markets = [m.strip() for m in market.split(',')]
+            query = query.where(Company.market.in_(markets))
+
+        # 종합 점수 범위 필터
+        if min_score is not None:
+            query = query.where(RaymondsIndex.total_score >= min_score)
+        if max_score is not None:
+            query = query.where(RaymondsIndex.total_score <= max_score)
+
+        # Sub-Index 필터 (CEI)
+        if min_cei is not None:
+            query = query.where(RaymondsIndex.cei_score >= min_cei)
+        if max_cei is not None:
+            query = query.where(RaymondsIndex.cei_score <= max_cei)
+
+        # Sub-Index 필터 (RII)
+        if min_rii is not None:
+            query = query.where(RaymondsIndex.rii_score >= min_rii)
+        if max_rii is not None:
+            query = query.where(RaymondsIndex.rii_score <= max_rii)
+
+        # Sub-Index 필터 (CGI)
+        if min_cgi is not None:
+            query = query.where(RaymondsIndex.cgi_score >= min_cgi)
+        if max_cgi is not None:
+            query = query.where(RaymondsIndex.cgi_score <= max_cgi)
+
+        # Sub-Index 필터 (MAI)
+        if min_mai is not None:
+            query = query.where(RaymondsIndex.mai_score >= min_mai)
+        if max_mai is not None:
+            query = query.where(RaymondsIndex.mai_score <= max_mai)
+
+        # 투자괴리율 필터
+        if min_gap is not None:
+            query = query.where(RaymondsIndex.investment_gap >= min_gap)
+        if max_gap is not None:
+            query = query.where(RaymondsIndex.investment_gap <= max_gap)
+
+        # Red Flag 필터
+        if has_red_flags is not None:
+            if has_red_flags:
+                query = query.where(func.jsonb_array_length(RaymondsIndex.red_flags) > 0)
+            else:
+                query = query.where(
+                    (func.jsonb_array_length(RaymondsIndex.red_flags) == 0) |
+                    (RaymondsIndex.red_flags.is_(None))
+                )
+
+        # 정렬 (확장)
         sort_map = {
             "score_desc": desc(RaymondsIndex.total_score),
             "score_asc": RaymondsIndex.total_score,
             "gap_asc": RaymondsIndex.investment_gap,
             "gap_desc": desc(RaymondsIndex.investment_gap),
+            "name_asc": Company.name,
+            "name_desc": desc(Company.name),
+            "cei_desc": desc(RaymondsIndex.cei_score),
+            "rii_desc": desc(RaymondsIndex.rii_score),
+            "cgi_desc": desc(RaymondsIndex.cgi_score),
+            "mai_desc": desc(RaymondsIndex.mai_score),
         }
         query = query.order_by(sort_map.get(sort, desc(RaymondsIndex.total_score)))
 
@@ -367,15 +448,74 @@ async def get_raymonds_index_ranking(
             item["rank"] = i
             rankings.append(item)
 
-        # 전체 개수
-        count_query = select(func.count()).select_from(RaymondsIndex)
+        # 전체 개수 (동일 필터 조건 적용)
+        count_query = (
+            select(func.count(func.distinct(RaymondsIndex.company_id)))
+            .select_from(RaymondsIndex)
+            .join(Company, RaymondsIndex.company_id == Company.id)
+            .where(Company.market != 'KONEX')  # KONEX 제외
+        )
+
+        # 연도 조건
         if year:
             count_query = count_query.where(RaymondsIndex.fiscal_year == year)
+        else:
+            count_query = count_query.join(
+                latest_subquery,
+                (RaymondsIndex.company_id == latest_subquery.c.company_id) &
+                (RaymondsIndex.fiscal_year == latest_subquery.c.max_year)
+            )
+
+        # 등급 필터
         if grade:
             count_query = count_query.where(RaymondsIndex.grade.in_(grades))
 
+        # 시장 필터
+        if market:
+            count_query = count_query.where(Company.market.in_(markets))
+
+        # 점수 범위 필터
+        if min_score is not None:
+            count_query = count_query.where(RaymondsIndex.total_score >= min_score)
+        if max_score is not None:
+            count_query = count_query.where(RaymondsIndex.total_score <= max_score)
+
+        # Sub-Index 필터
+        if min_cei is not None:
+            count_query = count_query.where(RaymondsIndex.cei_score >= min_cei)
+        if max_cei is not None:
+            count_query = count_query.where(RaymondsIndex.cei_score <= max_cei)
+        if min_rii is not None:
+            count_query = count_query.where(RaymondsIndex.rii_score >= min_rii)
+        if max_rii is not None:
+            count_query = count_query.where(RaymondsIndex.rii_score <= max_rii)
+        if min_cgi is not None:
+            count_query = count_query.where(RaymondsIndex.cgi_score >= min_cgi)
+        if max_cgi is not None:
+            count_query = count_query.where(RaymondsIndex.cgi_score <= max_cgi)
+        if min_mai is not None:
+            count_query = count_query.where(RaymondsIndex.mai_score >= min_mai)
+        if max_mai is not None:
+            count_query = count_query.where(RaymondsIndex.mai_score <= max_mai)
+
+        # 투자괴리율 필터
+        if min_gap is not None:
+            count_query = count_query.where(RaymondsIndex.investment_gap >= min_gap)
+        if max_gap is not None:
+            count_query = count_query.where(RaymondsIndex.investment_gap <= max_gap)
+
+        # Red Flag 필터
+        if has_red_flags is not None:
+            if has_red_flags:
+                count_query = count_query.where(func.jsonb_array_length(RaymondsIndex.red_flags) > 0)
+            else:
+                count_query = count_query.where(
+                    (func.jsonb_array_length(RaymondsIndex.red_flags) == 0) |
+                    (RaymondsIndex.red_flags.is_(None))
+                )
+
         total_result = await db.execute(count_query)
-        total = total_result.scalar()
+        total = total_result.scalar() or 0
 
         return {
             "total": total,
