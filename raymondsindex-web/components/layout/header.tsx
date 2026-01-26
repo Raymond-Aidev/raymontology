@@ -3,16 +3,17 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { BarChart3, Menu, X, User, LogOut, Settings } from 'lucide-react';
+import { BarChart3, Menu, X, User, LogOut, Settings, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/lib/auth';
+import { CompanySearchBar } from '@/components/company-search-bar';
 
 const navItems = [
-  { href: '/', label: 'RaymondsIndex' },
+  { href: '/', label: '홈' },
   { href: '/screener', label: '스크리너' },
   { href: '/ma-target', label: 'M&A 타겟' },
-  { href: '/methodology', label: '평가 방법론' },
+  { href: '/methodology', label: '방법론' },
 ];
 
 export function Header() {
@@ -48,7 +49,7 @@ export function Header() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-6">
+          <nav className="hidden md:flex items-center gap-4">
             {navItems.map((item) => (
               <Link
                 key={item.href}
@@ -64,6 +65,14 @@ export function Header() {
               </Link>
             ))}
           </nav>
+
+          {/* Search Bar - 데스크톱 */}
+          <div className="hidden lg:block flex-1 max-w-md mx-4">
+            <CompanySearchBar
+              placeholder="기업 검색..."
+              size="sm"
+            />
+          </div>
 
           {/* Auth Section */}
           <div className="hidden md:flex items-center gap-2">
@@ -150,6 +159,14 @@ export function Header() {
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
           <nav className="md:hidden py-4 border-t">
+            {/* 모바일 검색바 */}
+            <div className="mb-4 lg:hidden">
+              <CompanySearchBar
+                placeholder="기업 검색..."
+                size="sm"
+              />
+            </div>
+
             {navItems.map((item) => (
               <Link
                 key={item.href}
