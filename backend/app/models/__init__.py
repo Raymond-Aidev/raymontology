@@ -31,6 +31,9 @@ from app.models.news import (
     NewsArticle, NewsEntity, NewsRelation, NewsRisk, NewsCompanyComplexity,
     RISK_WEIGHTS, COMPLEXITY_GRADES
 )
+from app.models.daily_stock_price import DailyStockPrice
+from app.models.stock_info import StockInfo
+from app.models.financial_snapshot import FinancialSnapshot
 
 __all__ = [
     "Base",
@@ -72,4 +75,8 @@ __all__ = [
     "NewsCompanyComplexity",
     "RISK_WEIGHTS",
     "COMPLEXITY_GRADES",
+    # M&A Target models
+    "DailyStockPrice",
+    "StockInfo",
+    "FinancialSnapshot",
 ]

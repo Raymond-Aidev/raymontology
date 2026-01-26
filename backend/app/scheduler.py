@@ -113,6 +113,82 @@ async def daily_risk_analysis():
         logger.error(f"일일 위험도 분석 실패: {e}", exc_info=True)
 
 
+async def daily_ma_target_update():
+    """
+    일일 M&A 타겟 데이터 업데이트 작업
+
+    - 매일 10:00 KST 실행
+    - KRX에서 전일 종가 수집
+    - M&A 타겟 점수 계산 및 스냅샷 생성
+    """
+    logger.info("=" * 70)
+    logger.info("일일 M&A 타겟 데이터 업데이트 시작")
+    logger.info(f"실행 시각: {datetime.now().isoformat()}")
+    logger.info("=" * 70)
+
+    try:
+        import subprocess
+        import os
+        from datetime import date, timedelta
+
+        # 직전 거래일 계산
+        today = date.today()
+        if today.weekday() == 0:  # 월요일
+            target_date = today - timedelta(days=3)  # 금요일
+        elif today.weekday() == 6:  # 일요일
+            target_date = today - timedelta(days=2)  # 금요일
+        else:
+            target_date = today - timedelta(days=1)  # 전일
+
+        target_date_str = target_date.isoformat()
+        logger.info(f"수집 대상일: {target_date_str}")
+
+        # 1. KRX 전일 종가 수집
+        logger.info("Step 1: KRX 전일 종가 수집")
+        cmd_krx = [
+            'python', '-m', 'scripts.collection.collect_daily_prices',
+            '--date', target_date_str
+        ]
+        result = subprocess.run(
+            cmd_krx,
+            cwd=os.path.join(os.path.dirname(__file__), '..'),
+            capture_output=True,
+            text=True,
+            timeout=300  # 5분 타임아웃
+        )
+        if result.returncode != 0:
+            logger.error(f"KRX 수집 실패: {result.stderr}")
+        else:
+            logger.info("KRX 종가 수집 완료")
+
+        # 2. M&A 타겟 점수 계산
+        logger.info("Step 2: M&A 타겟 점수 계산")
+        cmd_score = [
+            'python', '-m', 'scripts.analysis.calculate_ma_target_score',
+            '--date', target_date_str
+        ]
+        result = subprocess.run(
+            cmd_score,
+            cwd=os.path.join(os.path.dirname(__file__), '..'),
+            capture_output=True,
+            text=True,
+            timeout=600  # 10분 타임아웃
+        )
+        if result.returncode != 0:
+            logger.error(f"점수 계산 실패: {result.stderr}")
+        else:
+            logger.info("M&A 타겟 점수 계산 완료")
+
+        logger.info("=" * 70)
+        logger.info("일일 M&A 타겟 데이터 업데이트 완료")
+        logger.info("=" * 70)
+
+    except subprocess.TimeoutExpired:
+        logger.error("M&A 타겟 업데이트 타임아웃")
+    except Exception as e:
+        logger.error(f"일일 M&A 타겟 업데이트 실패: {e}", exc_info=True)
+
+
 async def daily_financial_update():
     """
     일일 재무지표 업데이트 작업
@@ -348,6 +424,16 @@ def setup_scheduler():
     )
     logger.info("스케줄 등록: 일일 재무지표 업데이트 (매일 01:00)")
 
+    # 일일 M&A 타겟 업데이트 - 매일 10:00 KST
+    scheduler.add_job(
+        daily_ma_target_update,
+        CronTrigger(hour=10, minute=0),
+        id='daily_ma_target_update',
+        name='일일 M&A 타겟 업데이트',
+        replace_existing=True
+    )
+    logger.info("스케줄 등록: 일일 M&A 타겟 업데이트 (매일 10:00)")
+
     # 주간 데이터 수집 - 매주 월요일 02:00
     scheduler.add_job(
         weekly_data_collection,
@@ -433,6 +519,7 @@ async def run_job_now(job_name: str):
     jobs = {
         'daily_risk_analysis': daily_risk_analysis,
         'daily_financial_update': daily_financial_update,
+        'daily_ma_target_update': daily_ma_target_update,
         'weekly_data_collection': weekly_data_collection,
         'monthly_cleanup': monthly_cleanup,
         'quarterly_pipeline': quarterly_pipeline

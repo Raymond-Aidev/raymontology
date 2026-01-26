@@ -1,7 +1,7 @@
 """
 Company 모델
 """
-from sqlalchemy import Column, String, Float, DateTime, Index, Boolean
+from sqlalchemy import Column, String, Float, DateTime, Index, Boolean, BigInteger
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -47,6 +47,10 @@ class Company(Base):
     ownership_concentration = Column(Float, nullable=True)  # 소유 집중도 (0~1)
     affiliate_transaction_ratio = Column(Float, nullable=True)  # 특수관계자 거래 비율
     cb_issuance_count = Column(Float, default=0)  # CB 발행 횟수
+
+    # 발행주식수 (M&A 타겟 분석용)
+    shares_outstanding = Column(BigInteger, nullable=True)  # 유통주식수
+    shares_updated_at = Column(DateTime(timezone=True), nullable=True)  # 발행주식수 갱신일
 
     # 온톨로지 연결
     ontology_object_id = Column(String(50), unique=True, nullable=True, index=True)

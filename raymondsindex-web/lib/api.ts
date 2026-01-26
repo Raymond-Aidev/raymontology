@@ -8,7 +8,11 @@ import type {
   SearchResult,
   RankingParams,
   StockPriceChartResponse,
-  StockPriceStatusResponse
+  StockPriceStatusResponse,
+  MATargetResponse,
+  MATargetRankingResponse,
+  MATargetParams,
+  MATargetStatsResponse
 } from './types';
 
 async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -173,6 +177,62 @@ export const api = {
     // 수집 현황 조회
     getStatus: async (): Promise<StockPriceStatusResponse> => {
       return fetchAPI<StockPriceStatusResponse>('/stock-prices/status');
+    },
+  },
+
+  // M&A 타겟 API
+  maTarget: {
+    // 랭킹 조회
+    getRanking: async (params: MATargetParams = {}): Promise<MATargetRankingResponse> => {
+      const searchParams = new URLSearchParams();
+
+      const page = params.page || 1;
+      const size = params.size || 20;
+      const offset = (page - 1) * size;
+
+      searchParams.set('limit', size.toString());
+      searchParams.set('offset', offset.toString());
+
+      if (params.grade) searchParams.set('grade', params.grade);
+      if (params.market) searchParams.set('market', params.market);
+      if (params.sort) searchParams.set('sort', params.sort);
+      if (params.min_score !== undefined) searchParams.set('min_score', params.min_score.toString());
+      if (params.max_score !== undefined) searchParams.set('max_score', params.max_score.toString());
+      if (params.min_market_cap !== undefined) searchParams.set('min_market_cap', params.min_market_cap.toString());
+      if (params.max_market_cap !== undefined) searchParams.set('max_market_cap', params.max_market_cap.toString());
+      if (params.min_cash_ratio !== undefined) searchParams.set('min_cash_ratio', params.min_cash_ratio.toString());
+      if (params.min_revenue_growth !== undefined) searchParams.set('min_revenue_growth', params.min_revenue_growth.toString());
+      if (params.min_tangible_growth !== undefined) searchParams.set('min_tangible_growth', params.min_tangible_growth.toString());
+      if (params.min_op_profit_growth !== undefined) searchParams.set('min_op_profit_growth', params.min_op_profit_growth.toString());
+      if (params.snapshot_date) searchParams.set('snapshot_date', params.snapshot_date);
+
+      const query = searchParams.toString();
+      const data = await fetchAPI<{
+        total: number;
+        offset: number;
+        limit: number;
+        snapshot_date: string | null;
+        rankings: MATargetResponse[];
+      }>(`/ma-target/ranking?${query}`);
+
+      return {
+        items: data.rankings,
+        total: data.total,
+        page,
+        size,
+        total_pages: Math.ceil(data.total / size),
+        snapshot_date: data.snapshot_date,
+      };
+    },
+
+    // 통계 조회
+    getStats: async (): Promise<MATargetStatsResponse> => {
+      return fetchAPI<MATargetStatsResponse>('/ma-target/stats');
+    },
+
+    // 기업 상세 조회
+    getCompany: async (companyId: string): Promise<MATargetResponse> => {
+      return fetchAPI<MATargetResponse>(`/ma-target/company/${companyId}`);
     },
   },
 };

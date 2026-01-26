@@ -9,8 +9,9 @@ import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/lib/auth';
 
 const navItems = [
-  { href: '/', label: '홈' },
+  { href: '/', label: 'RaymondsIndex' },
   { href: '/screener', label: '스크리너' },
+  { href: '/ma-target', label: 'M&A 타겟' },
   { href: '/methodology', label: '평가 방법론' },
 ];
 

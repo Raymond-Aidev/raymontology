@@ -27,7 +27,8 @@ from app.api.endpoints import (
     raymonds_index,
     stock_prices,
     news,
-    financial_ratios
+    financial_ratios,
+    ma_target
 )
 from app.routes import auth, oauth, admin, subscription, content, service_application
 from app.routes import toss_auth, credits
@@ -103,6 +104,7 @@ app.include_router(raymonds_index.router, prefix="/api")
 app.include_router(stock_prices.router, prefix="/api")
 app.include_router(news.router, prefix="/api")
 app.include_router(financial_ratios.router, prefix="/api")
+app.include_router(ma_target.router, prefix="/api")
 
 @app.get("/")
 async def root():
@@ -114,6 +116,7 @@ async def root():
         "endpoints": {
             "report": "/api/report (회사 종합보고서)",
             "raymonds_index": "/api/raymonds-index (자본배분 효율성 지수)",
+            "ma_target": "/api/ma-target (M&A 타겟 분석)",
             "financial_ratios": "/api/financial-ratios (재무건전성 평가)",
             "stock_prices": "/api/stock-prices (월별 주가 데이터)",
             "graph": "/api/graph",

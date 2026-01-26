@@ -165,3 +165,83 @@ export interface StockPriceStatusResponse {
   total_price_records: number;
   latest_data_month: string | null;
 }
+
+// M&A 타겟 타입
+export interface MATargetResponse {
+  company_id: string;
+  name: string;
+  ticker: string;
+  stock_code: string;
+  market: string;
+  sector?: string;
+  trading_status?: string;
+  rank?: number;
+
+  // 주가 데이터
+  snapshot_date: string;
+  close_price: number | null;
+  market_cap_krx: number | null;
+  market_cap_calculated: number | null;
+  shares_outstanding: number | null;
+
+  // M&A 타겟 점수
+  ma_target_score: number | null;
+  ma_target_grade: string | null;
+  ma_target_factors?: {
+    cash_ratio: { score: number; max: number; value: number | null };
+    tangible_growth: { score: number; max: number; value: number | null };
+    revenue_growth: { score: number; max: number; value: number | null };
+    op_profit_growth: { score: number; max: number; value: number | null };
+    market_cap_size: { score: number; max: number; value: number | null };
+  };
+
+  // 재무 지표
+  cash_and_equivalents: number | null;
+  short_term_investments: number | null;
+  total_liquid_assets: number | null;
+  tangible_assets: number | null;
+  revenue: number | null;
+  operating_profit: number | null;
+
+  // 증감율
+  tangible_assets_growth: number | null;
+  revenue_growth: number | null;
+  operating_profit_growth: number | null;
+
+  fiscal_year: number | null;
+}
+
+export interface MATargetRankingResponse {
+  items: MATargetResponse[];
+  total: number;
+  page: number;
+  size: number;
+  total_pages: number;
+  snapshot_date: string | null;
+}
+
+export interface MATargetParams {
+  page?: number;
+  size?: number;
+  grade?: string;
+  market?: string;
+  sort?: 'score_desc' | 'score_asc' | 'cash_ratio_desc' | 'market_cap_asc' | 'market_cap_desc' | 'revenue_growth_desc' | 'tangible_growth_desc';
+  min_score?: number;
+  max_score?: number;
+  min_market_cap?: number;  // 억원
+  max_market_cap?: number;  // 억원
+  min_cash_ratio?: number;
+  min_revenue_growth?: number;
+  min_tangible_growth?: number;
+  min_op_profit_growth?: number;
+  snapshot_date?: string;
+}
+
+export interface MATargetStatsResponse {
+  snapshot_date: string | null;
+  total_companies: number;
+  average_score: number | null;
+  max_score: number | null;
+  min_score: number | null;
+  grade_distribution: Record<string, number>;
+}
