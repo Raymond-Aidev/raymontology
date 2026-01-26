@@ -204,5 +204,65 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* 폰트 합성 방지 - 가짜 볼드/이탤릭 생성 방지 */
+    font-synthesis: none;
+    /* 텍스트 렌더링 최적화 */
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
+}
+
+/* ============================================
+   Font Fallback - 브라우저 호환성 보장
+   ============================================ */
+
+/* CSS 변수가 지원되지 않는 구형 브라우저를 위한 폴백 */
+@supports not (font-family: var(--font-geist-sans)) {
+  body {
+    font-family:
+      "Apple SD Gothic Neo",  /* macOS 한글 */
+      "Malgun Gothic",        /* Windows 한글 */
+      "Noto Sans KR",         /* Android/Linux 한글 */
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      Roboto,
+      "Helvetica Neue",
+      Arial,
+      sans-serif;
+  }
+
+  code, pre, kbd, samp {
+    font-family:
+      "SF Mono",
+      Monaco,
+      Consolas,
+      "Liberation Mono",
+      "Courier New",
+      monospace;
+  }
+}
+
+/* 폰트 로딩 실패 시 대비 - 네트워크 오류, 지역 제한 등 */
+.font-sans {
+  font-family:
+    var(--font-geist-sans),
+    "Apple SD Gothic Neo",
+    "Malgun Gothic",
+    "Noto Sans KR",
+    system-ui,
+    -apple-system,
+    sans-serif;
+}
+
+.font-mono {
+  font-family:
+    var(--font-geist-mono),
+    "SF Mono",
+    Monaco,
+    Consolas,
+    "Liberation Mono",
+    "Courier New",
+    monospace;
 }
