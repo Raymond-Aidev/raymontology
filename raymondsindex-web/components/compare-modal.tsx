@@ -20,12 +20,15 @@ function MetricRow({
   highlight?: 'high' | 'low' | 'none';
 }) {
   const validValues = values.filter((v) => v !== null && v !== undefined) as number[];
+  // 빈 배열 안전 처리: Math.max/min에 빈 배열 전달 시 -Infinity/Infinity 반환 방지
   const bestValue =
-    highlight === 'high'
-      ? Math.max(...validValues)
-      : highlight === 'low'
-        ? Math.min(...validValues)
-        : null;
+    validValues.length === 0
+      ? null
+      : highlight === 'high'
+        ? Math.max(...validValues)
+        : highlight === 'low'
+          ? Math.min(...validValues)
+          : null;
 
   const formatValue = (v: number | null | undefined) => {
     if (v === null || v === undefined) return '-';

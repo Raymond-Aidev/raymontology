@@ -22,15 +22,19 @@ export const useCompareStore = create<CompareStore>((set, get) => ({
   items: [],
   isOpen: false,
 
+  // 원자적 패턴: set() 콜백 내에서 모든 검사와 업데이트 수행
   addItem: (item) => {
-    const { items } = get();
-    if (items.length >= MAX_COMPARE_ITEMS) {
-      return; // 최대 개수 초과
-    }
-    if (items.some((i) => i.company_id === item.company_id)) {
-      return; // 이미 추가됨
-    }
-    set({ items: [...items, item] });
+    set((state) => {
+      // 최대 개수 초과 검사
+      if (state.items.length >= MAX_COMPARE_ITEMS) {
+        return state; // 변경 없음
+      }
+      // 중복 검사
+      if (state.items.some((i) => i.company_id === item.company_id)) {
+        return state; // 변경 없음
+      }
+      return { items: [...state.items, item] };
+    });
   },
 
   removeItem: (companyId) => {
@@ -47,13 +51,21 @@ export const useCompareStore = create<CompareStore>((set, get) => ({
     return get().items.some((i) => i.company_id === companyId);
   },
 
+  // 원자적 토글: 단일 set() 호출로 검사와 업데이트 수행
   toggleItem: (item) => {
-    const { isSelected, addItem, removeItem } = get();
-    if (isSelected(item.company_id)) {
-      removeItem(item.company_id);
-    } else {
-      addItem(item);
-    }
+    set((state) => {
+      const isCurrentlySelected = state.items.some((i) => i.company_id === item.company_id);
+      if (isCurrentlySelected) {
+        // 제거
+        return { items: state.items.filter((i) => i.company_id !== item.company_id) };
+      } else {
+        // 추가 (최대 개수 검사)
+        if (state.items.length >= MAX_COMPARE_ITEMS) {
+          return state; // 변경 없음
+        }
+        return { items: [...state.items, item] };
+      }
+    });
   },
 
   openModal: () => {

@@ -35,24 +35,32 @@ export function convertToCSV(
 
   const headers = [...baseHeaders, ...subIndexHeaders];
 
-  // 데이터 행 생성
+  // 안전한 숫자 포맷팅 헬퍼
+  const safeToFixed = (value: number | null | undefined, decimals: number = 1): string => {
+    if (value === null || value === undefined || typeof value !== 'number' || isNaN(value)) {
+      return '';
+    }
+    return value.toFixed(decimals);
+  };
+
+  // 데이터 행 생성 (방어적 코딩)
   const rows = items.map((item, index) => {
     const baseRow = [
       index + 1,
-      item.company_name,
-      item.stock_code,
-      item.market || '',
-      item.grade,
-      item.total_score.toFixed(1),
+      item.company_name ?? '',
+      item.stock_code ?? '',
+      item.market ?? '',
+      item.grade ?? '',
+      safeToFixed(item.total_score),
     ];
 
     const subIndexRow = includeSubIndices
       ? [
-          item.cei_score?.toFixed(1) || '',
-          item.rii_score?.toFixed(1) || '',
-          item.cgi_score?.toFixed(1) || '',
-          item.mai_score?.toFixed(1) || '',
-          item.investment_gap?.toFixed(1) || '',
+          safeToFixed(item.cei_score),
+          safeToFixed(item.rii_score),
+          safeToFixed(item.cgi_score),
+          safeToFixed(item.mai_score),
+          safeToFixed(item.investment_gap),
         ]
       : [];
 
