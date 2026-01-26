@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trophy, ArrowRight } from 'lucide-react';
+import { Trophy, ArrowRight, AlertTriangle } from 'lucide-react';
 import type { RaymondsIndexResponse } from '@/lib/types';
 
 interface TopCompaniesTableProps {
@@ -86,6 +86,11 @@ export function TopCompaniesTable({ companies, isLoading }: TopCompaniesTablePro
                         tradingStatus={company.trading_status}
                         size="sm"
                       />
+                    )}
+                    {company.red_flags && company.red_flags.length > 0 && (
+                      <span title="위험 신호 있음">
+                        <AlertTriangle className="w-4 h-4 text-red-500" />
+                      </span>
                     )}
                   </div>
                   <p className="text-xs text-gray-500">{company.stock_code}</p>
