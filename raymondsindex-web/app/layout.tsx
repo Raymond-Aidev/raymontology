@@ -7,12 +7,30 @@ import { Providers } from "@/components/providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext"],
+  display: "swap", // 폰트 로딩 중에도 시스템 폰트로 텍스트 표시
+  fallback: [
+    "Apple SD Gothic Neo",  // macOS 한글
+    "Malgun Gothic",        // Windows 한글
+    "Noto Sans KR",         // Android/Linux 한글
+    "system-ui",
+    "-apple-system",
+    "sans-serif",
+  ],
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext"],
+  display: "swap",
+  fallback: [
+    "SF Mono",
+    "Monaco",
+    "Consolas",
+    "Liberation Mono",
+    "Courier New",
+    "monospace",
+  ],
 });
 
 export const metadata: Metadata = {
