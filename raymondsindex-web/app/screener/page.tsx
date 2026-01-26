@@ -31,7 +31,7 @@ import { GRADE_ORDER, type Grade } from '@/lib/constants';
 import type { RankingParams } from '@/lib/types';
 
 const PAGE_SIZE = 20;
-const MARKETS = ['KOSPI', 'KOSDAQ', 'KONEX'] as const;
+const MARKETS = ['KOSPI', 'KOSDAQ'] as const;  // KONEX 제외
 
 export default function ScreenerPage() {
   const [params, setParams] = useState<RankingParams>({

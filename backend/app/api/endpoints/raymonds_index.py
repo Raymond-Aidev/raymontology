@@ -69,6 +69,7 @@ async def get_downgraded_companies(
             select(RaymondsIndex, Company)
             .join(Company, RaymondsIndex.company_id == Company.id)
             .where(RaymondsIndex.fiscal_year == current_year)
+            .where(Company.market != 'KONEX')  # KONEX 제외
         )
         current_result = await db.execute(current_query)
         current_data = {str(row[0].company_id): (row[0], row[1]) for row in current_result.all()}
@@ -328,6 +329,7 @@ async def get_raymonds_index_ranking(
         query = (
             select(RaymondsIndex, Company)
             .join(Company, RaymondsIndex.company_id == Company.id)
+            .where(Company.market != 'KONEX')  # KONEX 제외
         )
 
         if year:
@@ -408,13 +410,14 @@ async def search_raymonds_index(
     - min_gap, max_gap: 투자괴리율 범위
     - has_red_flags: Red Flag 유무
     - grade: 등급 필터
-    - market: 시장 필터 (KOSPI, KOSDAQ, KONEX)
+    - market: 시장 필터 (KOSPI, KOSDAQ)
     - year: 연도 필터
     """
     try:
         query = (
             select(RaymondsIndex, Company)
             .join(Company, RaymondsIndex.company_id == Company.id)
+            .where(Company.market != 'KONEX')  # KONEX 제외
         )
 
         # 연도 필터 (기본: 각 회사의 최신)
@@ -636,6 +639,7 @@ async def search_companies(
                 (RaymondsIndex.company_id == subquery.c.company_id) &
                 (RaymondsIndex.fiscal_year == subquery.c.max_year)
             )
+            .where(Company.market != 'KONEX')  # KONEX 제외
             .where(
                 (Company.name.ilike(f"%{q}%")) |
                 (Company.ticker.ilike(f"%{q}%"))
