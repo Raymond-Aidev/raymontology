@@ -29,8 +29,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { Filter, RotateCcw, ChevronLeft, ChevronRight, ChevronDown, AlertTriangle } from 'lucide-react';
+import { Filter, RotateCcw, ChevronLeft, ChevronRight, ChevronDown, AlertTriangle, Download, Check } from 'lucide-react';
 import { GRADE_ORDER } from '@/lib/constants';
+import { downloadCSV } from '@/lib/export-csv';
+import { useCompareStore, MAX_COMPARE_ITEMS } from '@/lib/compare-store';
+import { CompareBar } from '@/components/compare-bar';
+import { CompareModal } from '@/components/compare-modal';
 import type { RankingParams } from '@/lib/types';
 
 const PAGE_SIZE = 20;
@@ -119,6 +123,9 @@ export default function ScreenerPage() {
 
   const { data, isLoading } = useRanking(buildParams());
 
+  // 비교 기능
+  const { items: compareItems, toggleItem, isSelected } = useCompareStore();
+
   // 필터 토글 핸들러
   const handleGradeToggle = (grade: string) => {
     setFilters((prev) => ({
@@ -167,11 +174,82 @@ export default function ScreenerPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">스크리너</h1>
         <p className="text-gray-600">
           조건에 맞는 기업을 검색하고 비교해보세요
         </p>
+      </div>
+
+      {/* 프리셋 필터 (빠른 필터) */}
+      <div className="mb-6 flex flex-wrap gap-2">
+        <Button
+          variant={filters.grades.length === 4 && filters.grades.includes('A++') ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => {
+            setFilters((prev) => ({
+              ...prev,
+              grades: ['A++', 'A+', 'A', 'A-'],
+            }));
+            setPage(1);
+          }}
+        >
+          A등급 이상
+        </Button>
+        <Button
+          variant={filters.hasRedFlags === false ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => {
+            setFilters((prev) => ({
+              ...prev,
+              hasRedFlags: prev.hasRedFlags === false ? null : false,
+            }));
+            setPage(1);
+          }}
+        >
+          위험신호 없음
+        </Button>
+        <Button
+          variant={filters.scoreRange[0] >= 70 ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => {
+            setFilters((prev) => ({
+              ...prev,
+              scoreRange: [70, 100],
+            }));
+            setPage(1);
+          }}
+        >
+          70점 이상
+        </Button>
+        <Button
+          variant={filters.ceiRange[0] >= 80 ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => {
+            setFilters((prev) => ({
+              ...prev,
+              ceiRange: [80, 100],
+            }));
+            setPage(1);
+            setAdvancedOpen(true);
+          }}
+        >
+          높은 ROIC
+        </Button>
+        <Button
+          variant={filters.gapRange[1] <= 0 ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => {
+            setFilters((prev) => ({
+              ...prev,
+              gapRange: [-100, 0],
+            }));
+            setPage(1);
+            setAdvancedOpen(true);
+          }}
+        >
+          과소투자
+        </Button>
       </div>
 
       <div className="grid lg:grid-cols-4 gap-6">
@@ -442,17 +520,35 @@ export default function ScreenerPage() {
               <CardTitle>
                 검색 결과: {data?.total?.toLocaleString() || 0}개 기업
               </CardTitle>
-              <div className="flex gap-1 flex-wrap">
-                {filters.grades.map((grade) => (
-                  <Badge key={grade} variant="secondary">
-                    {grade}
-                  </Badge>
-                ))}
-                {filters.markets.map((market) => (
-                  <Badge key={market} variant="outline">
-                    {market}
-                  </Badge>
-                ))}
+              <div className="flex items-center gap-3">
+                <div className="flex gap-1 flex-wrap">
+                  {filters.grades.map((grade) => (
+                    <Badge key={grade} variant="secondary">
+                      {grade}
+                    </Badge>
+                  ))}
+                  {filters.markets.map((market) => (
+                    <Badge key={market} variant="outline">
+                      {market}
+                    </Badge>
+                  ))}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (data?.items && data.items.length > 0) {
+                      downloadCSV(data.items, {
+                        filename: `raymondsindex_screener_${new Date().toISOString().split('T')[0]}.csv`,
+                      });
+                    }
+                  }}
+                  disabled={!data?.items || data.items.length === 0}
+                  className="shrink-0"
+                >
+                  <Download className="w-4 h-4 mr-1" />
+                  CSV
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
@@ -467,6 +563,7 @@ export default function ScreenerPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-10">비교</TableHead>
                         <TableHead>기업명</TableHead>
                         <TableHead className="text-center">등급</TableHead>
                         <TableHead className="text-right">종합</TableHead>
@@ -480,6 +577,21 @@ export default function ScreenerPage() {
                     <TableBody>
                       {data?.items.map((company) => (
                         <TableRow key={company.id}>
+                          <TableCell>
+                            <button
+                              onClick={() => toggleItem(company)}
+                              disabled={!isSelected(company.company_id) && compareItems.length >= MAX_COMPARE_ITEMS}
+                              className={`w-6 h-6 rounded border flex items-center justify-center transition-colors ${
+                                isSelected(company.company_id)
+                                  ? 'bg-blue-600 border-blue-600 text-white'
+                                  : compareItems.length >= MAX_COMPARE_ITEMS
+                                    ? 'bg-gray-100 border-gray-200 text-gray-300 cursor-not-allowed'
+                                    : 'border-gray-300 hover:border-blue-400'
+                              }`}
+                            >
+                              {isSelected(company.company_id) && <Check className="w-4 h-4" />}
+                            </button>
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <p className="font-medium">{company.company_name}</p>
@@ -565,6 +677,12 @@ export default function ScreenerPage() {
           </Card>
         </div>
       </div>
+
+      {/* 비교 바 (선택된 기업이 있을 때 표시) */}
+      <CompareBar />
+
+      {/* 비교 모달 */}
+      <CompareModal />
     </div>
   );
 }
