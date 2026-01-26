@@ -490,11 +490,6 @@ export default function ScreenerPage() {
                                   size="sm"
                                 />
                               )}
-                              {company.red_flags && company.red_flags.length > 0 && (
-                                <span title="위험 신호 있음">
-                                  <AlertTriangle className="w-4 h-4 text-red-500" />
-                                </span>
-                              )}
                             </div>
                             <p className="text-xs text-gray-500">{company.stock_code}</p>
                           </TableCell>
