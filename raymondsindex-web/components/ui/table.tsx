@@ -23,7 +23,12 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   return (
     <thead
       data-slot="table-header"
-      className={cn("[&_tr]:border-b", className)}
+      className={cn(
+        // Linear-style dark table header
+        "border-b border-white/10 bg-black/50",
+        "[&_tr]:border-b-0",
+        className
+      )}
       {...props}
     />
   )
@@ -44,7 +49,7 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
     <tfoot
       data-slot="table-footer"
       className={cn(
-        "bg-muted/50 border-t font-medium [&>tr]:last:border-b-0",
+        "bg-zinc-900/50 border-t border-white/10 font-medium [&>tr]:last:border-b-0",
         className
       )}
       {...props}
@@ -57,7 +62,10 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
     <tr
       data-slot="table-row"
       className={cn(
-        "hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors",
+        // Linear-style row with subtle hover
+        "border-b border-white/5 transition-colors",
+        "hover:bg-white/[0.02]",
+        "data-[state=selected]:bg-white/5",
         className
       )}
       {...props}
@@ -70,7 +78,11 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
     <th
       data-slot="table-head"
       className={cn(
-        "text-foreground h-8 px-2 text-left align-middle text-xs font-medium whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+        // Linear-style header cell
+        "h-10 px-3 text-left align-middle",
+        "text-xs font-medium text-zinc-400 uppercase tracking-wider",
+        "whitespace-nowrap",
+        "[&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
         className
       )}
       {...props}
@@ -83,7 +95,10 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
     <td
       data-slot="table-cell"
       className={cn(
-        "py-1.5 px-2 align-middle text-sm whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+        // Linear-style cell
+        "px-3 py-2.5 align-middle text-sm text-zinc-300",
+        "whitespace-nowrap",
+        "[&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
         className
       )}
       {...props}
@@ -98,7 +113,7 @@ function TableCaption({
   return (
     <caption
       data-slot="table-caption"
-      className={cn("text-muted-foreground mt-4 text-sm", className)}
+      className={cn("text-zinc-500 mt-4 text-sm", className)}
       {...props}
     />
   )

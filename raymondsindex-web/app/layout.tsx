@@ -43,6 +43,9 @@ export const metadata: Metadata = {
     locale: "ko_KR",
     type: "website",
   },
+  other: {
+    'theme-color': '#000000',
+  },
 };
 
 export default function RootLayout({
@@ -51,18 +54,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko">
+    <html lang="ko" className="dark">
       <head>
         {/* Google Fonts preconnect - 폰트 로딩 속도 개선 */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Theme color for mobile browsers */}
+        <meta name="theme-color" content="#000000" />
+        <meta name="color-scheme" content="dark" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col bg-black text-white`}
       >
         <Providers>
           <Header />
-          <main className="flex-1">
+          <main className="flex-1 bg-black">
             {children}
           </main>
           <Footer />

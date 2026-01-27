@@ -256,32 +256,32 @@ export default function SignupPage() {
   }, [username, fullName, email, password, isValid, register, clearError]);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-8 px-4">
+    <div className="min-h-screen bg-black flex items-center justify-center py-8 px-4">
       <div className="w-full max-w-md">
         {/* 로고 */}
         <div className="flex justify-center mb-8">
-          <Link href="/" className="text-2xl font-bold text-blue-600">
+          <Link href="/" className="text-2xl font-bold text-[#5E6AD2]">
             RaymondsIndex
           </Link>
         </div>
 
         {/* 회원가입 카드 */}
-        <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-lg">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
+        <div className="bg-zinc-900/50 border border-white/10 rounded-2xl p-8 shadow-xl shadow-black/50 backdrop-blur-sm">
+          <h2 className="text-2xl font-bold text-white mb-6 text-center">
             회원가입
           </h2>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">{error}</p>
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+              <p className="text-sm text-red-400">{error}</p>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* 사용자명 */}
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
-                사용자명 <span className="text-red-500">*</span>
+              <label htmlFor="username" className="block text-sm font-medium text-zinc-400 mb-1">
+                사용자명 <span className="text-red-400">*</span>
               </label>
               <input
                 id="username"
@@ -291,17 +291,17 @@ export default function SignupPage() {
                 onBlur={() => setTouched(prev => ({ ...prev, username: true }))}
                 placeholder="영문, 숫자, 밑줄 (3-50자)"
                 autoComplete="username"
-                className={`w-full px-4 py-3 bg-white border rounded-lg text-gray-900 placeholder-gray-400 transition-colors focus:outline-none focus:ring-2
-                           ${usernameError ? 'border-red-300 focus:ring-red-200 focus:border-red-500' :
-                                            'border-gray-300 focus:ring-blue-200 focus:border-blue-500'}`}
+                className={`w-full px-4 py-3 bg-zinc-800/50 border rounded-lg text-white placeholder-zinc-500 transition-colors focus:outline-none focus:ring-2
+                           ${usernameError ? 'border-red-500/50 focus:ring-red-500/20 focus:border-red-500/50' :
+                                            'border-white/10 focus:ring-[#5E6AD2]/20 focus:border-[#5E6AD2]/50'}`}
               />
-              {usernameError && <p className="mt-1 text-sm text-red-500">{usernameError}</p>}
+              {usernameError && <p className="mt-1 text-sm text-red-400">{usernameError}</p>}
             </div>
 
             {/* 이름 (선택) */}
             <div>
-              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
-                이름 <span className="text-gray-400">(선택)</span>
+              <label htmlFor="fullName" className="block text-sm font-medium text-zinc-400 mb-1">
+                이름 <span className="text-zinc-600">(선택)</span>
               </label>
               <input
                 id="fullName"
@@ -311,17 +311,17 @@ export default function SignupPage() {
                 onBlur={() => setTouched(prev => ({ ...prev, fullName: true }))}
                 placeholder="홍길동"
                 autoComplete="name"
-                className={`w-full px-4 py-3 bg-white border rounded-lg text-gray-900 placeholder-gray-400 transition-colors focus:outline-none focus:ring-2
-                           ${fullNameError ? 'border-red-300 focus:ring-red-200 focus:border-red-500' :
-                                            'border-gray-300 focus:ring-blue-200 focus:border-blue-500'}`}
+                className={`w-full px-4 py-3 bg-zinc-800/50 border rounded-lg text-white placeholder-zinc-500 transition-colors focus:outline-none focus:ring-2
+                           ${fullNameError ? 'border-red-500/50 focus:ring-red-500/20 focus:border-red-500/50' :
+                                            'border-white/10 focus:ring-[#5E6AD2]/20 focus:border-[#5E6AD2]/50'}`}
               />
-              {fullNameError && <p className="mt-1 text-sm text-red-500">{fullNameError}</p>}
+              {fullNameError && <p className="mt-1 text-sm text-red-400">{fullNameError}</p>}
             </div>
 
             {/* 이메일 */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                이메일 <span className="text-red-500">*</span>
+              <label htmlFor="email" className="block text-sm font-medium text-zinc-400 mb-1">
+                이메일 <span className="text-red-400">*</span>
               </label>
               <input
                 id="email"
@@ -331,17 +331,17 @@ export default function SignupPage() {
                 onBlur={() => setTouched(prev => ({ ...prev, email: true }))}
                 placeholder="example@email.com"
                 autoComplete="email"
-                className={`w-full px-4 py-3 bg-white border rounded-lg text-gray-900 placeholder-gray-400 transition-colors focus:outline-none focus:ring-2
-                           ${emailError ? 'border-red-300 focus:ring-red-200 focus:border-red-500' :
-                                         'border-gray-300 focus:ring-blue-200 focus:border-blue-500'}`}
+                className={`w-full px-4 py-3 bg-zinc-800/50 border rounded-lg text-white placeholder-zinc-500 transition-colors focus:outline-none focus:ring-2
+                           ${emailError ? 'border-red-500/50 focus:ring-red-500/20 focus:border-red-500/50' :
+                                         'border-white/10 focus:ring-[#5E6AD2]/20 focus:border-[#5E6AD2]/50'}`}
               />
-              {emailError && <p className="mt-1 text-sm text-red-500">{emailError}</p>}
+              {emailError && <p className="mt-1 text-sm text-red-400">{emailError}</p>}
             </div>
 
             {/* 비밀번호 */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                비밀번호 <span className="text-red-500">*</span>
+              <label htmlFor="password" className="block text-sm font-medium text-zinc-400 mb-1">
+                비밀번호 <span className="text-red-400">*</span>
               </label>
               <div className="relative">
                 <input
@@ -352,14 +352,14 @@ export default function SignupPage() {
                   onBlur={() => setTouched(prev => ({ ...prev, password: true }))}
                   placeholder="8자 이상, 대/소문자, 숫자, 특수문자 포함"
                   autoComplete="new-password"
-                  className={`w-full px-4 py-3 pr-12 bg-white border rounded-lg text-gray-900 placeholder-gray-400 transition-colors focus:outline-none focus:ring-2
-                             ${passwordError ? 'border-red-300 focus:ring-red-200 focus:border-red-500' :
-                                              'border-gray-300 focus:ring-blue-200 focus:border-blue-500'}`}
+                  className={`w-full px-4 py-3 pr-12 bg-zinc-800/50 border rounded-lg text-white placeholder-zinc-500 transition-colors focus:outline-none focus:ring-2
+                             ${passwordError ? 'border-red-500/50 focus:ring-red-500/20 focus:border-red-500/50' :
+                                              'border-white/10 focus:ring-[#5E6AD2]/20 focus:border-[#5E6AD2]/50'}`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-500 hover:text-zinc-300"
                 >
                   {showPassword ? (
                     <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -373,7 +373,7 @@ export default function SignupPage() {
                   )}
                 </button>
               </div>
-              {passwordError && <p className="mt-1 text-sm text-red-500">{passwordError}</p>}
+              {passwordError && <p className="mt-1 text-sm text-red-400">{passwordError}</p>}
 
               {/* 비밀번호 강도 */}
               {password && (
@@ -383,34 +383,34 @@ export default function SignupPage() {
                       <div
                         key={i}
                         className={`h-1 flex-1 rounded-full transition-colors ${
-                          i <= passwordStrength.level ? passwordStrength.color : 'bg-gray-200'
+                          i <= passwordStrength.level ? passwordStrength.color : 'bg-zinc-700'
                         }`}
                       />
                     ))}
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    비밀번호 강도: <span className={passwordStrength.level <= 1 ? 'text-red-500' : passwordStrength.level <= 3 ? 'text-yellow-500' : 'text-green-500'}>{passwordStrength.text}</span>
+                  <p className="text-xs text-zinc-500 mt-1">
+                    비밀번호 강도: <span className={passwordStrength.level <= 1 ? 'text-red-400' : passwordStrength.level <= 3 ? 'text-yellow-400' : 'text-green-400'}>{passwordStrength.text}</span>
                   </p>
                 </div>
               )}
 
               {/* 비밀번호 요구사항 */}
-              <div className="mt-2 text-xs text-gray-500">
+              <div className="mt-2 text-xs text-zinc-500">
                 <p className="font-medium mb-1">비밀번호 요구사항:</p>
                 <ul className="space-y-0.5 ml-3">
-                  <li className={password.length >= 8 ? 'text-green-500' : ''}>8자 이상</li>
-                  <li className={/[A-Z]/.test(password) ? 'text-green-500' : ''}>대문자 1개 이상</li>
-                  <li className={/[a-z]/.test(password) ? 'text-green-500' : ''}>소문자 1개 이상</li>
-                  <li className={/[0-9]/.test(password) ? 'text-green-500' : ''}>숫자 1개 이상</li>
-                  <li className={/[!@#$%^&*()_+\-=[\]{}|;:,.<>?]/.test(password) ? 'text-green-500' : ''}>특수문자 1개 이상</li>
+                  <li className={password.length >= 8 ? 'text-green-400' : ''}>8자 이상</li>
+                  <li className={/[A-Z]/.test(password) ? 'text-green-400' : ''}>대문자 1개 이상</li>
+                  <li className={/[a-z]/.test(password) ? 'text-green-400' : ''}>소문자 1개 이상</li>
+                  <li className={/[0-9]/.test(password) ? 'text-green-400' : ''}>숫자 1개 이상</li>
+                  <li className={/[!@#$%^&*()_+\-=[\]{}|;:,.<>?]/.test(password) ? 'text-green-400' : ''}>특수문자 1개 이상</li>
                 </ul>
               </div>
             </div>
 
             {/* 비밀번호 확인 */}
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                비밀번호 확인 <span className="text-red-500">*</span>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-zinc-400 mb-1">
+                비밀번호 확인 <span className="text-red-400">*</span>
               </label>
               <input
                 id="confirmPassword"
@@ -420,11 +420,11 @@ export default function SignupPage() {
                 onBlur={() => setTouched(prev => ({ ...prev, confirmPassword: true }))}
                 placeholder="비밀번호 재입력"
                 autoComplete="new-password"
-                className={`w-full px-4 py-3 bg-white border rounded-lg text-gray-900 placeholder-gray-400 transition-colors focus:outline-none focus:ring-2
-                           ${confirmPasswordError ? 'border-red-300 focus:ring-red-200 focus:border-red-500' :
-                                                   'border-gray-300 focus:ring-blue-200 focus:border-blue-500'}`}
+                className={`w-full px-4 py-3 bg-zinc-800/50 border rounded-lg text-white placeholder-zinc-500 transition-colors focus:outline-none focus:ring-2
+                           ${confirmPasswordError ? 'border-red-500/50 focus:ring-red-500/20 focus:border-red-500/50' :
+                                                   'border-white/10 focus:ring-[#5E6AD2]/20 focus:border-[#5E6AD2]/50'}`}
               />
-              {confirmPasswordError && <p className="mt-1 text-sm text-red-500">{confirmPasswordError}</p>}
+              {confirmPasswordError && <p className="mt-1 text-sm text-red-400">{confirmPasswordError}</p>}
             </div>
 
             {/* 약관 동의 */}
@@ -434,13 +434,13 @@ export default function SignupPage() {
                 type="checkbox"
                 checked={agreeTerms}
                 onChange={(e) => setAgreeTerms(e.target.checked)}
-                className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                className="mt-1 w-4 h-4 text-[#5E6AD2] bg-zinc-800 border-zinc-600 rounded focus:ring-[#5E6AD2]"
               />
-              <label htmlFor="agreeTerms" className="text-sm text-gray-600">
+              <label htmlFor="agreeTerms" className="text-sm text-zinc-400">
                 <button
                   type="button"
                   onClick={() => setShowTermsModal(true)}
-                  className="text-blue-600 hover:underline"
+                  className="text-[#8B95E8] hover:underline"
                 >
                   이용약관
                 </button>
@@ -448,12 +448,12 @@ export default function SignupPage() {
                 <button
                   type="button"
                   onClick={() => setShowTermsModal(true)}
-                  className="text-blue-600 hover:underline"
+                  className="text-[#8B95E8] hover:underline"
                 >
                   개인정보 처리방침
                 </button>
                 에 동의합니다
-                <span className="text-red-500 ml-1">*</span>
+                <span className="text-red-400 ml-1">*</span>
               </label>
             </div>
 
@@ -463,8 +463,8 @@ export default function SignupPage() {
               disabled={loading || !agreeTerms}
               className={`w-full py-3.5 px-4 rounded-lg font-semibold text-white transition-all ${
                 loading || !agreeTerms
-                  ? 'bg-blue-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25'
+                  ? 'bg-[#5E6AD2]/50 cursor-not-allowed'
+                  : 'bg-[#5E6AD2] hover:bg-[#7C85E0] shadow-lg shadow-[#5E6AD2]/25'
               }`}
             >
               {loading ? (
@@ -479,10 +479,10 @@ export default function SignupPage() {
           </form>
 
           {/* 로그인 링크 */}
-          <div className="mt-6 pt-6 border-t border-gray-200 text-center">
-            <p className="text-sm text-gray-600">
+          <div className="mt-6 pt-6 border-t border-white/10 text-center">
+            <p className="text-sm text-zinc-500">
               이미 계정이 있으신가요?{' '}
-              <Link href="/login" className="text-blue-600 hover:underline font-medium">
+              <Link href="/login" className="text-[#8B95E8] hover:underline font-medium">
                 로그인
               </Link>
             </p>
@@ -492,20 +492,20 @@ export default function SignupPage() {
 
       {/* 회원가입 완료 모달 */}
       {showSuccessModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-white border border-gray-200 rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="bg-zinc-900 border border-white/10 rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl">
             {/* 성공 아이콘 */}
-            <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
-              <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-16 h-16 mx-auto mb-4 bg-green-500/20 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
 
-            <h3 className="text-xl font-semibold text-gray-900 text-center mb-2">
+            <h3 className="text-xl font-semibold text-white text-center mb-2">
               회원가입 완료
             </h3>
 
-            <p className="text-sm text-gray-600 text-center mb-6">
+            <p className="text-sm text-zinc-400 text-center mb-6">
               회원가입이 완료되었습니다.
               <br />
               로그인 페이지에서 로그인해주세요.
@@ -513,7 +513,7 @@ export default function SignupPage() {
 
             <Link
               href="/login"
-              className="block w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl text-center transition-colors"
+              className="block w-full py-3 px-4 bg-[#5E6AD2] hover:bg-[#7C85E0] text-white font-medium rounded-xl text-center transition-colors"
               onClick={() => {
                 setShowSuccessModal(false);
                 useAuthStore.getState().logout();
@@ -527,15 +527,15 @@ export default function SignupPage() {
 
       {/* 이용약관 모달 */}
       {showTermsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white border border-gray-200 rounded-2xl w-full max-w-2xl max-h-[80vh] shadow-2xl flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-zinc-900 border border-white/10 rounded-2xl w-full max-w-2xl max-h-[80vh] shadow-2xl flex flex-col">
             {/* 모달 헤더 */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">이용약관</h3>
+            <div className="flex items-center justify-between p-4 border-b border-white/10">
+              <h3 className="text-lg font-semibold text-white">이용약관</h3>
               <button
                 type="button"
                 onClick={() => setShowTermsModal(false)}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 text-zinc-400 hover:text-zinc-200 hover:bg-white/5 rounded-lg transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -545,35 +545,35 @@ export default function SignupPage() {
 
             {/* 모달 내용 */}
             <div className="flex-1 overflow-y-auto p-6">
-              <div className="prose prose-sm max-w-none text-gray-700">
+              <div className="prose prose-sm prose-invert max-w-none text-zinc-300">
                 {TERMS_OF_SERVICE.split('\n').map((line, index) => {
                   if (line.startsWith('# ')) {
-                    return <h1 key={index} className="text-xl font-bold text-gray-900 mt-4 mb-2">{line.slice(2)}</h1>;
+                    return <h1 key={index} className="text-xl font-bold text-white mt-4 mb-2">{line.slice(2)}</h1>;
                   } else if (line.startsWith('## ')) {
-                    return <h2 key={index} className="text-lg font-semibold text-gray-800 mt-6 mb-2">{line.slice(3)}</h2>;
+                    return <h2 key={index} className="text-lg font-semibold text-zinc-100 mt-6 mb-2">{line.slice(3)}</h2>;
                   } else if (line.startsWith('**') && line.endsWith('**')) {
-                    return <p key={index} className="font-semibold text-gray-900 mt-2">{line.slice(2, -2)}</p>;
+                    return <p key={index} className="font-semibold text-white mt-2">{line.slice(2, -2)}</p>;
                   } else if (line.startsWith('---')) {
-                    return <hr key={index} className="my-4 border-gray-200" />;
+                    return <hr key={index} className="my-4 border-white/10" />;
                   } else if (line.startsWith('   - ')) {
-                    return <li key={index} className="ml-6 text-gray-600">{line.slice(5)}</li>;
+                    return <li key={index} className="ml-6 text-zinc-400">{line.slice(5)}</li>;
                   } else if (line.startsWith('1. ') || line.startsWith('2. ') || line.startsWith('3. ') || line.startsWith('4. ')) {
-                    return <p key={index} className="mt-2 text-gray-700">{line}</p>;
+                    return <p key={index} className="mt-2 text-zinc-300">{line}</p>;
                   } else if (line.trim() === '') {
                     return <br key={index} />;
                   } else {
-                    return <p key={index} className="text-gray-700">{line}</p>;
+                    return <p key={index} className="text-zinc-300">{line}</p>;
                   }
                 })}
               </div>
             </div>
 
             {/* 모달 푸터 */}
-            <div className="flex items-center justify-end gap-3 p-4 border-t border-gray-200">
+            <div className="flex items-center justify-end gap-3 p-4 border-t border-white/10">
               <button
                 type="button"
                 onClick={() => setShowTermsModal(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white transition-colors"
               >
                 닫기
               </button>
@@ -583,7 +583,7 @@ export default function SignupPage() {
                   setAgreeTerms(true);
                   setShowTermsModal(false);
                 }}
-                className="px-6 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                className="px-6 py-2 rounded-lg text-sm font-medium text-white bg-[#5E6AD2] hover:bg-[#7C85E0] transition-colors"
               >
                 동의하고 닫기
               </button>

@@ -25,11 +25,11 @@ export default function CompanyDetailPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="animate-pulse space-y-6">
-          <div className="h-8 w-48 bg-gray-200 rounded" />
-          <div className="h-40 bg-gray-100 rounded-lg" />
+          <div className="h-8 w-48 bg-zinc-800 rounded" />
+          <div className="h-40 bg-zinc-800/50 rounded-lg" />
           <div className="grid lg:grid-cols-2 gap-6">
-            <div className="h-80 bg-gray-100 rounded-lg" />
-            <div className="h-80 bg-gray-100 rounded-lg" />
+            <div className="h-80 bg-zinc-800/50 rounded-lg" />
+            <div className="h-80 bg-zinc-800/50 rounded-lg" />
           </div>
         </div>
       </div>
@@ -40,10 +40,10 @@ export default function CompanyDetailPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center py-12">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+          <h2 className="text-xl font-semibold text-white mb-2">
             기업 정보를 불러올 수 없습니다
           </h2>
-          <p className="text-gray-600 mb-4">
+          <p className="text-zinc-400 mb-4">
             요청하신 기업 정보가 존재하지 않거나 오류가 발생했습니다.
           </p>
           <Button asChild>
@@ -85,13 +85,13 @@ export default function CompanyDetailPage() {
             {/* Company Info */}
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-2xl font-bold text-white">
                   {company.company_name}
                 </h1>
                 <Badge variant="outline">{company.stock_code}</Badge>
               </div>
               {company.sector && (
-                <div className="flex items-center gap-2 text-gray-600">
+                <div className="flex items-center gap-2 text-zinc-400">
                   <Building2 className="w-4 h-4" />
                   <span>{company.sector}</span>
                 </div>
@@ -106,7 +106,7 @@ export default function CompanyDetailPage() {
               <GradeBadge grade={company.grade} size="xl" showLabel />
               <div>
                 <ScoreDisplay score={company.total_score} size="lg" />
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-zinc-500 mt-1">
                   {getPercentileText(company.total_score)}
                 </p>
               </div>
@@ -114,7 +114,7 @@ export default function CompanyDetailPage() {
           </div>
 
           {/* Meta Info */}
-          <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t text-sm text-gray-500">
+          <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-white/10 text-sm text-zinc-500">
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4" />
               <span>
@@ -165,7 +165,7 @@ export default function CompanyDetailPage() {
 
       {/* Core Metrics Grid */}
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">핵심 지표</h2>
+        <h2 className="text-lg font-semibold text-white mb-4">핵심 지표</h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <MetricCard
             label="투자괴리율 (v2.1)"
@@ -236,7 +236,7 @@ export default function CompanyDetailPage() {
 
       {/* Additional Metrics */}
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">추가 지표</h2>
+        <h2 className="text-lg font-semibold text-white mb-4">추가 지표</h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard
             label="유휴현금비율"

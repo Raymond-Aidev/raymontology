@@ -34,7 +34,7 @@ export function TopCompaniesTable({ companies, isLoading }: TopCompaniesTablePro
         <CardContent>
           <div className="animate-pulse space-y-1.5">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-8 bg-gray-100 rounded" />
+              <div key={i} className="h-8 bg-zinc-800 rounded" />
             ))}
           </div>
         </CardContent>
@@ -69,14 +69,14 @@ export function TopCompaniesTable({ companies, isLoading }: TopCompaniesTablePro
           <TableBody>
             {companies.map((company, index) => (
               <TableRow key={company.id}>
-                <TableCell className="font-medium text-gray-400 text-xs">
+                <TableCell className="font-medium text-zinc-500 text-xs">
                   {index + 1}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1.5">
                     <Link
                       href={`/company/${company.company_id}`}
-                      className="font-medium text-gray-900 hover:text-blue-600 text-sm"
+                      className="font-medium text-white hover:text-[#8B95E8] text-sm transition-colors"
                     >
                       {company.company_name}
                     </Link>
@@ -88,17 +88,17 @@ export function TopCompaniesTable({ companies, isLoading }: TopCompaniesTablePro
                       />
                     )}
                   </div>
-                  <p className="text-[10px] text-gray-400">{company.stock_code}</p>
+                  <p className="text-[10px] text-zinc-500">{company.stock_code}</p>
                 </TableCell>
                 <TableCell className="text-center">
                   <div className="flex justify-center">
                     <GradeBadge grade={company.grade} size="sm" />
                   </div>
                 </TableCell>
-                <TableCell className="text-right font-semibold text-sm">
+                <TableCell className="text-right font-semibold text-sm text-white">
                   {company.total_score.toFixed(1)}
                 </TableCell>
-                <TableCell className="hidden md:table-cell text-xs text-gray-500">
+                <TableCell className="hidden md:table-cell text-xs text-zinc-500">
                   {getStrength(company)}
                 </TableCell>
               </TableRow>
