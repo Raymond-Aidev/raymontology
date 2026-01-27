@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 """
-RaymondsIndex 계산
+RaymondsIndex 계산 (v2.1 통합)
 
 분기별 데이터 업데이트 후 RaymondsIndex를 재계산합니다.
+정상 계산기(RaymondsIndexCalculator)를 사용하여 Sub-Index를 포함한
+완전한 점수를 계산합니다.
+
+⚠️ 변경 이력:
+    2026-01-27: 단순화된 계산 로직 제거, 정상 계산기 통합
+               Sub-Index (CEI, RII, CGI, MAI) 저장 추가
 
 사용법:
     python -m scripts.pipeline.calculate_index --year 2025
@@ -21,10 +27,19 @@ import argparse
 import asyncio
 import logging
 import os
-from datetime import datetime
-from typing import Dict, Any, Optional
+import sys
+import json
+from datetime import datetime, date
+from pathlib import Path
+from typing import Dict, Any, Optional, List
+import uuid
 
 import asyncpg
+
+# 프로젝트 루트 경로 추가 (app 모듈 import를 위해)
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+from app.services.raymonds_index_calculator import RaymondsIndexCalculator as ProperCalculator
 
 logging.basicConfig(
     level=logging.INFO,
@@ -33,11 +48,13 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-class RaymondsIndexCalculator:
-    """RaymondsIndex 계산기
+class RaymondsIndexPipelineCalculator:
+    """RaymondsIndex 파이프라인 계산기
 
-    v2.1 (기본): 기존 산술평균 기반 계산
-    v3.0: HDI 방식 기하평균 + 클램핑 + V-Score
+    v2.1 (기본): 정상 계산기(ProperCalculator) 사용 - Sub-Index 포함
+    v3.0: HDI 방식 기하평균 + 클램핑 + V-Score (별도 테이블)
+
+    ⚠️ 2026-01-27 수정: 단순화된 계산 로직 제거, 정상 계산기 통합
     """
 
     def __init__(self, database_url: Optional[str] = None, version: str = '2.1'):
@@ -51,6 +68,9 @@ class RaymondsIndexCalculator:
 
         self.version = version
         self._v3_calculator = None
+
+        # v2.1: 정상 계산기 인스턴스
+        self._proper_calculator = ProperCalculator()
 
         # v3.0 사용 시 v3 모듈 로드
         if version == '3.0':
@@ -120,14 +140,17 @@ class RaymondsIndexCalculator:
                     logger.info(f"진행: {i+1}/{len(companies)}")
 
                 try:
+                    # company_id를 문자열로 변환 (asyncpg UUID 호환)
+                    company_id_str = str(company['id'])
+
                     # 버전에 따라 다른 계산기 사용
                     if self.version == '3.0' and self._v3_calculator:
                         result = await self._calculate_v3(
-                            conn, company['id'], company['name'], year
+                            conn, company_id_str, company['name'], year
                         )
                     else:
                         result = await self._calculate_for_company(
-                            conn, company['id'], company['name'], year
+                            conn, company_id_str, company['name'], year
                         )
 
                     if result:
@@ -160,6 +183,176 @@ class RaymondsIndexCalculator:
         finally:
             await conn.close()
 
+    async def _get_financial_data(
+        self,
+        conn: asyncpg.Connection,
+        company_id: str,
+        target_year: Optional[int] = None
+    ) -> List[Dict]:
+        """회사의 재무 데이터 조회 (3년치)"""
+        if target_year:
+            years = [target_year - 2, target_year - 1, target_year]
+        else:
+            years = None
+
+        query = """
+            SELECT DISTINCT ON (fiscal_year)
+                fiscal_year, fiscal_quarter, fs_type,
+                -- 재무상태표
+                cash_and_equivalents, short_term_investments, trade_and_other_receivables,
+                inventories, tangible_assets, intangible_assets,
+                total_assets, current_liabilities, non_current_liabilities,
+                total_liabilities, total_equity,
+                -- 재무상태표 (투자괴리율 v2용)
+                right_of_use_assets, investments_in_associates,
+                fvpl_financial_assets, other_financial_assets_non_current,
+                -- 손익계산서
+                revenue, cost_of_sales, selling_admin_expenses,
+                operating_income, net_income,
+                -- 현금흐름표
+                operating_cash_flow, investing_cash_flow, financing_cash_flow,
+                capex, intangible_acquisition, dividend_paid,
+                treasury_stock_acquisition, stock_issuance, bond_issuance
+            FROM financial_details
+            WHERE company_id = $1
+        """
+        params = [uuid.UUID(company_id)]
+
+        if years:
+            query += f" AND fiscal_year IN ({', '.join(map(str, years))})"
+
+        query += " ORDER BY fiscal_year, fiscal_quarter NULLS FIRST"
+
+        rows = await conn.fetch(query, *params)
+        return [dict(row) for row in rows]
+
+    def _clamp(self, value: float, min_val: float, max_val: float) -> float:
+        """값을 범위 내로 제한 (DB overflow 방지)"""
+        if value is None:
+            return None
+        return max(min_val, min(max_val, value))
+
+    async def _save_result(self, conn: asyncpg.Connection, result_dict: Dict) -> bool:
+        """계산 결과 저장 (v2.1 - Sub-Index 포함)"""
+        try:
+            await conn.execute("""
+                INSERT INTO raymonds_index (
+                    id, company_id, calculation_date, fiscal_year,
+                    total_score, grade,
+                    cei_score, rii_score, cgi_score, mai_score,
+                    investment_gap, cash_cagr, capex_growth, idle_cash_ratio,
+                    asset_turnover, reinvestment_rate, shareholder_return,
+                    cash_tangible_ratio, fundraising_utilization, short_term_ratio,
+                    capex_trend, roic, capex_cv, violation_count,
+                    investment_gap_v2, investment_gap_v21, investment_gap_v21_flag,
+                    cash_utilization, industry_sector, weight_adjustment,
+                    tangible_efficiency, cash_yield, debt_to_ebitda, growth_investment_ratio,
+                    red_flags, yellow_flags,
+                    verdict, key_risk, recommendation, watch_trigger,
+                    data_quality_score, created_at
+                )
+                VALUES (
+                    gen_random_uuid(), $1, $2, $3,
+                    $4, $5,
+                    $6, $7, $8, $9,
+                    $10, $11, $12, $13,
+                    $14, $15, $16,
+                    $17, $18, $19,
+                    $20, $21, $22, $23,
+                    $24, $25, $26,
+                    $27, $28, $29,
+                    $30, $31, $32, $33,
+                    $34, $35,
+                    $36, $37, $38, $39,
+                    $40, NOW()
+                )
+                ON CONFLICT (company_id, fiscal_year)
+                DO UPDATE SET
+                    calculation_date = EXCLUDED.calculation_date,
+                    total_score = EXCLUDED.total_score,
+                    grade = EXCLUDED.grade,
+                    cei_score = EXCLUDED.cei_score,
+                    rii_score = EXCLUDED.rii_score,
+                    cgi_score = EXCLUDED.cgi_score,
+                    mai_score = EXCLUDED.mai_score,
+                    investment_gap = EXCLUDED.investment_gap,
+                    cash_cagr = EXCLUDED.cash_cagr,
+                    capex_growth = EXCLUDED.capex_growth,
+                    idle_cash_ratio = EXCLUDED.idle_cash_ratio,
+                    asset_turnover = EXCLUDED.asset_turnover,
+                    reinvestment_rate = EXCLUDED.reinvestment_rate,
+                    shareholder_return = EXCLUDED.shareholder_return,
+                    cash_tangible_ratio = EXCLUDED.cash_tangible_ratio,
+                    fundraising_utilization = EXCLUDED.fundraising_utilization,
+                    short_term_ratio = EXCLUDED.short_term_ratio,
+                    capex_trend = EXCLUDED.capex_trend,
+                    roic = EXCLUDED.roic,
+                    capex_cv = EXCLUDED.capex_cv,
+                    violation_count = EXCLUDED.violation_count,
+                    investment_gap_v2 = EXCLUDED.investment_gap_v2,
+                    investment_gap_v21 = EXCLUDED.investment_gap_v21,
+                    investment_gap_v21_flag = EXCLUDED.investment_gap_v21_flag,
+                    cash_utilization = EXCLUDED.cash_utilization,
+                    industry_sector = EXCLUDED.industry_sector,
+                    weight_adjustment = EXCLUDED.weight_adjustment,
+                    tangible_efficiency = EXCLUDED.tangible_efficiency,
+                    cash_yield = EXCLUDED.cash_yield,
+                    debt_to_ebitda = EXCLUDED.debt_to_ebitda,
+                    growth_investment_ratio = EXCLUDED.growth_investment_ratio,
+                    red_flags = EXCLUDED.red_flags,
+                    yellow_flags = EXCLUDED.yellow_flags,
+                    verdict = EXCLUDED.verdict,
+                    key_risk = EXCLUDED.key_risk,
+                    recommendation = EXCLUDED.recommendation,
+                    watch_trigger = EXCLUDED.watch_trigger,
+                    data_quality_score = EXCLUDED.data_quality_score
+            """,
+                uuid.UUID(result_dict['company_id']),
+                date.today(),
+                result_dict['fiscal_year'],
+                result_dict['total_score'],
+                result_dict['grade'],
+                self._clamp(result_dict.get('cei_score'), 0, 100),
+                self._clamp(result_dict.get('rii_score'), 0, 100),
+                self._clamp(result_dict.get('cgi_score'), 0, 100),
+                self._clamp(result_dict.get('mai_score'), 0, 100),
+                self._clamp(result_dict.get('investment_gap'), -999, 999),
+                self._clamp(result_dict.get('cash_cagr'), -999, 999),
+                self._clamp(result_dict.get('capex_growth'), -999, 999),
+                self._clamp(result_dict.get('idle_cash_ratio'), 0, 100),
+                self._clamp(result_dict.get('asset_turnover'), 0, 99.999),
+                self._clamp(result_dict.get('reinvestment_rate'), 0, 100),
+                self._clamp(result_dict.get('shareholder_return'), 0, 100),
+                self._clamp(result_dict.get('cash_tangible_ratio', 0), 0, 9999999.99),
+                self._clamp(result_dict.get('fundraising_utilization', -1), -1, 999),
+                self._clamp(result_dict.get('short_term_ratio', 0), 0, 100),
+                result_dict.get('capex_trend', 'stable'),
+                self._clamp(result_dict.get('roic', 0), -999, 999),
+                self._clamp(result_dict.get('capex_cv', 0), 0, 9.999),
+                result_dict.get('violation_count', 0),
+                self._clamp(result_dict.get('investment_gap_v2', 0), -100, 100),
+                self._clamp(result_dict.get('investment_gap_v21', 0), -50, 50),
+                result_dict.get('investment_gap_v21_flag', 'ok'),
+                self._clamp(result_dict.get('cash_utilization', 0), 0, 999),
+                result_dict.get('industry_sector', ''),
+                json.dumps(result_dict.get('weight_adjustment', {}), ensure_ascii=False),
+                self._clamp(result_dict.get('tangible_efficiency', 0), 0, 999.999),
+                self._clamp(result_dict.get('cash_yield', 0), -999, 999),
+                self._clamp(result_dict.get('debt_to_ebitda', 0), 0, 999),
+                self._clamp(result_dict.get('growth_investment_ratio', 0), 0, 100),
+                json.dumps(result_dict.get('red_flags', []), ensure_ascii=False),
+                json.dumps(result_dict.get('yellow_flags', []), ensure_ascii=False),
+                result_dict.get('verdict', ''),
+                result_dict.get('key_risk', ''),
+                result_dict.get('recommendation', ''),
+                result_dict.get('watch_trigger', ''),
+                result_dict.get('data_quality_score', 0)
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Save error: {e}")
+            return False
+
     async def _calculate_for_company(
         self,
         conn: asyncpg.Connection,
@@ -167,102 +360,35 @@ class RaymondsIndexCalculator:
         company_name: str,
         year: Optional[int] = None
     ) -> Optional[Dict[str, Any]]:
-        """개별 회사 RaymondsIndex 계산
+        """개별 회사 RaymondsIndex 계산 (v2.1 정상 계산기 사용)
 
-        실제 계산 로직은 raymonds_index_calculator.py 서비스 사용
+        ⚠️ 2026-01-27 수정: 단순화된 계산 로직 제거
+        → 정상 계산기(ProperCalculator)를 사용하여 Sub-Index 포함 완전한 점수 계산
         """
-        # 최신 재무 데이터 조회
-        query = """
-            SELECT fiscal_year, revenue, operating_income, net_income,
-                   total_assets, total_liabilities, total_equity,
-                   operating_cash_flow, investing_cash_flow, financing_cash_flow,
-                   capex, r_and_d_expense, dividend_paid
-            FROM financial_details
-            WHERE company_id = $1
-        """
-        params = [company_id]
+        # 재무 데이터 조회 (3년치)
+        financial_data = await self._get_financial_data(conn, company_id, year)
 
-        if year:
-            query += " AND fiscal_year = $2"
-            params.append(year)
-
-        query += " ORDER BY fiscal_year DESC LIMIT 3"
-
-        financials = await conn.fetch(query, *params)
-
-        if not financials:
+        if len(financial_data) < 2:  # 최소 2년 데이터 필요
             return None
 
-        # 간단한 점수 계산 (실제로는 raymonds_index_calculator.py 사용)
-        latest = financials[0]
+        # 정상 계산기로 계산 (Sub-Index 포함)
+        result = self._proper_calculator.calculate(
+            company_id=company_id,
+            financial_data=financial_data,
+            target_year=year
+        )
 
-        # ROE 계산
-        roe = 0
-        if latest['total_equity'] and latest['total_equity'] > 0:
-            roe = (latest['net_income'] or 0) / latest['total_equity'] * 100
+        if result is None:
+            return None
 
-        # 부채비율
-        debt_ratio = 0
-        if latest['total_equity'] and latest['total_equity'] > 0:
-            debt_ratio = (latest['total_liabilities'] or 0) / latest['total_equity'] * 100
+        # 결과 저장 (Sub-Index 포함)
+        result_dict = self._proper_calculator.to_dict(result)
+        success = await self._save_result(conn, result_dict)
 
-        # 영업이익률
-        opm = 0
-        if latest['revenue'] and latest['revenue'] > 0:
-            opm = (latest['operating_income'] or 0) / latest['revenue'] * 100
+        if not success:
+            return None
 
-        # 간단한 점수 산정 (0-100)
-        score = 50  # 기본 점수
-
-        # ROE 가산점 (최대 20점)
-        if roe > 15:
-            score += 20
-        elif roe > 10:
-            score += 15
-        elif roe > 5:
-            score += 10
-        elif roe > 0:
-            score += 5
-
-        # 부채비율 감점 (최대 -20점)
-        if debt_ratio > 200:
-            score -= 20
-        elif debt_ratio > 150:
-            score -= 15
-        elif debt_ratio > 100:
-            score -= 10
-
-        # 영업이익률 가산점 (최대 15점)
-        if opm > 15:
-            score += 15
-        elif opm > 10:
-            score += 10
-        elif opm > 5:
-            score += 5
-
-        # 현금흐름 가산점 (최대 15점)
-        ocf = latest['operating_cash_flow'] or 0
-        if ocf > 0:
-            score += 10
-            # FCF (영업CF - 투자CF)
-            icf = latest['investing_cash_flow'] or 0
-            if ocf + icf > 0:  # 투자CF는 보통 음수
-                score += 5
-
-        score = max(0, min(100, score))
-
-        # 등급 결정
-        grade = self._get_grade(score)
-
-        # UPSERT
-        await conn.execute("""
-            INSERT INTO raymonds_index (id, company_id, fiscal_year, total_score, grade, calculation_date)
-            VALUES (gen_random_uuid(), $1, $2, $3, $4, CURRENT_DATE)
-            ON CONFLICT (company_id, fiscal_year)
-            DO UPDATE SET total_score = $3, grade = $4, calculation_date = CURRENT_DATE
-        """, company_id, latest['fiscal_year'], score, grade)
-
-        return {'score': score, 'grade': grade}
+        return {'score': result.total_score, 'grade': result.grade}
 
     async def _calculate_v3(
         self,
@@ -421,7 +547,7 @@ async def main():
 
     args = parser.parse_args()
 
-    calculator = RaymondsIndexCalculator(version=args.version)
+    calculator = RaymondsIndexPipelineCalculator(version=args.version)
 
     if args.stats:
         stats = await calculator.get_stats()

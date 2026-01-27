@@ -17,16 +17,22 @@ const sizeClasses = {
   xl: 'w-20 h-20 text-2xl font-bold',
 };
 
+// A++ 등급 특별 스타일 (골드 테두리 + 글로우)
+const isTopGrade = (grade: string) => grade === 'A++';
+
 export function GradeBadge({ grade, size = 'md', showLabel = false, className }: GradeBadgeProps) {
   const gradeKey = grade as Grade;
   const colors = GRADE_COLORS[gradeKey] || { bg: '#6B7280', text: 'white', label: '미평가' };
+  const isExcellent = isTopGrade(grade);
 
   return (
     <div className={cn('flex flex-col items-center gap-1', className)}>
+      {/* A++ 등급: 골드 외곽 링 */}
       <div
         className={cn(
-          'rounded-lg flex items-center justify-center font-semibold shadow-sm',
-          sizeClasses[size]
+          'rounded-lg flex items-center justify-center font-semibold',
+          sizeClasses[size],
+          isExcellent && 'ring-2 ring-[#FFD700] ring-offset-1 ring-offset-zinc-900 shadow-[0_0_12px_rgba(255,215,0,0.4)]'
         )}
         style={{
           backgroundColor: colors.bg,
@@ -36,7 +42,12 @@ export function GradeBadge({ grade, size = 'md', showLabel = false, className }:
         {grade}
       </div>
       {showLabel && (
-        <span className="text-xs text-gray-500">{colors.label}</span>
+        <span className={cn(
+          'text-xs',
+          isExcellent ? 'text-[#FFD700] font-medium' : 'text-gray-500'
+        )}>
+          {colors.label}
+        </span>
       )}
     </div>
   );
