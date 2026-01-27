@@ -45,11 +45,11 @@ export function KPICard({
   if (isLoading) {
     return (
       <Card className={cn('relative overflow-hidden', className)}>
-        <CardContent className="p-4">
+        <CardContent className="p-2.5">
           <div className="animate-pulse">
-            <div className="h-4 w-20 bg-gray-200 rounded mb-2" />
-            <div className="h-8 w-24 bg-gray-200 rounded mb-1" />
-            <div className="h-3 w-16 bg-gray-200 rounded" />
+            <div className="h-3 w-16 bg-gray-200 rounded mb-1.5" />
+            <div className="h-6 w-20 bg-gray-200 rounded mb-0.5" />
+            <div className="h-2.5 w-14 bg-gray-200 rounded" />
           </div>
         </CardContent>
       </Card>
@@ -57,45 +57,45 @@ export function KPICard({
   }
 
   return (
-    <Card className={cn('relative overflow-hidden hover:shadow-md transition-shadow', className)}>
-      <CardContent className="p-4">
+    <Card className={cn('relative overflow-hidden hover:bg-muted/30 transition-colors', className)}>
+      <CardContent className="p-2.5">
         {/* 헤더: 타이틀 + 아이콘 */}
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-muted-foreground">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs font-medium text-muted-foreground">
             {title}
           </span>
           {Icon && (
-            <Icon className="w-4 h-4 text-muted-foreground" />
+            <Icon className="w-3.5 h-3.5 text-muted-foreground" />
           )}
         </div>
 
         {/* 메인 값 */}
-        <div className="flex items-baseline gap-1">
-          <span className="text-2xl font-bold text-foreground">
+        <div className="flex items-baseline gap-0.5">
+          <span className="text-lg font-semibold text-foreground">
             {typeof value === 'number' ? value.toLocaleString() : value}
           </span>
           {suffix && (
-            <span className="text-sm text-muted-foreground">
+            <span className="text-xs text-muted-foreground">
               {suffix}
             </span>
           )}
         </div>
 
         {/* 트렌드 또는 서브타이틀 */}
-        <div className="mt-1 flex items-center gap-2">
+        <div className="mt-0.5 flex items-center gap-1.5">
           {trend && (
-            <div className={cn('flex items-center gap-1 text-xs', trendColor)}>
-              <TrendIcon className="w-3 h-3" />
+            <div className={cn('flex items-center gap-0.5 text-[10px]', trendColor)}>
+              <TrendIcon className="w-2.5 h-2.5" />
               {trend.value && <span>{trend.value}</span>}
             </div>
           )}
           {percentage !== undefined && (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-[10px] text-muted-foreground">
               전체의 {percentage.toFixed(1)}%
             </span>
           )}
           {subtitle && (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-[10px] text-muted-foreground">
               {subtitle}
             </span>
           )}
@@ -120,7 +120,7 @@ export function KPIGrid({ children, columns = 4, className }: KPIGridProps) {
   };
 
   return (
-    <div className={cn('grid gap-4', gridCols[columns], className)}>
+    <div className={cn('grid gap-2', gridCols[columns], className)}>
       {children}
     </div>
   );

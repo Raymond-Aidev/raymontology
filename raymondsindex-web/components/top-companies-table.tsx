@@ -26,15 +26,15 @@ export function TopCompaniesTable({ companies, isLoading }: TopCompaniesTablePro
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-yellow-500" />
+          <CardTitle className="flex items-center gap-1.5 text-sm">
+            <Trophy className="w-3.5 h-3.5 text-yellow-500" />
             TOP 10 기업
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="animate-pulse space-y-3">
+          <div className="animate-pulse space-y-1.5">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-12 bg-gray-100 rounded" />
+              <div key={i} className="h-8 bg-gray-100 rounded" />
             ))}
           </div>
         </CardContent>
@@ -45,13 +45,13 @@ export function TopCompaniesTable({ companies, isLoading }: TopCompaniesTablePro
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="flex items-center gap-2">
-          <Trophy className="w-5 h-5 text-yellow-500" />
+        <CardTitle className="flex items-center gap-1.5 text-sm">
+          <Trophy className="w-3.5 h-3.5 text-yellow-500" />
           TOP 10 기업
         </CardTitle>
-        <Button variant="ghost" size="sm" asChild>
+        <Button variant="ghost" size="sm" asChild className="h-7 text-xs">
           <Link href="/screener" className="flex items-center gap-1">
-            전체 보기 <ArrowRight className="w-4 h-4" />
+            전체 보기 <ArrowRight className="w-3 h-3" />
           </Link>
         </Button>
       </CardHeader>
@@ -69,14 +69,14 @@ export function TopCompaniesTable({ companies, isLoading }: TopCompaniesTablePro
           <TableBody>
             {companies.map((company, index) => (
               <TableRow key={company.id}>
-                <TableCell className="font-bold text-gray-500">
+                <TableCell className="font-medium text-gray-400 text-xs">
                   {index + 1}
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <Link
                       href={`/company/${company.company_id}`}
-                      className="font-medium text-gray-900 hover:text-blue-600"
+                      className="font-medium text-gray-900 hover:text-blue-600 text-sm"
                     >
                       {company.company_name}
                     </Link>
@@ -88,17 +88,17 @@ export function TopCompaniesTable({ companies, isLoading }: TopCompaniesTablePro
                       />
                     )}
                   </div>
-                  <p className="text-xs text-gray-500">{company.stock_code}</p>
+                  <p className="text-[10px] text-gray-400">{company.stock_code}</p>
                 </TableCell>
                 <TableCell className="text-center">
                   <div className="flex justify-center">
                     <GradeBadge grade={company.grade} size="sm" />
                   </div>
                 </TableCell>
-                <TableCell className="text-right font-semibold">
+                <TableCell className="text-right font-semibold text-sm">
                   {company.total_score.toFixed(1)}
                 </TableCell>
-                <TableCell className="hidden md:table-cell text-sm text-gray-600">
+                <TableCell className="hidden md:table-cell text-xs text-gray-500">
                   {getStrength(company)}
                 </TableCell>
               </TableRow>

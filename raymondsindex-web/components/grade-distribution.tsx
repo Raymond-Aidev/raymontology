@@ -18,15 +18,15 @@ export function GradeDistribution({ distribution, isLoading }: GradeDistribution
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-blue-500" />
+          <CardTitle className="flex items-center gap-1.5 text-sm">
+            <BarChart3 className="w-3.5 h-3.5 text-blue-500" />
             전체 등급 분포
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="animate-pulse space-y-3">
+          <div className="animate-pulse space-y-1">
             {[...Array(9)].map((_, i) => (
-              <div key={i} className="h-8 bg-gray-100 rounded" />
+              <div key={i} className="h-5 bg-gray-100 rounded" />
             ))}
           </div>
         </CardContent>
@@ -49,21 +49,21 @@ export function GradeDistribution({ distribution, isLoading }: GradeDistribution
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <BarChart3 className="w-5 h-5 text-blue-500" />
+        <CardTitle className="flex items-center gap-1.5 text-sm">
+          <BarChart3 className="w-3.5 h-3.5 text-blue-500" />
           전체 등급 분포
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
+        <div className="space-y-1">
           {sortedDistribution.map(({ grade, count, percentage }) => {
             const colors = GRADE_COLORS[grade as Grade];
             const barWidth = (percentage / maxPercentage) * 100;
 
             return (
-              <div key={grade} className="flex items-center gap-3">
+              <div key={grade} className="flex items-center gap-2">
                 <div
-                  className="w-10 h-7 rounded flex items-center justify-center text-xs font-semibold shrink-0"
+                  className="w-8 h-5 rounded flex items-center justify-center text-[10px] font-semibold shrink-0"
                   style={{
                     backgroundColor: colors?.bg || '#6B7280',
                     color: colors?.text || 'white',
@@ -71,23 +71,23 @@ export function GradeDistribution({ distribution, isLoading }: GradeDistribution
                 >
                   {grade}
                 </div>
-                <div className="flex-1 h-7 bg-gray-100 rounded-full overflow-hidden">
+                <div className="flex-1 h-5 bg-gray-100 rounded overflow-hidden">
                   <div
-                    className="h-full rounded-full transition-all duration-500 flex items-center justify-end pr-2"
+                    className="h-full rounded transition-all duration-500 flex items-center justify-end pr-1.5"
                     style={{
                       width: `${Math.max(barWidth, 5)}%`,
                       backgroundColor: colors?.bg || '#6B7280',
                     }}
                   >
-                    {percentage >= 5 && (
-                      <span className="text-xs font-medium text-white">
+                    {percentage >= 8 && (
+                      <span className="text-[10px] font-medium text-white">
                         {percentage.toFixed(1)}%
                       </span>
                     )}
                   </div>
                 </div>
-                <div className="w-16 text-right text-sm text-gray-600 shrink-0">
-                  {count.toLocaleString()}개
+                <div className="w-12 text-right text-xs text-gray-600 shrink-0">
+                  {count.toLocaleString()}
                 </div>
               </div>
             );

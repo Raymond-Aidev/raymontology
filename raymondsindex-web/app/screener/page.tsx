@@ -173,109 +173,115 @@ export default function ScreenerPage() {
   const currentPage = page;
 
   return (
-    <div className={`container mx-auto px-4 py-8 ${compareItems.length > 0 ? 'pb-24' : ''}`}>
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">스크리너</h1>
-        <p className="text-gray-600">
-          조건에 맞는 기업을 검색하고 비교해보세요
-        </p>
+    <div className={`container mx-auto px-4 py-3 ${compareItems.length > 0 ? 'pb-20' : ''}`}>
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold text-gray-900">스크리너</h1>
+          <p className="text-xs text-gray-500">
+            조건에 맞는 기업을 검색하고 비교해보세요
+          </p>
+        </div>
+        {/* 프리셋 필터 (빠른 필터) - 인라인 */}
+        <div className="flex flex-wrap gap-1.5">
+          <Button
+            variant={filters.grades.length === 4 && filters.grades.includes('A++') ? 'default' : 'outline'}
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => {
+              setFilters((prev) => ({
+                ...prev,
+                grades: ['A++', 'A+', 'A', 'A-'],
+              }));
+              setPage(1);
+            }}
+          >
+            A등급 이상
+          </Button>
+          <Button
+            variant={filters.hasRedFlags === false ? 'default' : 'outline'}
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => {
+              setFilters((prev) => ({
+                ...prev,
+                hasRedFlags: prev.hasRedFlags === false ? null : false,
+              }));
+              setPage(1);
+            }}
+          >
+            위험신호 없음
+          </Button>
+          <Button
+            variant={filters.scoreRange[0] >= 70 ? 'default' : 'outline'}
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => {
+              setFilters((prev) => ({
+                ...prev,
+                scoreRange: [70, 100],
+              }));
+              setPage(1);
+            }}
+          >
+            70점 이상
+          </Button>
+          <Button
+            variant={filters.ceiRange[0] >= 80 ? 'default' : 'outline'}
+            size="sm"
+            className="h-7 text-xs hidden md:inline-flex"
+            onClick={() => {
+              setFilters((prev) => ({
+                ...prev,
+                ceiRange: [80, 100],
+              }));
+              setPage(1);
+              setAdvancedOpen(true);
+            }}
+          >
+            높은 ROIC
+          </Button>
+          <Button
+            variant={filters.gapRange[1] <= 0 ? 'default' : 'outline'}
+            size="sm"
+            className="h-7 text-xs hidden md:inline-flex"
+            onClick={() => {
+              setFilters((prev) => ({
+                ...prev,
+                gapRange: [-100, 0],
+              }));
+              setPage(1);
+              setAdvancedOpen(true);
+            }}
+          >
+            과소투자
+          </Button>
+        </div>
       </div>
 
-      {/* 프리셋 필터 (빠른 필터) */}
-      <div className="mb-6 flex flex-wrap gap-2">
-        <Button
-          variant={filters.grades.length === 4 && filters.grades.includes('A++') ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => {
-            setFilters((prev) => ({
-              ...prev,
-              grades: ['A++', 'A+', 'A', 'A-'],
-            }));
-            setPage(1);
-          }}
-        >
-          A등급 이상
-        </Button>
-        <Button
-          variant={filters.hasRedFlags === false ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => {
-            setFilters((prev) => ({
-              ...prev,
-              hasRedFlags: prev.hasRedFlags === false ? null : false,
-            }));
-            setPage(1);
-          }}
-        >
-          위험신호 없음
-        </Button>
-        <Button
-          variant={filters.scoreRange[0] >= 70 ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => {
-            setFilters((prev) => ({
-              ...prev,
-              scoreRange: [70, 100],
-            }));
-            setPage(1);
-          }}
-        >
-          70점 이상
-        </Button>
-        <Button
-          variant={filters.ceiRange[0] >= 80 ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => {
-            setFilters((prev) => ({
-              ...prev,
-              ceiRange: [80, 100],
-            }));
-            setPage(1);
-            setAdvancedOpen(true);
-          }}
-        >
-          높은 ROIC
-        </Button>
-        <Button
-          variant={filters.gapRange[1] <= 0 ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => {
-            setFilters((prev) => ({
-              ...prev,
-              gapRange: [-100, 0],
-            }));
-            setPage(1);
-            setAdvancedOpen(true);
-          }}
-        >
-          과소투자
-        </Button>
-      </div>
-
-      <div className="grid lg:grid-cols-4 gap-6">
+      <div className="grid lg:grid-cols-4 gap-3">
         {/* Filter Panel */}
         <Card className="lg:col-span-1 h-fit">
           <CardHeader>
-            <CardTitle className="flex items-center justify-between text-lg">
-              <span className="flex items-center gap-2">
-                <Filter className="w-5 h-5" />
+            <CardTitle className="flex items-center justify-between text-sm">
+              <span className="flex items-center gap-1.5">
+                <Filter className="w-3.5 h-3.5" />
                 필터 조건
               </span>
               {activeFilterCount > 0 && (
-                <Badge variant="secondary">{activeFilterCount}</Badge>
+                <Badge variant="secondary" className="text-[10px] h-5">{activeFilterCount}</Badge>
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-3">
             {/* Market Filter */}
             <div>
-              <h4 className="font-medium text-gray-900 mb-3">거래소</h4>
-              <div className="flex gap-2">
+              <h4 className="text-xs font-medium text-gray-700 mb-1.5">거래소</h4>
+              <div className="flex gap-1.5">
                 {MARKETS.map((market) => (
                   <button
                     key={market}
                     onClick={() => handleMarketToggle(market)}
-                    className={`px-3 py-1.5 text-sm font-medium rounded border transition-colors ${
+                    className={`px-2 py-1 text-xs font-medium rounded border transition-colors ${
                       filters.markets.includes(market)
                         ? 'bg-blue-600 text-white border-blue-600'
                         : 'bg-white text-gray-700 border-gray-200 hover:border-blue-400'
@@ -289,13 +295,13 @@ export default function ScreenerPage() {
 
             {/* Grade Filter */}
             <div>
-              <h4 className="font-medium text-gray-900 mb-3">등급</h4>
-              <div className="grid grid-cols-3 gap-2">
+              <h4 className="text-xs font-medium text-gray-700 mb-1.5">등급</h4>
+              <div className="grid grid-cols-3 gap-1">
                 {GRADE_ORDER.map((grade) => (
                   <button
                     key={grade}
                     onClick={() => handleGradeToggle(grade)}
-                    className={`px-2 py-1.5 text-sm font-medium rounded border transition-colors ${
+                    className={`px-1.5 py-1 text-xs font-medium rounded border transition-colors ${
                       filters.grades.includes(grade)
                         ? 'bg-blue-600 text-white border-blue-600'
                         : 'bg-white text-gray-700 border-gray-200 hover:border-blue-400'
@@ -309,8 +315,8 @@ export default function ScreenerPage() {
 
             {/* Score Range */}
             <div>
-              <h4 className="font-medium text-gray-900 mb-3">종합 점수</h4>
-              <div className="px-1">
+              <h4 className="text-xs font-medium text-gray-700 mb-1.5">종합 점수</h4>
+              <div className="px-0.5">
                 <Slider
                   value={filters.scoreRange}
                   onValueChange={(value) => {
@@ -321,7 +327,7 @@ export default function ScreenerPage() {
                   max={100}
                   step={5}
                 />
-                <div className="flex justify-between text-sm text-gray-500 mt-2">
+                <div className="flex justify-between text-[10px] text-gray-500 mt-1">
                   <span>{filters.scoreRange[0]}점</span>
                   <span>{filters.scoreRange[1]}점</span>
                 </div>
@@ -330,8 +336,8 @@ export default function ScreenerPage() {
 
             {/* Red Flag Filter */}
             <div>
-              <h4 className="font-medium text-gray-900 mb-3">위험 신호</h4>
-              <div className="flex gap-2">
+              <h4 className="text-xs font-medium text-gray-700 mb-1.5">위험 신호</h4>
+              <div className="flex gap-1.5">
                 <button
                   onClick={() => {
                     setFilters((prev) => ({
@@ -340,7 +346,7 @@ export default function ScreenerPage() {
                     }));
                     setPage(1);
                   }}
-                  className={`px-3 py-1.5 text-sm font-medium rounded border transition-colors ${
+                  className={`px-2 py-1 text-xs font-medium rounded border transition-colors ${
                     filters.hasRedFlags === false
                       ? 'bg-green-600 text-white border-green-600'
                       : 'bg-white text-gray-700 border-gray-200 hover:border-green-400'
@@ -356,13 +362,13 @@ export default function ScreenerPage() {
                     }));
                     setPage(1);
                   }}
-                  className={`flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded border transition-colors ${
+                  className={`flex items-center gap-0.5 px-2 py-1 text-xs font-medium rounded border transition-colors ${
                     filters.hasRedFlags === true
                       ? 'bg-red-600 text-white border-red-600'
                       : 'bg-white text-gray-700 border-gray-200 hover:border-red-400'
                   }`}
                 >
-                  <AlertTriangle className="w-3 h-3" />
+                  <AlertTriangle className="w-2.5 h-2.5" />
                   있음
                 </button>
               </div>
@@ -370,7 +376,7 @@ export default function ScreenerPage() {
 
             {/* Sort */}
             <div>
-              <h4 className="font-medium text-gray-900 mb-3">정렬</h4>
+              <h4 className="text-xs font-medium text-gray-700 mb-1.5">정렬</h4>
               <Select
                 value={sort}
                 onValueChange={(value) => {
@@ -397,15 +403,15 @@ export default function ScreenerPage() {
             {/* Advanced Filters (Collapsible) */}
             <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
               <CollapsibleTrigger asChild>
-                <Button variant="ghost" className="w-full justify-between">
+                <Button variant="ghost" className="w-full justify-between h-7 text-xs">
                   <span>고급 필터</span>
-                  <ChevronDown className={`w-4 h-4 transition-transform ${advancedOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-3 h-3 transition-transform ${advancedOpen ? 'rotate-180' : ''}`} />
                 </Button>
               </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-4 pt-4">
+              <CollapsibleContent className="space-y-2.5 pt-2">
                 {/* CEI Range */}
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">CEI (자본효율성)</h4>
+                  <h4 className="text-[10px] font-medium text-gray-600 mb-1">CEI (자본효율성)</h4>
                   <Slider
                     value={filters.ceiRange}
                     onValueChange={(value) => {
@@ -416,7 +422,7 @@ export default function ScreenerPage() {
                     max={100}
                     step={5}
                   />
-                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
                     <span>{filters.ceiRange[0]}</span>
                     <span>{filters.ceiRange[1]}</span>
                   </div>
@@ -424,7 +430,7 @@ export default function ScreenerPage() {
 
                 {/* RII Range */}
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">RII (재투자)</h4>
+                  <h4 className="text-[10px] font-medium text-gray-600 mb-1">RII (재투자)</h4>
                   <Slider
                     value={filters.riiRange}
                     onValueChange={(value) => {
@@ -435,7 +441,7 @@ export default function ScreenerPage() {
                     max={100}
                     step={5}
                   />
-                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
                     <span>{filters.riiRange[0]}</span>
                     <span>{filters.riiRange[1]}</span>
                   </div>
@@ -443,7 +449,7 @@ export default function ScreenerPage() {
 
                 {/* CGI Range */}
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">CGI (현금거버넌스)</h4>
+                  <h4 className="text-[10px] font-medium text-gray-600 mb-1">CGI (현금거버넌스)</h4>
                   <Slider
                     value={filters.cgiRange}
                     onValueChange={(value) => {
@@ -454,7 +460,7 @@ export default function ScreenerPage() {
                     max={100}
                     step={5}
                   />
-                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
                     <span>{filters.cgiRange[0]}</span>
                     <span>{filters.cgiRange[1]}</span>
                   </div>
@@ -462,7 +468,7 @@ export default function ScreenerPage() {
 
                 {/* MAI Range */}
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">MAI (시장정렬)</h4>
+                  <h4 className="text-[10px] font-medium text-gray-600 mb-1">MAI (시장정렬)</h4>
                   <Slider
                     value={filters.maiRange}
                     onValueChange={(value) => {
@@ -473,7 +479,7 @@ export default function ScreenerPage() {
                     max={100}
                     step={5}
                   />
-                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
                     <span>{filters.maiRange[0]}</span>
                     <span>{filters.maiRange[1]}</span>
                   </div>
@@ -481,7 +487,7 @@ export default function ScreenerPage() {
 
                 {/* Investment Gap Range */}
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">투자괴리율 (%)</h4>
+                  <h4 className="text-[10px] font-medium text-gray-600 mb-1">투자괴리율 (%)</h4>
                   <Slider
                     value={filters.gapRange}
                     onValueChange={(value) => {
@@ -492,7 +498,7 @@ export default function ScreenerPage() {
                     max={100}
                     step={10}
                   />
-                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
                     <span>{filters.gapRange[0]}%</span>
                     <span>{filters.gapRange[1]}%</span>
                   </div>
@@ -504,10 +510,10 @@ export default function ScreenerPage() {
             <Button
               variant="outline"
               onClick={handleReset}
-              className="w-full"
+              className="w-full h-7 text-xs"
               disabled={activeFilterCount === 0 && sort === 'score_desc'}
             >
-              <RotateCcw className="w-4 h-4 mr-2" />
+              <RotateCcw className="w-3 h-3 mr-1" />
               필터 초기화
             </Button>
           </CardContent>
@@ -517,18 +523,18 @@ export default function ScreenerPage() {
         <div className="lg:col-span-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>
+              <CardTitle className="text-sm">
                 검색 결과: {data?.total?.toLocaleString() || 0}개 기업
               </CardTitle>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <div className="flex gap-1 flex-wrap">
                   {filters.grades.map((grade) => (
-                    <Badge key={grade} variant="secondary">
+                    <Badge key={grade} variant="secondary" className="text-[10px] h-5">
                       {grade}
                     </Badge>
                   ))}
                   {filters.markets.map((market) => (
-                    <Badge key={market} variant="outline">
+                    <Badge key={market} variant="outline" className="text-[10px] h-5">
                       {market}
                     </Badge>
                   ))}
@@ -544,18 +550,18 @@ export default function ScreenerPage() {
                     }
                   }}
                   disabled={!data?.items || data.items.length === 0}
-                  className="shrink-0"
+                  className="shrink-0 h-7 text-xs"
                 >
-                  <Download className="w-4 h-4 mr-1" />
+                  <Download className="w-3 h-3 mr-1" />
                   CSV
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
               {isLoading ? (
-                <div className="animate-pulse space-y-3">
+                <div className="animate-pulse space-y-1">
                   {[...Array(10)].map((_, i) => (
-                    <div key={i} className="h-14 bg-gray-100 rounded" />
+                    <div key={i} className="h-9 bg-gray-100 rounded" />
                   ))}
                 </div>
               ) : (
@@ -581,7 +587,7 @@ export default function ScreenerPage() {
                             <button
                               onClick={() => toggleItem(company)}
                               disabled={!isSelected(company.company_id) && compareItems.length >= MAX_COMPARE_ITEMS}
-                              className={`w-6 h-6 rounded border flex items-center justify-center transition-colors ${
+                              className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
                                 isSelected(company.company_id)
                                   ? 'bg-blue-600 border-blue-600 text-white'
                                   : compareItems.length >= MAX_COMPARE_ITEMS
@@ -589,12 +595,12 @@ export default function ScreenerPage() {
                                     : 'border-gray-300 hover:border-blue-400'
                               }`}
                             >
-                              {isSelected(company.company_id) && <Check className="w-4 h-4" />}
+                              {isSelected(company.company_id) && <Check className="w-3 h-3" />}
                             </button>
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium">{company.company_name}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="font-medium text-sm">{company.company_name}</p>
                               {company.market && (
                                 <MarketBadge
                                   market={company.market}
@@ -603,30 +609,30 @@ export default function ScreenerPage() {
                                 />
                               )}
                             </div>
-                            <p className="text-xs text-gray-500">{company.stock_code}</p>
+                            <p className="text-[10px] text-gray-400">{company.stock_code}</p>
                           </TableCell>
                           <TableCell className="text-center">
                             <div className="flex justify-center">
                               <GradeBadge grade={company.grade} size="sm" />
                             </div>
                           </TableCell>
-                          <TableCell className="text-right font-semibold">
+                          <TableCell className="text-right font-semibold text-sm">
                             {company.total_score.toFixed(1)}
                           </TableCell>
-                          <TableCell className="text-right hidden md:table-cell text-gray-600">
+                          <TableCell className="text-right hidden md:table-cell text-gray-500 text-xs">
                             {company.cei_score?.toFixed(1) || '-'}
                           </TableCell>
-                          <TableCell className="text-right hidden md:table-cell text-gray-600">
+                          <TableCell className="text-right hidden md:table-cell text-gray-500 text-xs">
                             {company.rii_score?.toFixed(1) || '-'}
                           </TableCell>
-                          <TableCell className="text-right hidden md:table-cell text-gray-600">
+                          <TableCell className="text-right hidden md:table-cell text-gray-500 text-xs">
                             {company.cgi_score?.toFixed(1) || '-'}
                           </TableCell>
-                          <TableCell className="text-right hidden md:table-cell text-gray-600">
+                          <TableCell className="text-right hidden md:table-cell text-gray-500 text-xs">
                             {company.mai_score?.toFixed(1) || '-'}
                           </TableCell>
                           <TableCell className="text-center">
-                            <Button variant="ghost" size="sm" asChild>
+                            <Button variant="ghost" size="sm" asChild className="h-6 text-xs">
                               <Link href={`/company/${company.company_id}`}>
                                 보기
                               </Link>
@@ -639,9 +645,9 @@ export default function ScreenerPage() {
 
                   {/* Empty State */}
                   {data?.items.length === 0 && (
-                    <div className="text-center py-12 text-gray-500">
-                      <p>조건에 맞는 기업이 없습니다.</p>
-                      <Button variant="link" onClick={handleReset}>
+                    <div className="text-center py-8 text-gray-500">
+                      <p className="text-sm">조건에 맞는 기업이 없습니다.</p>
+                      <Button variant="link" onClick={handleReset} className="text-xs">
                         필터 초기화하기
                       </Button>
                     </div>
@@ -649,25 +655,27 @@ export default function ScreenerPage() {
 
                   {/* Pagination */}
                   {totalPages > 1 && (
-                    <div className="flex items-center justify-center gap-2 mt-6">
+                    <div className="flex items-center justify-center gap-1.5 mt-4">
                       <Button
                         variant="outline"
                         size="sm"
+                        className="h-7 w-7 p-0"
                         onClick={() => handlePageChange(currentPage - 1)}
                         disabled={currentPage === 1}
                       >
-                        <ChevronLeft className="w-4 h-4" />
+                        <ChevronLeft className="w-3.5 h-3.5" />
                       </Button>
-                      <span className="text-sm text-gray-600">
+                      <span className="text-xs text-gray-500 min-w-[60px] text-center">
                         {currentPage} / {totalPages}
                       </span>
                       <Button
                         variant="outline"
                         size="sm"
+                        className="h-7 w-7 p-0"
                         onClick={() => handlePageChange(currentPage + 1)}
                         disabled={currentPage >= totalPages}
                       >
-                        <ChevronRight className="w-4 h-4" />
+                        <ChevronRight className="w-3.5 h-3.5" />
                       </Button>
                     </div>
                   )}
