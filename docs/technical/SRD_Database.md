@@ -325,7 +325,7 @@ CREATE TABLE risk_scores (
     id SERIAL PRIMARY KEY,
     company_id INTEGER REFERENCES companies(id) UNIQUE,
     total_score INTEGER,
-    investment_grade VARCHAR(10),
+    investment_grade VARCHAR(20),  -- 4등급 체계 (2026-01-28 개편)
     cb_score INTEGER,
     financial_score INTEGER,
     governance_score INTEGER,
@@ -333,7 +333,17 @@ CREATE TABLE risk_scores (
 );
 ```
 
-**레코드 수**: 3,138건
+**투자등급 4등급 체계** (2026-01-28 개편):
+| 등급 | 점수 범위 | 의미 |
+|------|----------|------|
+| LOW_RISK | 0-19점 | 저위험 |
+| RISK | 20-34점 | 위험 |
+| MEDIUM_RISK | 35-49점 | 중위험 |
+| HIGH_RISK | 50점+ | 고위험 |
+
+**가중치**: RaymondsRisk 40% + 재무건전성 60%
+
+**레코드 수**: 3,100건
 
 ---
 

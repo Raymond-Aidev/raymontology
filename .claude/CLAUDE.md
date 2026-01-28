@@ -362,19 +362,28 @@ DATABASE_URL="..." python scripts/maintenance/reparse_officer_careers.py
 GET /api/companies/high-risk
 ```
 
-### 파라미터
+### 파라미터 (4등급 체계 - 2026-01-28 개편)
 | 파라미터 | 기본값 | 설명 |
 |----------|--------|------|
 | `limit` | 6 | 결과 개수 (1-50) |
-| `min_grade` | B | 최소 등급 (B, CCC, CC, C, D) |
+| `min_grade` | HIGH_RISK | 최소 등급 (RISK, MEDIUM_RISK, HIGH_RISK) |
 | `has_cb` | true | CB 발행 여부 필터 |
 
+### 4등급 체계
+| 등급 | 점수 범위 | 의미 |
+|------|----------|------|
+| LOW_RISK | 0-19점 | 저위험 |
+| RISK | 20-34점 | 위험 |
+| MEDIUM_RISK | 35-49점 | 중위험 |
+| HIGH_RISK | 50점+ | 고위험 |
+
 ### 동작 방식
-- `risk_scores.investment_grade` 기준 필터링
+- `risk_scores.investment_grade` 기준 필터링 (기본: HIGH_RISK만)
 - `ORDER BY RANDOM()` 으로 매번 다른 기업 표시
 - 상장폐지 기업 제외 (`listing_status = 'LISTED'`)
+- KOSPI/KOSDAQ 시장만 표시
 
-관련 파일: `backend/app/api/endpoints/companies.py:363-451`
+관련 파일: `backend/app/api/endpoints/companies.py:377-`
 
 ---
 
