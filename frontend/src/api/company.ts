@@ -99,9 +99,9 @@ export async function getHighRiskCompanies(
   limit: number = 6
 ): Promise<CompanySearchResult[]> {
   try {
-    // 새 API: 관계형리스크등급 MEDIUM_RISK 이상 기업 랜덤 조회 (4등급 체계)
+    // 새 API: 관계형리스크등급 HIGH_RISK (고위험) 기업만 랜덤 조회 (4등급 체계)
     const response = await apiClient.get<ApiCompanySearchResponse>('/api/companies/high-risk', {
-      params: { limit, min_grade: 'MEDIUM_RISK', has_cb: true },
+      params: { limit, min_grade: 'HIGH_RISK', has_cb: true },
     })
 
     return response.data.items.map(mapApiResponseToFrontend)
