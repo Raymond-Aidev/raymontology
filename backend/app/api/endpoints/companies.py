@@ -377,30 +377,33 @@ async def search_companies(
 @router.get("/high-risk", response_model=CompanySearchResponse)
 async def get_high_risk_companies(
     limit: int = Query(6, ge=1, le=50, description="결과 개수"),
-    min_grade: str = Query("B", description="최소 등급 (B, CCC, CC, C, D)"),
+    min_grade: str = Query("MEDIUM_RISK", description="최소 등급 (RISK, MEDIUM_RISK, HIGH_RISK)"),
     has_cb: bool = Query(True, description="CB 발행 여부"),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    주의 필요 기업 조회 (관계형리스크등급 기준)
+    주의 필요 기업 조회 (관계형리스크등급 기준) - 4등급 체계 (2026-01-28 개편)
 
     - risk_scores 테이블의 investment_grade 기준
-    - B, CCC, CC, C, D 등급 기업 랜덤 조회
+    - MEDIUM_RISK, HIGH_RISK 등급 기업 랜덤 조회 (기본값)
     - CB 발행 기업 우선 (has_cb=true)
     - KOSPI/KOSDAQ 시장만 표시 (ETF, KONEX 등 제외)
     - 상장폐지 제외
+
+    등급 체계:
+    - LOW_RISK (저위험): 0-19점
+    - RISK (위험): 20-34점
+    - MEDIUM_RISK (중위험): 35-49점
+    - HIGH_RISK (고위험): 50점 이상
     """
     try:
-        # 등급 필터링 조건 설정
-        grade_filter = ['B', 'CCC', 'CC', 'C', 'D']
-        if min_grade == 'CCC':
-            grade_filter = ['CCC', 'CC', 'C', 'D']
-        elif min_grade == 'CC':
-            grade_filter = ['CC', 'C', 'D']
-        elif min_grade == 'C':
-            grade_filter = ['C', 'D']
-        elif min_grade == 'D':
-            grade_filter = ['D']
+        # 등급 필터링 조건 설정 (4등급 체계)
+        # 기본: 중위험 이상 (MEDIUM_RISK, HIGH_RISK)
+        grade_filter = ['MEDIUM_RISK', 'HIGH_RISK']
+        if min_grade == 'RISK':
+            grade_filter = ['RISK', 'MEDIUM_RISK', 'HIGH_RISK']
+        elif min_grade == 'HIGH_RISK':
+            grade_filter = ['HIGH_RISK']
 
         # Raw SQL로 랜덤 조회 (성능 최적화)
         # KOSPI/KOSDAQ 시장만 표시 (ETF, KONEX 등 제외)
