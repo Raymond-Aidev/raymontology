@@ -7,8 +7,11 @@ export interface RiskScore {
   networkRisk: number // 네트워크 관련 리스크
 }
 
-// 투자등급
-export type InvestmentGrade = 'AAA' | 'AA' | 'A' | 'BBB' | 'BB' | 'B' | 'CCC' | 'CC' | 'C' | 'D'
+// 투자등급 (4등급 체계 - 2026-01-28 개편)
+export type InvestmentGrade = 'LOW_RISK' | 'RISK' | 'MEDIUM_RISK' | 'HIGH_RISK'
+
+// 하위 호환성을 위한 레거시 등급 타입 (DB 마이그레이션 전 지원)
+export type LegacyInvestmentGrade = 'AAA' | 'AA' | 'A' | 'BBB' | 'BB' | 'B' | 'CCC' | 'CC' | 'C' | 'D'
 
 // 회사 리포트 데이터
 export interface CompanyReport {
@@ -135,8 +138,16 @@ export const riskLevelConfig = {
   high: { color: '#EF4444', label: '높음', range: [61, 100] },
 } as const
 
-// 투자등급별 색상
+// 투자등급별 색상 (4등급 체계 - 2026-01-28 개편)
 export const gradeConfig: Record<InvestmentGrade, { color: string; label: string }> = {
+  LOW_RISK: { color: '#10B981', label: '저위험' },     // 초록 (0-19점)
+  RISK: { color: '#FBBF24', label: '위험' },           // 노랑 (20-34점)
+  MEDIUM_RISK: { color: '#F97316', label: '중위험' },  // 주황 (35-49점)
+  HIGH_RISK: { color: '#EF4444', label: '고위험' },    // 빨강 (50점+)
+}
+
+// 하위 호환성을 위한 레거시 등급 색상 (DB 마이그레이션 전 지원)
+export const legacyGradeConfig: Record<LegacyInvestmentGrade, { color: string; label: string }> = {
   AAA: { color: '#059669', label: '최우량' },
   AA: { color: '#10B981', label: '우량' },
   A: { color: '#34D399', label: '양호' },
@@ -147,6 +158,33 @@ export const gradeConfig: Record<InvestmentGrade, { color: string; label: string
   CC: { color: '#DC2626', label: '극히위험' },
   C: { color: '#B91C1C', label: '최고위험' },
   D: { color: '#991B1B', label: '부도' },
+}
+
+// 등급 변환 유틸리티 (레거시 → 신규)
+export function convertLegacyGrade(legacy: LegacyInvestmentGrade | string): InvestmentGrade {
+  const mapping: Record<string, InvestmentGrade> = {
+    'AAA': 'LOW_RISK', 'AA': 'LOW_RISK', 'A': 'RISK',
+    'BBB': 'RISK', 'BB': 'MEDIUM_RISK', 'B': 'MEDIUM_RISK',
+    'CCC': 'HIGH_RISK', 'CC': 'HIGH_RISK', 'C': 'HIGH_RISK', 'D': 'HIGH_RISK',
+    // 신규 등급은 그대로
+    'LOW_RISK': 'LOW_RISK', 'RISK': 'RISK', 'MEDIUM_RISK': 'MEDIUM_RISK', 'HIGH_RISK': 'HIGH_RISK',
+  }
+  return mapping[legacy] || 'RISK'
+}
+
+// 등급 설정 가져오기 (레거시/신규 모두 지원)
+export function getGradeConfig(grade: string): { color: string; label: string } {
+  // 신규 등급인지 확인
+  if (grade in gradeConfig) {
+    return gradeConfig[grade as InvestmentGrade]
+  }
+  // 레거시 등급이면 변환
+  if (grade in legacyGradeConfig) {
+    const newGrade = convertLegacyGrade(grade)
+    return gradeConfig[newGrade]
+  }
+  // 기본값
+  return { color: '#6B7280', label: '미평가' }
 }
 
 // 리스크 점수로 레벨 판정

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import type { GraphNode } from '../../types/graph'
 import { nodeTypeColors } from '../../types/graph'
-import { riskLevelColors, gradeColors } from '../../types/company'
+import { riskLevelColors, gradeColors, gradeLabels } from '../../types/company'
 import {
   fetchOfficerCareer,
   fetchSubscriberInvestments,
@@ -220,8 +220,8 @@ export default function NodeDetailPanel({ node, onClose, onRecenter, onNavigateT
             {gradeColor && node.investment_grade && (
               <div className="flex items-center justify-between">
                 <span className="text-xs text-text-muted uppercase tracking-wide">관계형리스크등급</span>
-                <span className={`font-bold font-mono ${gradeColor}`}>
-                  {node.investment_grade}
+                <span className={`font-bold ${gradeColor}`}>
+                  {gradeLabels[node.investment_grade] || node.investment_grade}
                 </span>
               </div>
             )}

@@ -2,6 +2,7 @@ import apiClient from './client'
 import type {
   RiskScore,
   InvestmentGrade,
+  LegacyInvestmentGrade,
   CBIssuance,
   CBSubscriber,
   Officer,
@@ -10,6 +11,7 @@ import type {
   RiskSignal,
   Affiliate,
 } from '../types/report'
+import { convertLegacyGrade } from '../types/report'
 
 // ============================================================================
 // 백엔드 API 응답 타입 (/api/report/name/{company_name})
@@ -144,8 +146,18 @@ function mapRiskScoreToFrontend(apiScore: ApiRiskScoreInfo): RiskScore {
 }
 
 function mapInvestmentGrade(grade: string): InvestmentGrade {
-  const validGrades: InvestmentGrade[] = ['AAA', 'AA', 'A', 'BBB', 'BB', 'B', 'CCC', 'CC', 'C', 'D']
-  return validGrades.includes(grade as InvestmentGrade) ? (grade as InvestmentGrade) : 'BB'
+  // 신규 4등급 체계
+  const newGrades: InvestmentGrade[] = ['LOW_RISK', 'RISK', 'MEDIUM_RISK', 'HIGH_RISK']
+  if (newGrades.includes(grade as InvestmentGrade)) {
+    return grade as InvestmentGrade
+  }
+  // 레거시 10등급 → 신규 4등급 변환
+  const legacyGrades: LegacyInvestmentGrade[] = ['AAA', 'AA', 'A', 'BBB', 'BB', 'B', 'CCC', 'CC', 'C', 'D']
+  if (legacyGrades.includes(grade as LegacyInvestmentGrade)) {
+    return convertLegacyGrade(grade)
+  }
+  // 기본값
+  return 'RISK'
 }
 
 // bond_name에서 회차 추출 (예: "제33회 무기명식..." → "제33회")
@@ -449,7 +461,7 @@ export async function getCompanyReportByName(companyName: string): Promise<Compa
       companyType: report.basic_info.company_type || undefined,
       tradingStatus: report.basic_info.trading_status || undefined,
       riskScore: report.risk_score ? mapRiskScoreToFrontend(report.risk_score) : defaultRiskScore,
-      investmentGrade: report.risk_score ? mapInvestmentGrade(report.risk_score.investment_grade) : 'BB',
+      investmentGrade: report.risk_score ? mapInvestmentGrade(report.risk_score.investment_grade) : 'RISK',
       cbIssuances: aggregateCBIssuances(report.convertible_bonds.map(mapCBIssuanceToFrontend)),
       cbSubscribers: aggregateCBSubscribers(
         report.cb_subscribers.map(sub => mapCBSubscriberToFrontend(sub, totalCBAmount)),
@@ -493,7 +505,7 @@ export async function getCompanyReport(companyId: string): Promise<CompanyReport
       companyId,
       companyName: companyDetail?.name || '회사',
       riskScore: { total: 0, cbRisk: 0, officerRisk: 0, financialRisk: 0, networkRisk: 0 },
-      investmentGrade: 'BB',
+      investmentGrade: 'RISK',
       cbIssuances: [],
       cbSubscribers: [],
       officers: [],
@@ -510,7 +522,7 @@ export async function getCompanyReport(companyId: string): Promise<CompanyReport
       companyId,
       companyName: '회사',
       riskScore: { total: 0, cbRisk: 0, officerRisk: 0, financialRisk: 0, networkRisk: 0 },
-      investmentGrade: 'BB',
+      investmentGrade: 'RISK',
       cbIssuances: [],
       cbSubscribers: [],
       officers: [],

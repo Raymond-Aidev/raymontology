@@ -9,6 +9,7 @@ import asyncio
 import asyncpg
 import json
 import logging
+import os
 from datetime import date, datetime, timedelta
 import uuid
 
@@ -18,7 +19,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-DB_URL = 'postgresql://postgres:dev_password@localhost:5432/raymontology_dev'
+# 환경변수에서 DB URL 읽기 (없으면 로컬 기본값)
+DB_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres:dev_password@localhost:5432/raymontology_dev')
+# asyncpg는 postgresql:// 스킴만 지원 (postgresql+asyncpg:// 변환)
+if DB_URL.startswith('postgresql+asyncpg://'):
+    DB_URL = DB_URL.replace('postgresql+asyncpg://', 'postgresql://')
 
 # 분석 기간 (PRD 정의)
 ANALYSIS_YEAR = 2025
@@ -227,27 +232,22 @@ def calculate_financial_health(fs_data: dict) -> dict:
 
 
 def get_investment_grade(score: float) -> str:
-    """투자등급 산정 - PRD 6.6"""
-    if score < 10:
-        return 'AAA'
-    elif score < 20:
-        return 'AA'
-    elif score < 30:
-        return 'A'
-    elif score < 40:
-        return 'BBB'
+    """투자등급 산정 - 4등급 체계 (2026-01-28 개편)
+
+    등급 체계:
+    - LOW_RISK (저위험): 0-19점 - 안정적, 투자 적격
+    - RISK (위험): 20-34점 - 모니터링 필요
+    - MEDIUM_RISK (중위험): 35-49점 - 주의, 투자 신중
+    - HIGH_RISK (고위험): 50점 이상 - 경고, 투자 회피
+    """
+    if score < 20:
+        return 'LOW_RISK'      # 저위험
+    elif score < 35:
+        return 'RISK'          # 위험
     elif score < 50:
-        return 'BB'
-    elif score < 60:
-        return 'B'
-    elif score < 70:
-        return 'CCC'
-    elif score < 80:
-        return 'CC'
-    elif score < 90:
-        return 'C'
+        return 'MEDIUM_RISK'   # 중위험
     else:
-        return 'D'
+        return 'HIGH_RISK'     # 고위험
 
 
 def get_risk_level(score: float) -> str:
@@ -287,8 +287,11 @@ async def calculate_risk_scores():
         }
 
         batch_data = []
+        total = len(companies)
 
-        for company in companies:
+        for idx, company in enumerate(companies):
+            if idx % 100 == 0:
+                logger.info(f"진행 중: {idx}/{total} ({idx*100//total}%)")
             company_id = company['id']
             corp_code = company['corp_code']
 
@@ -370,9 +373,9 @@ async def calculate_risk_scores():
 
                 financial_health = calculate_financial_health(dict(fs_data) if fs_data else {})
 
-                # 4. 종합 점수 계산
+                # 4. 종합 점수 계산 (2026-01-28 비중 조정: RaymondsRisk 40%, 재무건전성 60%)
                 raymondsrisk_score = human_risk['score'] * 0.5 + cb_risk['score'] * 0.5
-                total_score = raymondsrisk_score * 0.5 + financial_health['score'] * 0.5
+                total_score = raymondsrisk_score * 0.4 + financial_health['score'] * 0.6
 
                 risk_level = get_risk_level(total_score)
                 investment_grade = get_investment_grade(total_score)
