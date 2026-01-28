@@ -1,6 +1,6 @@
 # INDEX-WEB (RaymondsIndex 독립 사이트)
 
-> 경로: `raymondsindex-web/` | 배포: https://raymondsindex.konnect-ai.net | 완성도: 95%
+> 경로: `raymondsindex-web/` | 배포: https://raymondsindex.konnect-ai.net | 완성도: 100%
 
 ---
 
@@ -25,7 +25,7 @@
 
 ---
 
-## 페이지 구조 (7개)
+## 페이지 구조 (9개)
 
 | 경로 | 파일 | 설명 |
 |------|------|------|
@@ -33,15 +33,16 @@
 | `/screener` | `app/screener/page.tsx` | 기업 스크리닝 (필터, 정렬, 페이징) |
 | `/company/[id]` | `app/company/[id]/page.tsx` | 기업 상세 (레이더 차트, 지표 카드) |
 | `/methodology` | `app/methodology/page.tsx` | 평가 방법론 설명 |
+| `/ma-target` | `app/ma-target/page.tsx` | M&A 타겟 스크리닝 ⭐ |
 | `/login` | `app/login/page.tsx` | 로그인 |
 | `/signup` | `app/signup/page.tsx` | 회원가입 |
 | `/admin` | `app/admin/page.tsx` | 관리자 (superuser 전용) |
 
 ---
 
-## 컴포넌트 구조 (26개)
+## 컴포넌트 구조 (30개)
 
-### UI 컴포넌트 (`/components/ui/`) - 11개
+### UI 컴포넌트 (`/components/ui/`) - 13개
 | 컴포넌트 | 설명 |
 |----------|------|
 | `button.tsx` | 버튼 |
@@ -56,8 +57,9 @@
 | `tabs.tsx` | 탭 |
 | `tooltip.tsx` | 툴팁 |
 | `separator.tsx` | 구분선 |
+| `collapsible.tsx` | 접기/펼치기 |
 
-### 비즈니스 컴포넌트 - 12개
+### 비즈니스 컴포넌트 - 15개
 | 컴포넌트 | 설명 |
 |----------|------|
 | `grade-badge.tsx` | 9등급 배지 (A++ ~ C) |
@@ -65,12 +67,15 @@
 | `grade-distribution.tsx` | 등급 분포 차트 |
 | `sub-index-radar.tsx` | 4대 Sub-Index 레이더 차트 |
 | `metric-card.tsx` | 지표 카드 |
+| `kpi-card.tsx` | KPI 카드 |
 | `risk-flags-panel.tsx` | 위험 신호 패널 |
 | `company-search-bar.tsx` | 기업 검색 (자동완성) |
 | `top-companies-table.tsx` | TOP 10 기업 테이블 |
 | `stock-price-chart.tsx` | 주가 차트 |
 | `market-badge.tsx` | 시장 배지 (KOSPI/KOSDAQ/KONEX/ETF) |
 | `ai-analysis-section.tsx` | AI 분석 섹션 |
+| `compare-bar.tsx` | 기업 비교 바 (하단 고정) ⭐ |
+| `compare-modal.tsx` | 기업 비교 모달 ⭐ |
 | `providers.tsx` | 전역 Provider |
 
 ### 레이아웃 (`/components/layout/`) - 2개
@@ -123,6 +128,10 @@
 - [x] 위험신호 패널
 - [x] 시장 필터 (KOSPI/KOSDAQ/KONEX)
 - [x] 다크 모드 지원
+- [x] **M&A 타겟 스크리닝** ⭐ (2026-01 신규)
+- [x] **기업 비교 기능** ⭐ (최대 4개 기업 비교)
+- [x] **CSV 내보내기** ⭐ (스크리너 결과 다운로드)
+- [x] **주가 차트** ⭐ (3년 추이)
 
 ### 구현 예정
 - [ ] 관심 기업 저장
@@ -160,16 +169,47 @@ NEXT_PUBLIC_API_URL=https://raymontology-production.up.railway.app/api
 
 ## API 연동
 
+### RaymondsIndex API
 | 엔드포인트 | 용도 |
 |-----------|------|
-| `/api/raymonds-index` | 인덱스 데이터 |
-| `/api/raymonds-index/screener` | 스크리너 데이터 |
-| `/api/raymonds-index/top` | TOP N 기업 |
-| `/api/raymonds-index/grade-distribution` | 등급 분포 |
-| `/api/companies/{id}` | 기업 상세 |
-| `/api/search/companies` | 기업 검색 |
-| `/api/stock-prices` | 주가 데이터 |
-| `/api/auth` | 인증 |
+| `/api/raymonds-index/ranking/list` | 인덱스 랭킹 목록 |
+| `/api/raymonds-index/{company_id}` | 기업 상세 |
+| `/api/raymonds-index/statistics/summary` | 통계 요약 |
+| `/api/raymonds-index/search/companies` | 기업 검색 |
+
+### M&A 타겟 API ⭐
+| 엔드포인트 | 용도 |
+|-----------|------|
+| `/api/ma-target/ranking` | M&A 타겟 랭킹 |
+| `/api/ma-target/stats` | M&A 타겟 통계 |
+| `/api/ma-target/company/{id}` | M&A 타겟 상세 |
+
+### 주가 API
+| 엔드포인트 | 용도 |
+|-----------|------|
+| `/api/stock-prices/company/{id}/chart` | 주가 차트 데이터 |
+| `/api/stock-prices/status` | 주가 수집 현황 |
+
+### 인증 API
+| 엔드포인트 | 용도 |
+|-----------|------|
+| `/api/auth/login` | 로그인 |
+| `/api/auth/register` | 회원가입 |
+
+---
+
+## lib 모듈 (8개)
+
+| 모듈 | 설명 |
+|------|------|
+| `api.ts` | API 클라이언트 (fetch 래퍼) |
+| `types.ts` | 타입 정의 (RaymondsIndex, MATarget 등) |
+| `constants.ts` | 상수 (등급 색상, API URL 등) |
+| `utils.ts` | 유틸리티 함수 |
+| `auth.ts` | 인증 상태 관리 (Zustand) |
+| `chart-theme.ts` | Recharts 테마 설정 |
+| `compare-store.ts` | 기업 비교 상태 관리 (Zustand) ⭐ |
+| `export-csv.ts` | CSV 내보내기 유틸리티 ⭐ |
 
 ---
 
@@ -182,4 +222,18 @@ NEXT_PUBLIC_API_URL=https://raymontology-production.up.railway.app/api
 
 ---
 
-*마지막 업데이트: 2026-01-23*
+## M&A 타겟 등급 체계 (7등급) ⭐
+
+| 등급 | 의미 | 색상 |
+|------|------|------|
+| A+ | 최우수 | #2563EB |
+| A | 우수 | #3B82F6 |
+| B+ | 양호 | #22C55E |
+| B | 보통 | #84CC16 |
+| C+ | 주의 | #EAB308 |
+| C | 경고 | #F97316 |
+| D | 위험 | #6B7280 |
+
+---
+
+*마지막 업데이트: 2026-01-28*
