@@ -10,9 +10,9 @@
 | 항목 | 내용 |
 |------|------|
 | 문서명 | RaymondsRisk Service PRD (통합본) |
-| 버전 | 4.7 |
+| 버전 | 4.8 |
 | 작성일 | 2025-12-15 |
-| 최종 수정일 | 2026-01-21 |
+| 최종 수정일 | 2026-01-23 |
 | 이전 문서 | IMPLEMENTATION_PLAN.md, PHASE2_2_FRONTEND_IMPLEMENTATION.md, 화면기획서 v3.0, 관계형 리스크 기획서 v3.2.1 |
 | 아키텍처 | PostgreSQL (정형 데이터) + Neo4j (관계 그래프) |
 | 핵심 서비스 | 이해관계자 360° 통합 뷰 |
@@ -25,6 +25,7 @@
 
 | 버전 | 날짜 | 변경 내용 |
 |------|------|----------|
+| 4.8 | 2026-01-23 | DB 통계 현행화 - 유령기업/상장폐지 813개 삭제 반영, 신규 테이블 4개 추가 (financial_details, raymonds_index, stock_prices, largest_shareholder_info), 레코드 수 전면 업데이트 |
 | 4.7 | 2026-01-23 | 관계도 기업 노드 네비게이션 기능 기획 - 그래프 내 DB 기업 노드 클릭 시 해당 기업 관계도로 이동, UX 개선 및 시각적 피드백 추가 |
 | 4.6 | 2026-01-21 | 이용권 사전 체크 UX 개선 - 기업 클릭 시 페이지 이동 전 조회 가능 여부 확인, 조회 불가 시 검색 화면에서 모달 표시 |
 | 4.5 | 2026-01-21 | 조회한 기업 목록 기능 추가, Trial 사용자 30일 만료/재조회 허용, 조회 제한 UX 개선, 공유 Header 전체 적용 |
@@ -85,17 +86,17 @@
 ┌─────────────────────────────┐    ┌─────────────────────────────────────┐
 │        PostgreSQL           │    │              Neo4j                   │
 │                             │    │                                      │
-│  • companies (3,922)        │    │  Nodes:                              │
-│  • officers (38,125)        │    │  • (:Company) 3,922                  │
-│  • officer_positions (240K) │    │  • (:Officer) 38,125                 │
-│  • convertible_bonds (1,435)│    │  • (:ConvertibleBond) 1,435          │
-│  • cb_subscribers (8,656)   │    │  • (:Subscriber) 2,227               │
+│  • companies (3,109)        │    │  Nodes:                              │
+│  • officers (47,444)        │    │  • (:Company) 3,109                  │
+│  • officer_positions (62K)  │    │  • (:Officer) 47,444                 │
+│  • convertible_bonds (1,133)│    │  • (:ConvertibleBond) 1,133          │
+│  • cb_subscribers (7,026)   │    │  • (:Subscriber) ~2,200              │
 │  • financial_statements (9K)│    │                                      │
 │  • risk_signals (1,412)     │    │  Relationships:                      │
-│  • disclosures (206,767)    │    │  • [:WORKS_AT] 240,320               │
-│  • affiliates (1,245)       │    │  • [:INVESTED_IN] 3,130              │
-│                             │    │  • [:SUBSCRIBED] 4,014               │
-│                             │    │  • [:ISSUED] 1,435                   │
+│  • disclosures (279,258)    │    │  • [:WORKS_AT] 62,141                │
+│  • affiliates (864)         │    │  • [:INVESTED_IN] ~3,100             │
+│  • raymonds_index (5,257)   │    │  • [:SUBSCRIBED] ~4,000              │
+│  • stock_prices (126,506)   │    │  • [:ISSUED] 1,133                   │
 └─────────────────────────────┘    └─────────────────────────────────────┘
 ```
 
@@ -122,33 +123,37 @@
 
 | 테이블명 | 레코드 수 | 상태 | 비고 |
 |----------|----------|------|------|
-| companies | 3,922 | ✅ | 상장사 전체 |
-| officers | 38,125 | ✅ | birth_date 99.9% (38,081명) |
-| officer_positions | 240,320 | ✅ | 2022~2025 임원 재직 기록 |
-| convertible_bonds | 1,435 | ✅ | 회차정보 포함 |
-| cb_subscribers | 8,656 | ✅ | - |
-| financial_statements | 9,432 | ✅ | - |
+| companies | 3,109 | ✅ | 상장사 3,021 + ETF 88 (유령/상장폐지 813개 삭제) |
+| officers | 47,444 | ✅ | birth_date 99.9% |
+| officer_positions | 62,141 | ✅ | 2022~2025 임원 재직 기록 |
+| convertible_bonds | 1,133 | ✅ | 회차정보 포함 |
+| cb_subscribers | 7,026 | ✅ | - |
+| financial_statements | 9,820 | ✅ | - |
+| financial_details | 10,288 | ✅ | XBRL v3.0 파서 적용 |
 | risk_signals | 1,412 | ✅ | 5개 패턴 탐지 |
-| disclosures | 206,767 | ✅ | 2022~2025 공시 |
-| risk_scores | 3,912 | ✅ | 종합 리스크 점수 |
-| major_shareholders | 1,130 | ✅ | 대주주 정보 |
-| affiliates | 1,245 | ✅ | 계열사 정보 |
+| disclosures | 279,258 | ✅ | 2022~2025 공시 |
+| risk_scores | 3,138 | ✅ | 종합 리스크 점수 (상장폐지 774건 삭제) |
+| major_shareholders | 44,574 | ✅ | 대주주 정보 |
+| affiliates | 864 | ✅ | 계열사 정보 (109건 삭제) |
+| raymonds_index | 5,257 | ✅ | RaymondsIndex 평가 결과 |
+| stock_prices | 126,506 | ✅ | 주가 데이터 (818건 삭제) |
+| largest_shareholder_info | 4,599 | ✅ | 최대주주 기본정보 |
 
 ### 3.2 완료된 Neo4j 그래프
 
 | 항목 | 개수 | 상태 | 비고 |
 |------|------|------|------|
-| 전체 노드 | ~45,700 | ✅ | PostgreSQL 기준 재동기화 |
-| Company 노드 | 3,922 | ✅ | corp_code 기반 |
-| Officer 노드 | 38,125 | ✅ | PostgreSQL ID 동기화 |
-| ConvertibleBond 노드 | 1,435 | ✅ | - |
-| Subscriber 노드 | 2,227 | ✅ | - |
-| WORKS_AT 관계 | 240,320 | ✅ | corp_code 기반 매핑 |
-| INVESTED_IN 관계 | 3,130 | ✅ | - |
-| SUBSCRIBED 관계 | 4,014 | ✅ | - |
-| ISSUED 관계 | 1,435 | ✅ | - |
+| 전체 노드 | ~53,000 | ✅ | PostgreSQL 기준 재동기화 |
+| Company 노드 | 3,109 | ✅ | corp_code 기반 |
+| Officer 노드 | 47,444 | ✅ | PostgreSQL ID 동기화 |
+| ConvertibleBond 노드 | 1,133 | ✅ | - |
+| Subscriber 노드 | ~2,200 | ✅ | - |
+| WORKS_AT 관계 | 62,141 | ✅ | corp_code 기반 매핑 |
+| INVESTED_IN 관계 | ~3,100 | ✅ | - |
+| SUBSCRIBED 관계 | ~4,000 | ✅ | - |
+| ISSUED 관계 | 1,133 | ✅ | - |
 
-> **2025-12-12 개선사항**: Neo4j Officer 노드를 PostgreSQL ID 기준으로 재동기화하여 ID 불일치 문제 해결. birth_date 99.9% 적재 완료.
+> **2026-01-21 개선사항**: 유령기업 39개 + 상장폐지 기업 774개 삭제 (총 813개). 현재 3,109개 기업 관리 중.
 
 ### 3.3 완료된 API 엔드포인트
 
@@ -188,9 +193,9 @@ Company API (/api/companies)
 | cb_issuances | convertible_bonds | ✅ 호환 | 컬럼명 차이만 |
 | cb_participants | cb_subscribers | ✅ 호환 | - |
 | cb_participant_other_investments | Neo4j INVESTED_IN | ✅ 대체 가능 | - |
-| major_shareholders | major_shareholders (1,130) | ✅ 완료 | - |
-| affiliates | affiliates (1,245) | ✅ 완료 | - |
-| risk_scores | risk_scores (3,912) | ✅ 완료 | 종합 리스크 점수 |
+| major_shareholders | major_shareholders (44,574) | ✅ 완료 | - |
+| affiliates | affiliates (864) | ✅ 완료 | - |
+| risk_scores | risk_scores (3,138) | ✅ 완료 | 종합 리스크 점수 |
 | alerts | risk_signals (일부 역할) | ✅ 대체 가능 | - |
 
 ### 4.2 신규 생성 필요 테이블
@@ -354,11 +359,11 @@ RETURN o
 
 #### 5.2.4 결과
 
-| 항목 | 개선 전 | 개선 후 |
+| 항목 | 개선 전 | 개선 후 (현재) |
 |------|---------|---------|
-| Officers (Neo4j) | 95,596 | 38,125 |
+| Officers (Neo4j) | 95,596 | 47,444 |
 | birth_date 보유율 | 88% | 99.9% |
-| WORKS_AT 관계 | 55,206 | 240,320 |
+| WORKS_AT 관계 | 55,206 | 62,141 |
 | 동명이인 구분 | 불가 | 가능 |
 
 ### 5.3 임원 타사 이력 API

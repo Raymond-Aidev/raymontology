@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { MarketBadge } from '@/components/market-badge';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
@@ -44,7 +44,6 @@ import {
   Target,
   TrendingUp,
   TrendingDown,
-  DollarSign,
   Building2,
   HelpCircle,
   Loader2,

@@ -111,12 +111,6 @@ export function TopCompaniesTable({ companies, isLoading }: TopCompaniesTablePro
 }
 
 function getStrength(company: RaymondsIndexResponse): string {
-  const scores = [
-    { name: '높은 ROIC', score: company.roic || 0 },
-    { name: '적극 재투자', score: company.reinvestment_rate || 0 },
-    { name: '균형 배분', score: company.total_score },
-  ];
-
   if (company.rii_score && company.rii_score >= 80) {
     return '적극 재투자';
   }

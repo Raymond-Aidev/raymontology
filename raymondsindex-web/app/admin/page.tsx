@@ -176,7 +176,7 @@ export default function AdminPage() {
   }, [isAuthenticated, user, authLoading, router]);
 
   // API helper
-  const apiCall = async (endpoint: string, options: RequestInit = {}) => {
+  const apiCall = useCallback(async (endpoint: string, options: RequestInit = {}) => {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers: {
@@ -192,7 +192,7 @@ export default function AdminPage() {
     }
 
     return response.json();
-  };
+  }, [token]);
 
   // Load user data
   const loadUserData = useCallback(async () => {
@@ -215,7 +215,7 @@ export default function AdminPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [user, token]);
+  }, [user, token, apiCall]);
 
   // Load database overview
   const loadDbOverview = useCallback(async () => {
@@ -231,7 +231,7 @@ export default function AdminPage() {
     } finally {
       setDbLoading(false);
     }
-  }, [user, token]);
+  }, [user, token, apiCall]);
 
   // Load data quality
   const loadDataQuality = useCallback(async () => {
@@ -247,7 +247,7 @@ export default function AdminPage() {
     } finally {
       setQualityLoading(false);
     }
-  }, [user, token]);
+  }, [user, token, apiCall]);
 
   // Load data based on active tab
   useEffect(() => {

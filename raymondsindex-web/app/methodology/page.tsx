@@ -1,6 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import {
   BookOpen,
   PieChart,
@@ -10,7 +9,7 @@ import {
   AlertTriangle,
   CheckCircle2
 } from 'lucide-react';
-import { GRADE_COLORS, SUB_INDEX_INFO, GRADE_ORDER, type Grade } from '@/lib/constants';
+import { GRADE_COLORS, GRADE_ORDER, type Grade } from '@/lib/constants';
 
 export default function MethodologyPage() {
   return (

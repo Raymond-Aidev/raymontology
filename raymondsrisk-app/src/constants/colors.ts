@@ -7,6 +7,9 @@ export const colors = {
   gray900: '#191f28',
   gray600: '#6b7684',
   gray500: '#8b95a1',
+  gray400: '#a0aab4',  // 추가: 블러 처리용
+  gray300: '#c4c9cf',  // 추가: 블러 처리용
+  gray200: '#dde0e4',  // 추가: 블러 처리용
   gray100: '#f2f4f6',
   gray50: '#f7f8fa',
   white: '#ffffff',

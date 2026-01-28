@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { BarChart3, Menu, X, User, LogOut, Settings, Search } from 'lucide-react';
+import { BarChart3, Menu, X, User, LogOut, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/lib/auth';
@@ -23,9 +23,12 @@ export function Header() {
   const [mounted, setMounted] = useState(false);
   const { user, isAuthenticated, logout } = useAuthStore();
 
-  // Hydration 문제 방지
+  // Hydration 문제 방지 (requestAnimationFrame으로 setState 지연)
   useEffect(() => {
-    setMounted(true);
+    const rafId = requestAnimationFrame(() => {
+      setMounted(true);
+    });
+    return () => cancelAnimationFrame(rafId);
   }, []);
 
   const handleLogout = () => {

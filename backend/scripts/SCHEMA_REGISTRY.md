@@ -4,44 +4,52 @@
 >
 > **마지막 업데이트**: 2026-01-21
 >
-> **현재 데이터 상태** (2026-01-14):
-> - companies: 3,922건
-> - officers: 49,446건
-> - officer_positions: 75,059건
+> **현재 데이터 상태** (2026-01-21):
+> - companies: 3,109건 (813개 삭제 후)
+> - officers: 47,444건
+> - officer_positions: 62,141건
 > - disclosures: 279,258건
 > - convertible_bonds: 1,133건
 > - cb_subscribers: 7,026건
 > - financial_statements: 9,820건
 > - risk_signals: 1,412건
-> - risk_scores: 3,912건
-> - major_shareholders: 60,214건
-> - affiliates: 973건
-> - financial_details: 9,926건 (XBRL v3.0 파서 적용)
+> - risk_scores: 3,138건
+> - major_shareholders: 44,574건
+> - affiliates: 864건
+> - financial_details: 10,288건 (XBRL v3.0 파서 적용)
 > - **raymonds_index: 5,257건** (5,257개 기업 평가 완료)
-> - **stock_prices: 127,324건**
+> - **stock_prices: 126,506건**
 > - **largest_shareholder_info: 4,599건** (최대주주 기본정보)
 > - users: 4건
 > - user_query_usage: - (조회 제한 추적)
 > - page_contents: - (페이지 콘텐츠 관리)
 > - site_settings: - (사이트 설정)
+> - **company_labels: -** (기업 라벨)
 > - **news_articles: 468건** (뉴스 기사)
 > - **news_entities: 2,703건** (뉴스 엔티티)
 > - **news_relations: 791건** (뉴스 관계)
 > - **news_risks: 1,470건** (뉴스 위험요소)
+> - **news_company_complexity: -** (뉴스 기업 복잡도)
 > - **toss_users: 4건** (토스 로그인 사용자)
 > - **credit_transactions: 16건** (이용권 거래)
 > - **credit_products: 3건** (이용권 상품)
 > - **report_views: 6건** (리포트 조회)
 > - **pipeline_runs: 0건** (파이프라인 실행 이력)
 > - **service_applications: 1건** (서비스 이용신청)
-> - **financial_ratios: 신규 예정** (재무비율 분석 - 25개 재무비율)
-> - **company_view_history: 신규** (사용자 기업 조회 기록)
+> - **financial_ratios: -** (재무비율 분석 - 25개 재무비율)
+> - **company_view_history: -** (사용자 기업 조회 기록)
+> - **crawl_jobs: -** (크롤링 작업)
+> - **disclosure_parsed_data: -** (공시 파싱 데이터)
+> - **script_execution_log: -** (스크립트 실행 로그)
+> - **ontology_objects: -** (온톨로지 객체)
+> - **ontology_links: -** (온톨로지 관계)
+> - **alembic_version: 1건** (마이그레이션 버전)
 
 ---
 
-## 핵심 테이블 목록 (PostgreSQL) - 총 39개 테이블
+## 핵심 테이블 목록 (PostgreSQL) - 총 43개 테이블
 
-### 1. companies (기업 정보) - 3,922건
+### 1. companies (기업 정보) - 3,109건
 
 | 컬럼명 | 데이터타입 | NULL | 설명 |
 |--------|-----------|------|------|

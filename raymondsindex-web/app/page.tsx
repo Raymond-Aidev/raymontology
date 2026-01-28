@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useTopRanking } from '@/hooks/use-ranking';
 import { useStatistics } from '@/hooks/use-statistics';
 import { TopCompaniesTable } from '@/components/top-companies-table';
@@ -21,6 +22,20 @@ export default function HomePage() {
   const aGradePercentage = statsData?.total_companies
     ? (aGradeCount / statsData.total_companies) * 100
     : 0;
+
+  // 데이터 업데이트 경과일 계산 (requestAnimationFrame으로 setState 지연)
+  const [daysSinceUpdate, setDaysSinceUpdate] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    const rafId = requestAnimationFrame(() => {
+      if (statsData?.updated_at) {
+        const diff = Date.now() - new Date(statsData.updated_at).getTime();
+        setDaysSinceUpdate(`${Math.floor(diff / (1000 * 60 * 60 * 24))}일 전`);
+      } else {
+        setDaysSinceUpdate(undefined);
+      }
+    });
+    return () => cancelAnimationFrame(rafId);
+  }, [statsData?.updated_at]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -81,9 +96,7 @@ export default function HomePage() {
                 })
               : '-'}
             icon={Calendar}
-            subtitle={statsData?.updated_at
-              ? `${Math.floor((Date.now() - new Date(statsData.updated_at).getTime()) / (1000 * 60 * 60 * 24))}일 전`
-              : undefined}
+            subtitle={daysSinceUpdate}
             isLoading={statsLoading}
           />
         </KPIGrid>

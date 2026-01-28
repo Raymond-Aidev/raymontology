@@ -60,38 +60,13 @@ export default function ReportPage() {
   // 기업명 (URL에서 전달받거나 기본값)
   const companyName = location.state?.companyName || '기업'
 
-  // 인증 및 이용권 체크
+  // 이용권 필요 여부 체크 (credits === -1은 무제한)
+  const needsPaywall = !isAuthenticated || credits === 0
+
+  // 회사 데이터 로드 (이용권 없어도 기본 정보는 로드)
   useEffect(() => {
     // 인증 로딩 중이면 대기
     if (authLoading) return
-
-    // 미인증 시 Paywall로 리다이렉트
-    if (!isAuthenticated) {
-      navigate('/paywall', {
-        state: { returnTo: location.pathname, companyName },
-        replace: true
-      })
-      return
-    }
-
-    // 이용권 없으면 Paywall로 리다이렉트 (credits === -1은 무제한)
-    if (credits === 0) {
-      navigate('/paywall', {
-        state: { returnTo: location.pathname, companyName },
-        replace: true
-      })
-      return
-    }
-  }, [authLoading, isAuthenticated, credits, navigate, location.pathname, companyName])
-
-  // 회사 데이터 로드
-  useEffect(() => {
-    // 인증 로딩 중이면 대기
-    if (authLoading) return
-
-    // 인증 및 이용권 체크 (위의 useEffect에서 리다이렉트 처리)
-    // credits === -1은 무제한
-    if (!isAuthenticated || credits === 0) return
 
     if (!corpCode) {
       navigate('/', { replace: true })
@@ -162,7 +137,7 @@ export default function ReportPage() {
     }
 
     loadCompanyData()
-  }, [corpCode, navigate, companyName, isAuthenticated, credits])
+  }, [corpCode, navigate, companyName, authLoading])
 
   // 로딩 중
   if (authLoading || isLoading) {
@@ -360,6 +335,55 @@ export default function ReportPage() {
           </p>
         </section>
 
+        {/* 이용권 필요 배너 */}
+        {needsPaywall && (
+          <section
+            style={{
+              backgroundColor: colors.blue500 + '10',
+              borderRadius: '16px',
+              padding: '20px',
+              marginBottom: '12px',
+              textAlign: 'center',
+            }}
+          >
+            <div style={{ fontSize: '32px', marginBottom: '12px' }}>🔒</div>
+            <h3 style={{
+              fontSize: '18px',
+              fontWeight: '600',
+              color: colors.gray900,
+              margin: '0 0 8px 0',
+            }}>
+              상세 리포트 확인하기
+            </h3>
+            <p style={{
+              fontSize: '14px',
+              color: colors.gray600,
+              margin: '0 0 16px 0',
+            }}>
+              {!isAuthenticated
+                ? '로그인하고 이용권을 구매하면 상세 분석을 확인할 수 있어요'
+                : '이용권을 구매하면 상세 분석을 확인할 수 있어요'}
+            </p>
+            <button
+              onClick={() => navigate('/paywall', {
+                state: { returnTo: location.pathname, companyName: companyData.name }
+              })}
+              style={{
+                padding: '14px 28px',
+                borderRadius: '12px',
+                border: 'none',
+                backgroundColor: colors.blue500,
+                color: colors.white,
+                fontSize: '16px',
+                fontWeight: '600',
+                cursor: 'pointer',
+              }}
+            >
+              {!isAuthenticated ? '토스로 시작하기' : '이용권 구매하기'}
+            </button>
+          </section>
+        )}
+
         {/* 리스크 점수 카드 */}
         <section
           style={{
@@ -367,9 +391,29 @@ export default function ReportPage() {
             borderRadius: '16px',
             padding: '24px 20px',
             marginBottom: '12px',
+            position: 'relative',
+            overflow: 'hidden',
           }}
           aria-label="리스크 점수"
         >
+          {/* 이용권 없으면 블러 처리 */}
+          {needsPaywall && (
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(255,255,255,0.7)',
+              backdropFilter: 'blur(4px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 10,
+            }}>
+              <span style={{ fontSize: '24px' }}>🔒</span>
+            </div>
+          )}
           <div style={{
             fontSize: '14px',
             color: colors.gray500,
@@ -388,12 +432,12 @@ export default function ReportPage() {
               style={{
                 fontSize: '48px',
                 fontWeight: '700',
-                color: getRiskColor(companyData.risk_score),
+                color: needsPaywall ? colors.gray300 : getRiskColor(companyData.risk_score),
                 letterSpacing: '-0.02em'
               }}
-              aria-label={`리스크 점수 ${companyData.risk_score}점`}
+              aria-label={`리스크 점수 ${needsPaywall ? '?' : companyData.risk_score}점`}
             >
-              {companyData.risk_score}
+              {needsPaywall ? '??' : companyData.risk_score}
             </span>
             <span style={{
               fontSize: '16px',
@@ -409,12 +453,12 @@ export default function ReportPage() {
                 borderRadius: '8px',
                 fontSize: '14px',
                 fontWeight: '600',
-                backgroundColor: getRiskColor(companyData.risk_score) + '20',
-                color: getRiskColor(companyData.risk_score),
+                backgroundColor: needsPaywall ? colors.gray100 : getRiskColor(companyData.risk_score) + '20',
+                color: needsPaywall ? colors.gray400 : getRiskColor(companyData.risk_score),
               }}
-              aria-label={`위험 등급: ${getRiskLabel(companyData.risk_score)}`}
+              aria-label={`위험 등급: ${needsPaywall ? '?' : getRiskLabel(companyData.risk_score)}`}
             >
-              {getRiskLabel(companyData.risk_score)}
+              {needsPaywall ? '?' : getRiskLabel(companyData.risk_score)}
             </span>
           </div>
           {/* Progress Bar */}
@@ -433,21 +477,22 @@ export default function ReportPage() {
           >
             <div style={{
               height: '100%',
-              width: `${companyData.risk_score}%`,
-              backgroundColor: getRiskColor(companyData.risk_score),
+              width: needsPaywall ? '50%' : `${companyData.risk_score}%`,
+              backgroundColor: needsPaywall ? colors.gray200 : getRiskColor(companyData.risk_score),
               borderRadius: '4px',
               transition: 'width 0.3s ease'
             }} />
           </div>
         </section>
 
-        {/* 통계 카드 그리드 */}
+        {/* 통계 카드 그리드 - 이용권 없으면 블러 */}
         <section
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(2, 1fr)',
             gap: '12px',
-            marginBottom: '12px'
+            marginBottom: '12px',
+            position: 'relative',
           }}
           aria-label="기업 통계"
         >
@@ -456,9 +501,28 @@ export default function ReportPage() {
               backgroundColor: colors.white,
               padding: '20px 16px',
               borderRadius: '16px',
+              position: 'relative',
+              overflow: 'hidden',
             }}
             aria-label={`투자등급: ${companyData.investment_grade}`}
           >
+            {needsPaywall && (
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(255,255,255,0.7)',
+                backdropFilter: 'blur(4px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 10,
+              }}>
+                <span style={{ fontSize: '18px' }}>🔒</span>
+              </div>
+            )}
             <div style={{
               fontSize: '13px',
               color: colors.gray500,
@@ -470,10 +534,10 @@ export default function ReportPage() {
             <div style={{
               fontSize: '28px',
               fontWeight: '700',
-              color: colors.yellow500,
+              color: needsPaywall ? colors.gray300 : colors.yellow500,
               letterSpacing: '-0.02em'
             }}>
-              {companyData.investment_grade}
+              {needsPaywall ? '?' : companyData.investment_grade}
             </div>
           </article>
           <article
@@ -481,9 +545,28 @@ export default function ReportPage() {
               backgroundColor: colors.white,
               padding: '20px 16px',
               borderRadius: '16px',
+              position: 'relative',
+              overflow: 'hidden',
             }}
             aria-label={`CB 발행: ${companyData.cb_count}회`}
           >
+            {needsPaywall && (
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(255,255,255,0.7)',
+                backdropFilter: 'blur(4px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 10,
+              }}>
+                <span style={{ fontSize: '18px' }}>🔒</span>
+              </div>
+            )}
             <div style={{
               fontSize: '13px',
               color: colors.gray500,
@@ -495,15 +578,15 @@ export default function ReportPage() {
             <div style={{
               fontSize: '28px',
               fontWeight: '700',
-              color: companyData.cb_count > 0 ? colors.red500 : colors.green500,
+              color: needsPaywall ? colors.gray300 : (companyData.cb_count > 0 ? colors.red500 : colors.green500),
               letterSpacing: '-0.02em'
             }}>
-              {companyData.cb_count}회
+              {needsPaywall ? '?' : `${companyData.cb_count}회`}
             </div>
           </article>
         </section>
 
-        {/* 추가 정보 카드 */}
+        {/* 추가 정보 카드 - 이용권 없으면 블러 */}
         <section
           style={{
             display: 'grid',
@@ -516,7 +599,26 @@ export default function ReportPage() {
             backgroundColor: colors.white,
             padding: '20px 16px',
             borderRadius: '16px',
+            position: 'relative',
+            overflow: 'hidden',
           }}>
+            {needsPaywall && (
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(255,255,255,0.7)',
+                backdropFilter: 'blur(4px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 10,
+              }}>
+                <span style={{ fontSize: '18px' }}>🔒</span>
+              </div>
+            )}
             <div style={{
               fontSize: '13px',
               color: colors.gray500,
@@ -528,10 +630,10 @@ export default function ReportPage() {
             <div style={{
               fontSize: '28px',
               fontWeight: '700',
-              color: colors.blue500,
+              color: needsPaywall ? colors.gray300 : colors.blue500,
               letterSpacing: '-0.02em'
             }}>
-              {companyData.officer_count}명
+              {needsPaywall ? '?' : `${companyData.officer_count}명`}
             </div>
           </article>
           <article style={{
@@ -564,13 +666,31 @@ export default function ReportPage() {
             backgroundColor: colors.white,
             borderRadius: '16px',
             overflow: 'hidden',
+            position: 'relative',
           }}
           aria-label="상세 분석 메뉴"
         >
+          {needsPaywall && (
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(255,255,255,0.7)',
+              backdropFilter: 'blur(4px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 10,
+            }}>
+              <span style={{ fontSize: '24px' }}>🔒</span>
+            </div>
+          )}
           <ListItem
             title="이해관계자 네트워크"
             description="임원, CB 투자자, 대주주 간의 연결 관계 분석"
-            onClick={() => navigate(`/graph/${companyData.corp_code}`, {
+            onClick={needsPaywall ? undefined : () => navigate(`/graph/${companyData.corp_code}`, {
               state: { companyName: companyData.name }
             })}
           />

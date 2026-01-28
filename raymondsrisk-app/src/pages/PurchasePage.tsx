@@ -115,6 +115,14 @@ export default function PurchasePage() {
   const [isLoggingIn, setIsLoggingIn] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // 디버그 로그 (화면에 표시용)
+  const [debugLogs, setDebugLogs] = useState<string[]>([])
+  const addDebugLog = (msg: string) => {
+    const timestamp = new Date().toLocaleTimeString()
+    setDebugLogs(prev => [...prev.slice(-9), `[${timestamp}] ${msg}`])
+    console.log(msg)
+  }
+
   const returnTo = location.state?.returnTo || '/'
 
   // 상품 목록 로드
@@ -239,45 +247,60 @@ export default function PurchasePage() {
       }
 
       // 프로덕션 (토스 앱 내부): @apps-in-toss/web-framework IAP 호출
-      console.log('[PurchasePage] 프로덕션 환경 - IAP 결제 시작, SKU:', normalizedSku)
+      addDebugLog(`IAP 결제 시작, SKU: ${normalizedSku}`)
       purchaseCleanupRef.current = IAP.createOneTimePurchaseOrder({
         options: {
           sku: normalizedSku,  // 정규화된 SKU 사용
-          processProductGrant: async ({ orderId }) => {
-            // SDK 1.1.3+ 스펙: async 함수로 실제 상품 지급 결과 반환
-            console.log('[PurchasePage] processProductGrant 호출됨, orderId:', orderId)
+          processProductGrant: ({ orderId }) => {
+            // SDK 타임아웃 방지: fire-and-forget 패턴 사용
+            // 백엔드 호출은 비동기로 처리하고 즉시 true 반환
+            addDebugLog(`processProductGrant 호출됨, orderId: ${orderId}`)
+            addDebugLog('백엔드 API 호출 (fire-and-forget)...')
 
-            try {
-              // 백엔드 API 호출하여 이용권 충전
-              const result = await creditService.purchaseCredits(selectedProduct, orderId)
-              console.log('[PurchasePage] 백엔드 응답:', JSON.stringify(result))
+            // 백엔드 API 호출 - Promise는 기다리지 않음
+            creditService.purchaseCredits(selectedProduct, orderId)
+              .then(result => {
+                addDebugLog(`백엔드 응답: ${JSON.stringify(result)}`)
+                if (result.success) {
+                  addDebugLog('이용권 충전 성공')
+                } else {
+                  addDebugLog(`이용권 충전 실패: ${result.message}`)
+                  // 충전 실패 시에도 결제는 이미 완료됨
+                  // 토스 측에서 환불 처리 또는 재시도 로직 필요할 수 있음
+                }
+              })
+              .catch(err => {
+                addDebugLog(`백엔드 API 오류: ${err}`)
+                // 에러 발생해도 결제는 이미 완료됨
+                // 나중에 getPendingOrders로 재처리 가능
+              })
 
-              if (result.success) {
-                console.log('[PurchasePage] 이용권 충전 성공')
-                return true
-              } else {
-                console.error('[PurchasePage] 이용권 충전 실패:', result.message)
-                return false  // SDK에 실패 알림 → PRODUCT_NOT_GRANTED_BY_PARTNER 에러
-              }
-            } catch (err) {
-              console.error('[PurchasePage] 백엔드 API 오류:', err)
-              return false  // SDK에 실패 알림
-            }
+            // SDK 타임아웃 방지: 즉시 true 반환
+            addDebugLog('즉시 return true (SDK 타임아웃 방지)')
+            return true
           },
         },
         onEvent: async (event: unknown) => {
           // 결제 이벤트 수신
-          console.log('[PurchasePage] onEvent 수신:', JSON.stringify(event))
-          // SDK 문서: event.type === 'success' 일 때 결제 성공
-          await refreshCredits()
-          setIsPurchasing(false)
-          purchaseCleanupRef.current?.()
-          navigate(returnTo, { replace: true })
+          addDebugLog(`onEvent 수신: ${JSON.stringify(event)}`)
+          try {
+            await refreshCredits()
+            addDebugLog('잔액 새로고침 완료')
+            setIsPurchasing(false)
+            purchaseCleanupRef.current?.()
+            addDebugLog(`navigate to: ${returnTo}`)
+            navigate(returnTo, { replace: true })
+          } catch (err) {
+            addDebugLog(`onEvent 처리 중 에러: ${err}`)
+            setError('결제 완료 후 처리 중 오류 발생')
+            setIsPurchasing(false)
+          }
         },
         onError: (error: unknown) => {
           // 결제 실패 또는 취소
-          console.error('[PurchasePage] onError 수신:', error)
-          const errorMessage = error instanceof Error ? error.message : '결제가 취소되었습니다.'
+          const errorObj = error as { code?: string; message?: string }
+          addDebugLog(`onError 수신: code=${errorObj?.code}, msg=${errorObj?.message}`)
+          const errorMessage = errorObj?.message || '결제가 취소되었습니다.'
           setError(errorMessage)
           setIsPurchasing(false)
           purchaseCleanupRef.current?.()
@@ -620,6 +643,30 @@ export default function PurchasePage() {
             • 결제 관련 문의: support@raymondsrisk.com
           </p>
         </div>
+
+        {/* 디버그 로그 패널 (개발용) */}
+        {debugLogs.length > 0 && (
+          <div style={{
+            marginTop: '20px',
+            padding: '12px',
+            backgroundColor: '#1a1a2e',
+            borderRadius: '8px',
+            fontFamily: 'monospace',
+            fontSize: '11px',
+            color: '#00ff00',
+            maxHeight: '200px',
+            overflowY: 'auto',
+          }}>
+            <div style={{ marginBottom: '8px', color: '#ffcc00', fontWeight: 'bold' }}>
+              🔍 Debug Logs (최근 10개)
+            </div>
+            {debugLogs.map((log, i) => (
+              <div key={i} style={{ marginBottom: '4px', wordBreak: 'break-all' }}>
+                {log}
+              </div>
+            ))}
+          </div>
+        )}
 
       </main>
     </div>

@@ -4,8 +4,90 @@
 
 ---
 
+## `/sc:load` - 세션 시작 시 문서 로드 ⭐⭐⭐
+
+**세션 시작 시 반드시 아래 문서들을 순서대로 읽어 컨텍스트를 확보하세요:**
+
+### 필수 로드 문서 (순서대로)
+
+| # | 문서 | 경로 | 용도 |
+|---|------|------|------|
+| 1 | **문서 허브** | `docs/INDEX.md` | 전체 문서 구조 및 진입점 |
+| 2 | **데이터 현황** | `docs/data/DATA_STATUS.md` | DB 테이블별 레코드 수 (단일 진실 공급원) |
+| 3 | **시스템 아키텍처** | `docs/technical/SRD_Architecture.md` | 시스템 구성 및 기술 스택 |
+| 4 | **DB 스키마** | `docs/technical/SRD_Database.md` | 테이블 스키마 및 관계 |
+
+### 작업별 추가 로드
+
+| 작업 유형 | 추가 문서 |
+|----------|----------|
+| `[RISK-WEB]` 작업 | `docs/apps/risk-web/README.md` |
+| `[INDEX-WEB]` 작업 | `docs/apps/index-web/README.md` |
+| `[RISK-APP]` 작업 | `docs/apps/risk-app/README.md` |
+| `[BACKEND]` 작업 | `docs/apps/backend/README.md` |
+| 제품 기획 확인 | `docs/product/PRD_Overview.md` |
+
+### 로드 명령 예시
+```
+/sc:load
+→ Claude가 위 문서들을 순차적으로 읽고 컨텍스트 확보
+```
+
+---
+
+## `/sc:save` - 세션 종료 시 문서 업데이트 ⭐⭐⭐
+
+**작업 완료 후 변동사항을 아래 문서들에 반영하세요:**
+
+### 업데이트 대상 문서
+
+| 변경 유형 | 업데이트 문서 | 업데이트 내용 |
+|----------|--------------|--------------|
+| **DB 변경** (레코드 추가/삭제) | `docs/data/DATA_STATUS.md` | 테이블별 레코드 수, 마지막 업데이트 날짜 |
+| **API 변경** | `docs/apps/backend/README.md` | 엔드포인트 추가/수정 |
+| **RISK-WEB 변경** | `docs/apps/risk-web/README.md` | 컴포넌트, 페이지 변경 |
+| **INDEX-WEB 변경** | `docs/apps/index-web/README.md` | 컴포넌트, 페이지 변경 |
+| **RISK-APP 변경** | `docs/apps/risk-app/README.md` | 토스 앱 기능 변경 |
+| **스키마 변경** | `docs/technical/SRD_Database.md` | 테이블/컬럼 추가/수정 |
+| **아키텍처 변경** | `docs/technical/SRD_Architecture.md` | 시스템 구성 변경 |
+| **기능 추가** | `docs/product/PRD_Overview.md` | 제품 기능 목록 업데이트 |
+
+### 저장 명령 예시
+```
+/sc:save
+→ Claude가 작업 중 변경된 내용을 해당 문서에 자동 반영
+```
+
+### 업데이트 규칙
+
+1. **날짜 업데이트**: 각 문서의 "마지막 업데이트" 날짜 갱신
+2. **변경 이력**: 주요 변경사항 요약 추가
+3. **정합성 유지**: DATA_STATUS.md와 실제 DB 수치 일치 확인
+4. **CLAUDE.md 동기화**: 핵심 수치 변경 시 이 파일도 업데이트
+
+### 문서 구조 (참조)
+
+```
+docs/
+├── INDEX.md                    ← 문서 허브 (진입점)
+├── apps/                       ← 앱별 구현 문서
+│   ├── backend/README.md
+│   ├── index-web/README.md
+│   ├── risk-app/README.md
+│   └── risk-web/README.md
+├── product/                    ← 제품 기획
+│   └── PRD_Overview.md
+├── technical/                  ← 기술 명세
+│   ├── SRD_Architecture.md
+│   └── SRD_Database.md
+└── data/                       ← 데이터 현황
+    └── DATA_STATUS.md
+```
+
+---
+
 ## 상태: 기업 데이터 정리 완료 v2.9 (2026-01-21)
-전체 **37개 테이블** 데이터 적재 완료. **RaymondsIndex 계산 완료 (5,257건)**.
+전체 **43개 테이블** 데이터 적재 완료. **RaymondsIndex 계산 완료 (5,257건)**.
 **RaymondsIndex 독립 사이트**: https://raymondsindex.konnect-ai.net 배포 완료.
 **RaymondsRisk 앱인토스**: 토스 로그인 연동 완료, 샌드박스 테스트 진행 중.
 **최근 업데이트**: 유령기업 39개 + 상장폐지 기업 774개 삭제 (총 813개), 현재 3,109개 기업 관리 중 (2026-01-21)
@@ -18,7 +100,7 @@
 |------|------|------|
 | **프로젝트 설정** | **구현 현황 및 환경 설정** | **`PROJECT_SETUP.md`** |
 | 환경 변수 | 프로덕션 DB 접속정보 | `.env.production` |
-| 스키마 레지스트리 | 모든 테이블명/컬럼명 참조 | `scripts/SCHEMA_REGISTRY.md` |
+| 스키마 레지스트리 | 모든 테이블명/컬럼명 참조 | `backend/scripts/SCHEMA_REGISTRY.md` |
 | 표준 작업 프로세스 | 모든 DB 작업 체크리스트 | `scripts/STANDARD_PROCESS.md` |
 | 파싱 상태 | 상세 파싱 진행 상황 | `scripts/PARSING_STATUS.md` |
 | **기업 관리 문서** | **데이터 수집 대상 기업 관리** | **`scripts/COMPANY_MANAGEMENT.md`** |

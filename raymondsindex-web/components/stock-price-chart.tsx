@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import {
-  LineChart,
   Line,
   XAxis,
   YAxis,
@@ -112,7 +111,7 @@ function CustomTooltip({ active, payload, label }: {
   );
 }
 
-export function StockPriceChart({ companyId, companyName, ticker }: StockPriceChartProps) {
+export function StockPriceChart({ companyId, ticker }: StockPriceChartProps) {
   const [period, setPeriod] = useState<PeriodType>('3y');
   const [data, setData] = useState<StockPriceChartResponse | null>(null);
   const [loading, setLoading] = useState(true);
