@@ -72,6 +72,7 @@ export interface ApiRaymondsIndex {
 
   // Core Metrics
   investment_gap: number | null
+  investment_gap_v21: number | null  // v2.1 핵심 (현금 CAGR - CAPEX 성장률)
   cash_cagr: number | null
   capex_growth: number | null
   idle_cash_ratio: number | null
@@ -182,7 +183,7 @@ export function mapApiToRaymondsIndex(api: ApiRaymondsIndex): RaymondsIndexData 
       mai: api.mai_score ?? 0,
     },
     coreMetrics: {
-      investmentGap: api.investment_gap ?? 0,
+      investmentGap: api.investment_gap_v21 ?? api.investment_gap ?? 0,  // v2.1 우선 사용
       cashCagr: api.cash_cagr ?? 0,
       capexGrowth: api.capex_growth ?? 0,
       idleCashRatio: api.idle_cash_ratio ?? 0,

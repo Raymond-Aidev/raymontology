@@ -195,7 +195,7 @@ export async function getRaymondsIndexRanking(
       market: item.company_market,
       total_score: item.total_score,
       grade: item.grade,
-      investment_gap: item.investment_gap ?? 0,
+      investment_gap: item.investment_gap_v21 ?? item.investment_gap ?? 0,  // v2.1 우선 사용
       cei_score: item.cei_score ?? undefined,
       rii_score: item.rii_score ?? undefined,
       cgi_score: item.cgi_score ?? undefined,
@@ -231,7 +231,7 @@ function mapApiToRaymondsIndexData(api: ApiRaymondsIndex): RaymondsIndexData {
       mai: api.mai_score ?? 0,
     },
     coreMetrics: {
-      investmentGap: api.investment_gap ?? 0,
+      investmentGap: api.investment_gap_v21 ?? api.investment_gap ?? 0,  // v2.1 우선 사용
       cashCagr: api.cash_cagr ?? 0,
       capexGrowth: api.capex_growth ?? 0,
       idleCashRatio: api.idle_cash_ratio ?? 0,

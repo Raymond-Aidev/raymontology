@@ -5,8 +5,11 @@
 pykrx의 get_market_cap() 함수를 사용하여 KRX에서 직접 시가총액과 상장주식수를 수집합니다.
 
 Usage:
-    # 전체 기업 수집
+    # 전체 기업 수집 (companies 테이블만 업데이트)
     python -m scripts.collection.collect_market_cap --all
+
+    # 전체 기업 수집 + 일별 이력 저장 (daily_stock_prices 테이블)
+    python -m scripts.collection.collect_market_cap --all --save-daily
 
     # 샘플 테스트 (10개 기업)
     python -m scripts.collection.collect_market_cap --sample 10
@@ -292,6 +295,139 @@ class MarketCapCollector:
 
         return stats
 
+    async def collect_and_save_daily(
+        self,
+        target_date: str = None,
+        sample: Optional[int] = None,
+        dry_run: bool = False
+    ) -> Dict[str, int]:
+        """
+        시가총액 데이터를 daily_stock_prices 테이블에 저장 (일별 이력)
+
+        Args:
+            target_date: 조회 날짜 (YYYYMMDD)
+            sample: 샘플 수
+            dry_run: True면 저장하지 않음
+
+        Returns:
+            저장 통계
+        """
+        from datetime import datetime as dt
+
+        stats = {
+            "target_date": target_date,
+            "krx_total": 0,
+            "db_companies": 0,
+            "matched": 0,
+            "daily_saved": 0,
+            "skipped": 0,
+            "errors": 0,
+        }
+
+        if not target_date:
+            target_date = dt.now().strftime("%Y%m%d")
+        stats["target_date"] = target_date
+
+        # YYYYMMDD -> date 객체
+        price_date = dt.strptime(target_date, "%Y%m%d").date()
+
+        logger.info(f"=== 일별 시가총액 저장 시작 ===")
+        logger.info(f"저장 날짜: {price_date}")
+        logger.info(f"샘플: {sample or '전체'}")
+        logger.info(f"Dry-run: {dry_run}")
+
+        # 1. KRX에서 시가총액 데이터 수집
+        logger.info("\n[1/3] KRX 시가총액 조회 중...")
+        krx_data = await self.get_market_cap_data(target_date)
+        stats["krx_total"] = len(krx_data)
+        logger.info(f"KRX 조회 결과: {len(krx_data)}개 종목")
+
+        if not krx_data:
+            logger.error("KRX 데이터 조회 실패")
+            return stats
+
+        # 2. DB 기업 조회
+        async with self.async_session() as session:
+            logger.info("\n[2/3] DB 기업 조회 중...")
+            companies = await self.get_companies_ticker_map(session, sample)
+            stats["db_companies"] = len(companies)
+            logger.info(f"DB 기업: {len(companies)}개")
+
+            # 3. daily_stock_prices 저장
+            logger.info("\n[3/3] daily_stock_prices 저장 중...")
+
+            daily_records = []
+            for ticker, company in companies.items():
+                if ticker not in krx_data:
+                    stats["skipped"] += 1
+                    continue
+
+                krx = krx_data[ticker]
+                stats["matched"] += 1
+
+                daily_records.append({
+                    "company_id": company["id"],
+                    "price_date": price_date,
+                    "close_price": krx["close_price"],
+                    "volume": krx["volume"],
+                    "trading_value": krx["trading_value"],
+                    "market_cap": krx["market_cap"],
+                    "listed_shares": krx["listed_shares"],
+                })
+
+            if dry_run:
+                logger.info(f"[DRY-RUN] {len(daily_records)}건 저장 예정")
+                if daily_records:
+                    sample_rec = daily_records[0]
+                    logger.info(f"  샘플: company_id={sample_rec['company_id'][:8]}..., "
+                              f"close={sample_rec['close_price']}, "
+                              f"market_cap={sample_rec['market_cap']}")
+                stats["daily_saved"] = len(daily_records)
+                return stats
+
+            # 배치 UPSERT
+            if daily_records:
+                batch_size = 100
+                for i in range(0, len(daily_records), batch_size):
+                    batch = daily_records[i:i + batch_size]
+
+                    values_list = ", ".join([
+                        f"('{r['company_id']}'::uuid, '{r['price_date']}'::date, "
+                        f"{r['close_price'] or 'NULL'}, NULL, NULL, NULL, "
+                        f"{r['volume'] or 'NULL'}, {r['trading_value'] or 'NULL'}, "
+                        f"{r['market_cap'] or 'NULL'}, {r['listed_shares'] or 'NULL'})"
+                        for r in batch
+                    ])
+
+                    upsert_stmt = text(f"""
+                        INSERT INTO daily_stock_prices
+                        (company_id, price_date, close_price, open_price, high_price, low_price,
+                         volume, trading_value, market_cap, listed_shares)
+                        VALUES {values_list}
+                        ON CONFLICT (company_id, price_date)
+                        DO UPDATE SET
+                            close_price = EXCLUDED.close_price,
+                            volume = EXCLUDED.volume,
+                            trading_value = EXCLUDED.trading_value,
+                            market_cap = EXCLUDED.market_cap,
+                            listed_shares = EXCLUDED.listed_shares
+                    """)
+
+                    try:
+                        await session.execute(upsert_stmt)
+                        stats["daily_saved"] += len(batch)
+                    except Exception as e:
+                        logger.error(f"배치 저장 실패: {e}")
+                        stats["errors"] += 1
+
+                    if (i + batch_size) % 500 == 0 or i + batch_size >= len(daily_records):
+                        logger.info(f"  진행: {min(i + batch_size, len(daily_records))}/{len(daily_records)}")
+
+                await session.commit()
+                logger.info(f"  daily_stock_prices 저장 완료: {stats['daily_saved']}건")
+
+        return stats
+
     async def get_status(self) -> Dict[str, Any]:
         """수집 현황 조회"""
         async with self.async_session() as session:
@@ -338,6 +474,11 @@ async def main():
         action="store_true",
         help="저장하지 않고 결과만 출력"
     )
+    parser.add_argument(
+        "--save-daily",
+        action="store_true",
+        help="daily_stock_prices 테이블에도 일별 이력 저장"
+    )
     args = parser.parse_args()
 
     # 환경 변수
@@ -363,13 +504,14 @@ async def main():
             logger.info(f"평균 시가총액: {status['avg_market_cap_억']:,.0f}억원" if status['avg_market_cap_억'] else "평균 시가총액: N/A")
             logger.info(f"총 시가총액: {status['total_market_cap_조']:,.1f}조원" if status['total_market_cap_조'] else "총 시가총액: N/A")
         else:
+            # companies 테이블 업데이트 (기본)
             stats = await collector.collect_and_save(
                 target_date=args.date,
                 sample=args.sample,
                 dry_run=args.dry_run
             )
 
-            logger.info("\n=== 수집 결과 ===")
+            logger.info("\n=== companies 테이블 수집 결과 ===")
             logger.info(f"조회 날짜: {stats['target_date']}")
             logger.info(f"KRX 종목: {stats['krx_total']}개")
             logger.info(f"DB 기업: {stats['db_companies']}개")
@@ -377,6 +519,22 @@ async def main():
             logger.info(f"시가총액 업데이트: {stats['updated_market_cap']}개")
             logger.info(f"상장주식수 업데이트: {stats['updated_shares']}개")
             logger.info(f"스킵 (KRX 미존재): {stats['skipped']}개")
+
+            # --save-daily 옵션: daily_stock_prices 테이블에도 저장
+            if args.save_daily:
+                daily_stats = await collector.collect_and_save_daily(
+                    target_date=args.date,
+                    sample=args.sample,
+                    dry_run=args.dry_run
+                )
+
+                logger.info("\n=== daily_stock_prices 저장 결과 ===")
+                logger.info(f"저장 날짜: {daily_stats['target_date']}")
+                logger.info(f"매칭: {daily_stats['matched']}개")
+                logger.info(f"저장 완료: {daily_stats['daily_saved']}건")
+                logger.info(f"스킵: {daily_stats['skipped']}개")
+                if daily_stats['errors'] > 0:
+                    logger.info(f"오류: {daily_stats['errors']}개")
 
     finally:
         await collector.close()
