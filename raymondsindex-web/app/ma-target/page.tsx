@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
-import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -25,11 +24,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -40,7 +34,6 @@ import {
   RotateCcw,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   Target,
   TrendingUp,
   TrendingDown,
@@ -69,21 +62,21 @@ const MA_GRADE_COLORS: Record<string, string> = {
 interface FilterState {
   grades: string[];
   markets: string[];
-  scoreRange: [number, number];
-  marketCapRange: [number, number];  // 억원
-  minCashRatio: number | null;
-  minRevenueGrowth: number | null;
-  minTangibleGrowth: number | null;
+  marketCapRange: [number, number];  // 억원 (100억 ~ 10조)
+  cashAssetsRange: [number, number]; // 억원 (0 ~ 5조)
+  cashRatioRange: [number, number];  // % (0 ~ 100)
+  revenueGrowthRange: [number, number]; // % (-50 ~ 100)
+  tangibleGrowthRange: [number, number]; // % (-50 ~ 100)
 }
 
 const DEFAULT_FILTERS: FilterState = {
   grades: [],
   markets: [],
-  scoreRange: [0, 100],
-  marketCapRange: [100, 10000],  // 100억 ~ 1조
-  minCashRatio: null,
-  minRevenueGrowth: null,
-  minTangibleGrowth: null,
+  marketCapRange: [100, 100000],  // 100억 ~ 10조
+  cashAssetsRange: [0, 50000],    // 0 ~ 5조
+  cashRatioRange: [0, 100],       // 0 ~ 100%
+  revenueGrowthRange: [-50, 100], // -50 ~ 100%
+  tangibleGrowthRange: [-50, 100], // -50 ~ 100%
 };
 
 // 숫자 포맷팅 함수
@@ -121,7 +114,6 @@ export default function MATargetPage() {
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<MATargetParams['sort']>('score_desc');
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   // 데이터 상태
   const [data, setData] = useState<{
@@ -150,28 +142,44 @@ export default function MATargetPage() {
       params.market = filters.markets.join(',');
     }
 
-    if (filters.scoreRange[0] > 0) {
-      params.min_score = filters.scoreRange[0];
-    }
-    if (filters.scoreRange[1] < 100) {
-      params.max_score = filters.scoreRange[1];
-    }
-
+    // 시가총액 범위 (100억 ~ 10조)
     if (filters.marketCapRange[0] > 100) {
       params.min_market_cap = filters.marketCapRange[0];
     }
-    if (filters.marketCapRange[1] < 10000) {
+    if (filters.marketCapRange[1] < 100000) {
       params.max_market_cap = filters.marketCapRange[1];
     }
 
-    if (filters.minCashRatio !== null) {
-      params.min_cash_ratio = filters.minCashRatio;
+    // 현금성자산 범위 (0 ~ 5조)
+    if (filters.cashAssetsRange[0] > 0) {
+      params.min_cash_assets = filters.cashAssetsRange[0];
     }
-    if (filters.minRevenueGrowth !== null) {
-      params.min_revenue_growth = filters.minRevenueGrowth;
+    if (filters.cashAssetsRange[1] < 50000) {
+      params.max_cash_assets = filters.cashAssetsRange[1];
     }
-    if (filters.minTangibleGrowth !== null) {
-      params.min_tangible_growth = filters.minTangibleGrowth;
+
+    // 현금/시총 비율 범위 (0 ~ 100%)
+    if (filters.cashRatioRange[0] > 0) {
+      params.min_cash_ratio = filters.cashRatioRange[0];
+    }
+    if (filters.cashRatioRange[1] < 100) {
+      params.max_cash_ratio = filters.cashRatioRange[1];
+    }
+
+    // 매출 성장률 범위 (-50 ~ 100%)
+    if (filters.revenueGrowthRange[0] > -50) {
+      params.min_revenue_growth = filters.revenueGrowthRange[0];
+    }
+    if (filters.revenueGrowthRange[1] < 100) {
+      params.max_revenue_growth = filters.revenueGrowthRange[1];
+    }
+
+    // 유형자산 증가율 범위 (-50 ~ 100%)
+    if (filters.tangibleGrowthRange[0] > -50) {
+      params.min_tangible_growth = filters.tangibleGrowthRange[0];
+    }
+    if (filters.tangibleGrowthRange[1] < 100) {
+      params.max_tangible_growth = filters.tangibleGrowthRange[1];
     }
 
     return params;
@@ -232,16 +240,22 @@ export default function MATargetPage() {
   };
 
   const totalPages = data?.total_pages || 0;
-  const hasActiveFilters =
-    filters.grades.length > 0 ||
-    filters.markets.length > 0 ||
-    filters.scoreRange[0] > 0 ||
-    filters.scoreRange[1] < 100 ||
-    filters.marketCapRange[0] > 100 ||
-    filters.marketCapRange[1] < 10000 ||
-    filters.minCashRatio !== null ||
-    filters.minRevenueGrowth !== null ||
-    filters.minTangibleGrowth !== null;
+
+  // 활성화된 필터 개수 계산
+  const countActiveFilters = () => {
+    let count = 0;
+    if (filters.grades.length > 0) count++;
+    if (filters.markets.length > 0) count++;
+    if (filters.marketCapRange[0] > 100 || filters.marketCapRange[1] < 100000) count++;
+    if (filters.cashAssetsRange[0] > 0 || filters.cashAssetsRange[1] < 50000) count++;
+    if (filters.cashRatioRange[0] > 0 || filters.cashRatioRange[1] < 100) count++;
+    if (filters.revenueGrowthRange[0] > -50 || filters.revenueGrowthRange[1] < 100) count++;
+    if (filters.tangibleGrowthRange[0] > -50 || filters.tangibleGrowthRange[1] < 100) count++;
+    return count;
+  };
+
+  const activeFilterCount = countActiveFilters();
+  const hasActiveFilters = activeFilterCount > 0;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -320,9 +334,7 @@ export default function MATargetPage() {
               <CardTitle className="text-lg">필터</CardTitle>
               {hasActiveFilters && (
                 <Badge variant="secondary" className="ml-2">
-                  {filters.grades.length + filters.markets.length +
-                   (filters.scoreRange[0] > 0 || filters.scoreRange[1] < 100 ? 1 : 0) +
-                   (filters.marketCapRange[0] > 100 || filters.marketCapRange[1] < 10000 ? 1 : 0)}개 적용
+                  {activeFilterCount}개 적용
                 </Badge>
               )}
             </div>
@@ -369,40 +381,25 @@ export default function MATargetPage() {
             </div>
           </div>
 
-          {/* 점수 범위 */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-zinc-300">점수 범위</p>
-              <span className="text-sm text-zinc-500">
-                {filters.scoreRange[0]} - {filters.scoreRange[1]}점
-              </span>
-            </div>
-            <Slider
-              value={filters.scoreRange}
-              min={0}
-              max={100}
-              step={5}
-              onValueChange={(value) => {
-                setFilters((prev) => ({ ...prev, scoreRange: value as [number, number] }));
-                setPage(1);
-              }}
-              className="w-full"
-            />
-          </div>
-
-          {/* 시가총액 범위 */}
+          {/* 시가총액 범위 (10조까지) */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm font-medium text-zinc-300">시가총액 범위</p>
               <span className="text-sm text-zinc-500">
-                {filters.marketCapRange[0]}억 - {filters.marketCapRange[1]}억
+                {filters.marketCapRange[0] >= 10000
+                  ? `${(filters.marketCapRange[0] / 10000).toFixed(1)}조`
+                  : `${filters.marketCapRange[0].toLocaleString()}억`}
+                {' - '}
+                {filters.marketCapRange[1] >= 10000
+                  ? `${(filters.marketCapRange[1] / 10000).toFixed(1)}조`
+                  : `${filters.marketCapRange[1].toLocaleString()}억`}
               </span>
             </div>
             <Slider
               value={filters.marketCapRange}
               min={100}
-              max={10000}
-              step={100}
+              max={100000}
+              step={1000}
               onValueChange={(value) => {
                 setFilters((prev) => ({ ...prev, marketCapRange: value as [number, number] }));
                 setPage(1);
@@ -411,73 +408,119 @@ export default function MATargetPage() {
             />
           </div>
 
-          {/* 고급 필터 */}
-          <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-full justify-between">
-                고급 필터
-                <ChevronDown className={`w-4 h-4 transition-transform ${advancedOpen ? 'rotate-180' : ''}`} />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-4 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-zinc-300 flex items-center gap-1">
-                    최소 현금/시총 비율 (%)
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <HelpCircle className="w-4 h-4 text-zinc-500" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>현금성 자산 / 시가총액 비율</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </label>
-                  <Input
-                    type="number"
-                    placeholder="예: 30"
-                    value={filters.minCashRatio ?? ''}
-                    onChange={(e) => {
-                      const value = e.target.value ? Number(e.target.value) : null;
-                      setFilters((prev) => ({ ...prev, minCashRatio: value }));
-                      setPage(1);
-                    }}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-zinc-300">최소 매출 성장률 (%)</label>
-                  <Input
-                    type="number"
-                    placeholder="예: 10"
-                    value={filters.minRevenueGrowth ?? ''}
-                    onChange={(e) => {
-                      const value = e.target.value ? Number(e.target.value) : null;
-                      setFilters((prev) => ({ ...prev, minRevenueGrowth: value }));
-                      setPage(1);
-                    }}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-zinc-300">최소 유형자산 증가율 (%)</label>
-                  <Input
-                    type="number"
-                    placeholder="예: 5"
-                    value={filters.minTangibleGrowth ?? ''}
-                    onChange={(e) => {
-                      const value = e.target.value ? Number(e.target.value) : null;
-                      setFilters((prev) => ({ ...prev, minTangibleGrowth: value }));
-                      setPage(1);
-                    }}
-                    className="mt-1"
-                  />
-                </div>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
+          {/* 현금성자산 범위 */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-medium text-zinc-300 flex items-center gap-1">
+                현금성자산 범위
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <HelpCircle className="w-4 h-4 text-zinc-500" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>현금 및 현금성 자산 + 단기금융상품</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </p>
+              <span className="text-sm text-zinc-500">
+                {filters.cashAssetsRange[0] >= 10000
+                  ? `${(filters.cashAssetsRange[0] / 10000).toFixed(1)}조`
+                  : `${filters.cashAssetsRange[0].toLocaleString()}억`}
+                {' - '}
+                {filters.cashAssetsRange[1] >= 10000
+                  ? `${(filters.cashAssetsRange[1] / 10000).toFixed(1)}조`
+                  : `${filters.cashAssetsRange[1].toLocaleString()}억`}
+              </span>
+            </div>
+            <Slider
+              value={filters.cashAssetsRange}
+              min={0}
+              max={50000}
+              step={1000}
+              onValueChange={(value) => {
+                setFilters((prev) => ({ ...prev, cashAssetsRange: value as [number, number] }));
+                setPage(1);
+              }}
+              className="w-full"
+            />
+          </div>
+
+          {/* 현금/시총 비율 범위 */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-medium text-zinc-300 flex items-center gap-1">
+                현금/시총 비율
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <HelpCircle className="w-4 h-4 text-zinc-500" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>현금성 자산 / 시가총액 비율</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </p>
+              <span className="text-sm text-zinc-500">
+                {filters.cashRatioRange[0]}% - {filters.cashRatioRange[1]}%
+              </span>
+            </div>
+            <Slider
+              value={filters.cashRatioRange}
+              min={0}
+              max={100}
+              step={10}
+              onValueChange={(value) => {
+                setFilters((prev) => ({ ...prev, cashRatioRange: value as [number, number] }));
+                setPage(1);
+              }}
+              className="w-full"
+            />
+          </div>
+
+          {/* 매출 성장률 범위 */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-medium text-zinc-300">매출 성장률</p>
+              <span className="text-sm text-zinc-500">
+                {filters.revenueGrowthRange[0]}% - {filters.revenueGrowthRange[1]}%
+              </span>
+            </div>
+            <Slider
+              value={filters.revenueGrowthRange}
+              min={-50}
+              max={100}
+              step={10}
+              onValueChange={(value) => {
+                setFilters((prev) => ({ ...prev, revenueGrowthRange: value as [number, number] }));
+                setPage(1);
+              }}
+              className="w-full"
+            />
+          </div>
+
+          {/* 유형자산 증가율 범위 */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-medium text-zinc-300">유형자산 증가율</p>
+              <span className="text-sm text-zinc-500">
+                {filters.tangibleGrowthRange[0]}% - {filters.tangibleGrowthRange[1]}%
+              </span>
+            </div>
+            <Slider
+              value={filters.tangibleGrowthRange}
+              min={-50}
+              max={100}
+              step={10}
+              onValueChange={(value) => {
+                setFilters((prev) => ({ ...prev, tangibleGrowthRange: value as [number, number] }));
+                setPage(1);
+              }}
+              className="w-full"
+            />
+          </div>
         </CardContent>
       </Card>
 

@@ -33,7 +33,7 @@
 | `/screener` | `app/screener/page.tsx` | 기업 스크리닝 (필터, 정렬, 페이징) |
 | `/company/[id]` | `app/company/[id]/page.tsx` | 기업 상세 (레이더 차트, 지표 카드) |
 | `/methodology` | `app/methodology/page.tsx` | 평가 방법론 설명 |
-| `/ma-target` | `app/ma-target/page.tsx` | M&A 타겟 스크리닝 ⭐ |
+| `/ma-target` | `app/ma-target/page.tsx` | 적대적 M&A 스크리닝 ⭐ |
 | `/login` | `app/login/page.tsx` | 로그인 |
 | `/signup` | `app/signup/page.tsx` | 회원가입 |
 | `/admin` | `app/admin/page.tsx` | 관리자 (superuser 전용) |
@@ -128,7 +128,7 @@
 - [x] 위험신호 패널
 - [x] 시장 필터 (KOSPI/KOSDAQ/KONEX)
 - [x] 다크 모드 지원
-- [x] **M&A 타겟 스크리닝** ⭐ (2026-01 신규)
+- [x] **적대적 M&A 스크리닝** ⭐ (2026-01 신규)
 - [x] **기업 비교 기능** ⭐ (최대 4개 기업 비교)
 - [x] **CSV 내보내기** ⭐ (스크리너 결과 다운로드)
 - [x] **주가 차트** ⭐ (3년 추이)
@@ -177,12 +177,12 @@ NEXT_PUBLIC_API_URL=https://raymontology-production.up.railway.app/api
 | `/api/raymonds-index/statistics/summary` | 통계 요약 |
 | `/api/raymonds-index/search/companies` | 기업 검색 |
 
-### M&A 타겟 API ⭐
+### 적대적 M&A API ⭐
 | 엔드포인트 | 용도 |
 |-----------|------|
-| `/api/ma-target/ranking` | M&A 타겟 랭킹 |
-| `/api/ma-target/stats` | M&A 타겟 통계 |
-| `/api/ma-target/company/{id}` | M&A 타겟 상세 |
+| `/api/ma-target/ranking` | 적대적 M&A 랭킹 |
+| `/api/ma-target/stats` | 적대적 M&A 통계 |
+| `/api/ma-target/company/{id}` | 적대적 M&A 상세 |
 
 ### 주가 API
 | 엔드포인트 | 용도 |
@@ -222,7 +222,7 @@ NEXT_PUBLIC_API_URL=https://raymontology-production.up.railway.app/api
 
 ---
 
-## M&A 타겟 등급 체계 (7등급) ⭐
+## 적대적 M&A 등급 체계 (7등급) ⭐
 
 | 등급 | 의미 | 색상 |
 |------|------|------|
@@ -236,4 +236,4 @@ NEXT_PUBLIC_API_URL=https://raymontology-production.up.railway.app/api
 
 ---
 
-*마지막 업데이트: 2026-01-28*
+*마지막 업데이트: 2026-01-30*

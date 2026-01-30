@@ -78,11 +78,17 @@ async def get_ma_target_ranking(
     # 시가총액 범위 (억원)
     min_market_cap: Optional[float] = Query(None, ge=0, description="최소 시가총액 (억원)"),
     max_market_cap: Optional[float] = Query(None, ge=0, description="최대 시가총액 (억원)"),
-    # 현금비율 필터
+    # 현금성자산 범위 (억원)
+    min_cash_assets: Optional[float] = Query(None, ge=0, description="최소 현금성자산 (억원)"),
+    max_cash_assets: Optional[float] = Query(None, ge=0, description="최대 현금성자산 (억원)"),
+    # 현금비율 범위 필터
     min_cash_ratio: Optional[float] = Query(None, ge=0, description="최소 현금/시총 비율 (%)"),
-    # 증감율 필터
+    max_cash_ratio: Optional[float] = Query(None, ge=0, le=100, description="최대 현금/시총 비율 (%)"),
+    # 증감율 범위 필터
     min_revenue_growth: Optional[float] = Query(None, description="최소 매출 증감율 (%)"),
+    max_revenue_growth: Optional[float] = Query(None, description="최대 매출 증감율 (%)"),
     min_tangible_growth: Optional[float] = Query(None, description="최소 유형자산 증가율 (%)"),
+    max_tangible_growth: Optional[float] = Query(None, description="최대 유형자산 증가율 (%)"),
     min_op_profit_growth: Optional[float] = Query(None, description="최소 영업이익 증감율 (%)"),
     # 날짜 필터 (기본: 최신)
     snapshot_date: Optional[str] = Query(None, description="스냅샷 일자 (YYYY-MM-DD)"),
@@ -165,7 +171,13 @@ async def get_ma_target_ranking(
         if max_market_cap is not None:
             query = query.where(FinancialSnapshot.market_cap_calculated <= max_market_cap * 100_000_000)
 
-        # 현금비율 필터 (total_liquid_assets / market_cap_calculated * 100)
+        # 현금성자산 범위 필터 (억원 → 원으로 변환)
+        if min_cash_assets is not None:
+            query = query.where(FinancialSnapshot.total_liquid_assets >= min_cash_assets * 100_000_000)
+        if max_cash_assets is not None:
+            query = query.where(FinancialSnapshot.total_liquid_assets <= max_cash_assets * 100_000_000)
+
+        # 현금비율 범위 필터 (total_liquid_assets / market_cap_calculated * 100)
         if min_cash_ratio is not None:
             query = query.where(
                 and_(
@@ -175,12 +187,25 @@ async def get_ma_target_ranking(
                     (FinancialSnapshot.total_liquid_assets * 100.0 / FinancialSnapshot.market_cap_calculated) >= min_cash_ratio
                 )
             )
+        if max_cash_ratio is not None:
+            query = query.where(
+                and_(
+                    FinancialSnapshot.total_liquid_assets.isnot(None),
+                    FinancialSnapshot.market_cap_calculated.isnot(None),
+                    FinancialSnapshot.market_cap_calculated > 0,
+                    (FinancialSnapshot.total_liquid_assets * 100.0 / FinancialSnapshot.market_cap_calculated) <= max_cash_ratio
+                )
+            )
 
-        # 증감율 필터
+        # 증감율 범위 필터
         if min_revenue_growth is not None:
             query = query.where(FinancialSnapshot.revenue_growth >= min_revenue_growth)
+        if max_revenue_growth is not None:
+            query = query.where(FinancialSnapshot.revenue_growth <= max_revenue_growth)
         if min_tangible_growth is not None:
             query = query.where(FinancialSnapshot.tangible_assets_growth >= min_tangible_growth)
+        if max_tangible_growth is not None:
+            query = query.where(FinancialSnapshot.tangible_assets_growth <= max_tangible_growth)
         if min_op_profit_growth is not None:
             query = query.where(FinancialSnapshot.operating_profit_growth >= min_op_profit_growth)
 

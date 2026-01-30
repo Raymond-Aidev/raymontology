@@ -250,7 +250,7 @@ export const api = {
 | 5 | 방법론 + 반응형 + SEO | 2일 | ✅ 완료 |
 | 6 | 인증 시스템 (로그인/회원가입/관리자) | 1일 | ✅ 완료 |
 | 7 | 검색 API 및 통계 수정 | 1일 | ✅ 완료 |
-| 8 | M&A 타겟 스크리닝 ⭐ | 2일 | ✅ 완료 |
+| 8 | 적대적 M&A 스크리닝 ⭐ | 2일 | ✅ 완료 |
 | 9 | 기업 비교 + CSV 내보내기 ⭐ | 1일 | ✅ 완료 |
 | **합계** | | **13일** | ✅ |
 
@@ -440,7 +440,7 @@ origins = [
 
 ---
 
-### M&A 타겟 스크리닝 (2026-01) ⭐
+### 적대적 M&A 스크리닝 (2026-01) ⭐
 
 #### 개요
 인수합병 대상 기업을 스크리닝하는 독립 페이지 구현
@@ -448,11 +448,11 @@ origins = [
 #### 구현 파일
 | 파일 | 설명 |
 |------|------|
-| `app/ma-target/page.tsx` | M&A 타겟 스크리닝 페이지 |
+| `app/ma-target/page.tsx` | 적대적 M&A 스크리닝 페이지 |
 | `lib/types.ts` | MATargetResponse, MATargetParams 등 타입 |
 | `lib/api.ts` | api.maTarget 메서드 추가 |
 
-#### M&A 타겟 등급 체계 (7등급)
+#### 적대적 M&A 등급 체계 (7등급)
 | 등급 | 의미 |
 |------|------|
 | A+ | 최우수 인수 대상 |
@@ -464,7 +464,7 @@ origins = [
 | D | 부적합 |
 
 #### 필터 기능
-- M&A 타겟 등급 필터
+- 적대적 M&A 등급 필터
 - 시장 필터 (KOSPI/KOSDAQ)
 - 점수 범위
 - 시가총액 범위 (억원)
@@ -512,7 +512,7 @@ origins = [
 | RaymondsIndex 설계 | `docs/RAYMONDS_INDEX_INTEGRATION_DESIGN.md` |
 | 백엔드 모델 | `backend/app/models/raymonds_index.py` |
 | API 라우터 | `backend/app/api/endpoints/raymonds_index.py` |
-| M&A 타겟 API | `backend/app/api/endpoints/ma_target.py` |
+| 적대적 M&A API | `backend/app/api/endpoints/ma_target.py` |
 
 ---
 

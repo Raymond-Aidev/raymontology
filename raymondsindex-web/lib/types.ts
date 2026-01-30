@@ -230,9 +230,18 @@ export interface MATargetParams {
   max_score?: number;
   min_market_cap?: number;  // 억원
   max_market_cap?: number;  // 억원
+  // 현금성자산 범위 (억원)
+  min_cash_assets?: number;
+  max_cash_assets?: number;
+  // 현금비율 범위 (%)
   min_cash_ratio?: number;
+  max_cash_ratio?: number;
+  // 매출 성장률 범위 (%)
   min_revenue_growth?: number;
+  max_revenue_growth?: number;
+  // 유형자산 증가율 범위 (%)
   min_tangible_growth?: number;
+  max_tangible_growth?: number;
   min_op_profit_growth?: number;
   snapshot_date?: string;
 }
