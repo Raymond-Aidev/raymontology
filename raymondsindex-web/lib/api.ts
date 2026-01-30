@@ -225,9 +225,26 @@ export const api = {
       };
     },
 
-    // 통계 조회
-    getStats: async (): Promise<MATargetStatsResponse> => {
-      return fetchAPI<MATargetStatsResponse>('/ma-target/stats');
+    // 통계 조회 (필터 지원)
+    getStats: async (params: MATargetParams = {}): Promise<MATargetStatsResponse> => {
+      const searchParams = new URLSearchParams();
+
+      if (params.grade) searchParams.set('grade', params.grade);
+      if (params.market) searchParams.set('market', params.market);
+      if (params.min_market_cap !== undefined) searchParams.set('min_market_cap', params.min_market_cap.toString());
+      if (params.max_market_cap !== undefined) searchParams.set('max_market_cap', params.max_market_cap.toString());
+      if (params.min_cash_assets !== undefined) searchParams.set('min_cash_assets', params.min_cash_assets.toString());
+      if (params.max_cash_assets !== undefined) searchParams.set('max_cash_assets', params.max_cash_assets.toString());
+      if (params.min_cash_ratio !== undefined) searchParams.set('min_cash_ratio', params.min_cash_ratio.toString());
+      if (params.max_cash_ratio !== undefined) searchParams.set('max_cash_ratio', params.max_cash_ratio.toString());
+      if (params.min_revenue_growth !== undefined) searchParams.set('min_revenue_growth', params.min_revenue_growth.toString());
+      if (params.max_revenue_growth !== undefined) searchParams.set('max_revenue_growth', params.max_revenue_growth.toString());
+      if (params.min_tangible_growth !== undefined) searchParams.set('min_tangible_growth', params.min_tangible_growth.toString());
+      if (params.max_tangible_growth !== undefined) searchParams.set('max_tangible_growth', params.max_tangible_growth.toString());
+      if (params.snapshot_date) searchParams.set('snapshot_date', params.snapshot_date);
+
+      const query = searchParams.toString();
+      return fetchAPI<MATargetStatsResponse>(`/ma-target/stats${query ? `?${query}` : ''}`);
     },
 
     // 기업 상세 조회

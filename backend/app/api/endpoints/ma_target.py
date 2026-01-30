@@ -377,13 +377,31 @@ async def get_company_ma_target_history(
 
 @router.get("/stats")
 async def get_ma_target_stats(
+    # 등급/시장 필터
+    grade: Optional[str] = Query(None, description="등급 필터 (A+,A,B+ 쉼표 구분)"),
+    market: Optional[str] = Query(None, description="시장 필터 (KOSPI,KOSDAQ 쉼표 구분)"),
+    # 시가총액 범위 (억원)
+    min_market_cap: Optional[float] = Query(None, ge=0, description="최소 시가총액 (억원)"),
+    max_market_cap: Optional[float] = Query(None, ge=0, description="최대 시가총액 (억원)"),
+    # 현금성자산 범위 (억원)
+    min_cash_assets: Optional[float] = Query(None, ge=0, description="최소 현금성자산 (억원)"),
+    max_cash_assets: Optional[float] = Query(None, ge=0, description="최대 현금성자산 (억원)"),
+    # 현금비율 범위 필터
+    min_cash_ratio: Optional[float] = Query(None, ge=0, description="최소 현금/시총 비율 (%)"),
+    max_cash_ratio: Optional[float] = Query(None, ge=0, le=100, description="최대 현금/시총 비율 (%)"),
+    # 증감율 범위 필터
+    min_revenue_growth: Optional[float] = Query(None, description="최소 매출 증감율 (%)"),
+    max_revenue_growth: Optional[float] = Query(None, description="최대 매출 증감율 (%)"),
+    min_tangible_growth: Optional[float] = Query(None, description="최소 유형자산 증가율 (%)"),
+    max_tangible_growth: Optional[float] = Query(None, description="최대 유형자산 증가율 (%)"),
+    # 날짜 필터
     snapshot_date: Optional[str] = Query(None, description="스냅샷 일자"),
     db: AsyncSession = Depends(get_db)
 ):
     """
     M&A 타겟 통계
 
-    등급별 분포, 평균 점수 등 전체 통계를 반환합니다.
+    등급별 분포, 평균 점수 등 필터링된 통계를 반환합니다.
     """
     try:
         # 대상 날짜
@@ -402,7 +420,64 @@ async def get_ma_target_stats(
                 "average_score": None,
             }
 
-        # 전체 통계
+        # 기본 필터 조건 구성
+        def apply_filters(query):
+            # 등급 필터
+            if grade:
+                grades = [g.strip() for g in grade.split(',')]
+                query = query.where(FinancialSnapshot.ma_target_grade.in_(grades))
+
+            # 시장 필터
+            if market:
+                markets = [m.strip() for m in market.split(',')]
+                query = query.join(Company, FinancialSnapshot.company_id == Company.id)
+                query = query.where(Company.market.in_(markets))
+
+            # 시가총액 범위 (억원 → 원으로 변환)
+            if min_market_cap is not None:
+                query = query.where(FinancialSnapshot.market_cap_calculated >= min_market_cap * 100_000_000)
+            if max_market_cap is not None:
+                query = query.where(FinancialSnapshot.market_cap_calculated <= max_market_cap * 100_000_000)
+
+            # 현금성자산 범위 필터 (억원 → 원으로 변환)
+            if min_cash_assets is not None:
+                query = query.where(FinancialSnapshot.total_liquid_assets >= min_cash_assets * 100_000_000)
+            if max_cash_assets is not None:
+                query = query.where(FinancialSnapshot.total_liquid_assets <= max_cash_assets * 100_000_000)
+
+            # 현금비율 범위 필터
+            if min_cash_ratio is not None:
+                query = query.where(
+                    and_(
+                        FinancialSnapshot.total_liquid_assets.isnot(None),
+                        FinancialSnapshot.market_cap_calculated.isnot(None),
+                        FinancialSnapshot.market_cap_calculated > 0,
+                        (FinancialSnapshot.total_liquid_assets * 100.0 / FinancialSnapshot.market_cap_calculated) >= min_cash_ratio
+                    )
+                )
+            if max_cash_ratio is not None:
+                query = query.where(
+                    and_(
+                        FinancialSnapshot.total_liquid_assets.isnot(None),
+                        FinancialSnapshot.market_cap_calculated.isnot(None),
+                        FinancialSnapshot.market_cap_calculated > 0,
+                        (FinancialSnapshot.total_liquid_assets * 100.0 / FinancialSnapshot.market_cap_calculated) <= max_cash_ratio
+                    )
+                )
+
+            # 증감율 범위 필터
+            if min_revenue_growth is not None:
+                query = query.where(FinancialSnapshot.revenue_growth >= min_revenue_growth)
+            if max_revenue_growth is not None:
+                query = query.where(FinancialSnapshot.revenue_growth <= max_revenue_growth)
+            if min_tangible_growth is not None:
+                query = query.where(FinancialSnapshot.tangible_assets_growth >= min_tangible_growth)
+            if max_tangible_growth is not None:
+                query = query.where(FinancialSnapshot.tangible_assets_growth <= max_tangible_growth)
+
+            return query
+
+        # 전체 통계 쿼리
         stats_query = select(
             func.count(FinancialSnapshot.id).label('total'),
             func.avg(FinancialSnapshot.ma_target_score).label('avg_score'),
@@ -414,10 +489,11 @@ async def get_ma_target_stats(
             FinancialSnapshot.ma_target_score.isnot(None)
         )
 
+        stats_query = apply_filters(stats_query)
         stats_result = await db.execute(stats_query)
         stats = stats_result.first()
 
-        # 등급별 분포
+        # 등급별 분포 쿼리
         grade_query = select(
             FinancialSnapshot.ma_target_grade,
             func.count(FinancialSnapshot.id).label('count')
@@ -429,6 +505,7 @@ async def get_ma_target_stats(
             FinancialSnapshot.ma_target_grade
         )
 
+        grade_query = apply_filters(grade_query)
         grade_result = await db.execute(grade_query)
         grade_distribution = {row.ma_target_grade: row.count for row in grade_result.fetchall()}
 

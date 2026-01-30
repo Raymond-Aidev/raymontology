@@ -191,9 +191,10 @@ export default function MATargetPage() {
       setIsLoading(true);
       setError(null);
       try {
+        const params = buildParams();
         const [rankingData, statsData] = await Promise.all([
-          api.maTarget.getRanking(buildParams()),
-          api.maTarget.getStats(),
+          api.maTarget.getRanking(params),
+          api.maTarget.getStats(params),
         ]);
         setData(rankingData);
         setStats(statsData);
