@@ -138,7 +138,7 @@ export default function HomePage() {
                   href="/ma-target"
                   className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-white/5 transition-colors"
                 >
-                  <span className="text-sm text-zinc-300">M&A 타겟 분석</span>
+                  <span className="text-sm text-zinc-300">적대적 M&A 분석</span>
                   <ArrowRight className="w-3 h-3 text-zinc-500" />
                 </Link>
                 <Link

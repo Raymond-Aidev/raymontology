@@ -249,7 +249,7 @@ export default function MATargetPage() {
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <Target className="w-8 h-8 text-red-500" />
-          <h1 className="text-3xl font-bold text-white">M&A 타겟 분석</h1>
+          <h1 className="text-3xl font-bold text-white">적대적 M&A 분석</h1>
         </div>
         <p className="text-zinc-400">
           적대적 M&A 검토 대상 기업을 분석합니다. 현금성 자산, 시가총액, 성장성 지표를 종합 평가합니다.
@@ -335,7 +335,7 @@ export default function MATargetPage() {
         <CardContent className="space-y-6">
           {/* 등급 필터 */}
           <div>
-            <p className="text-sm font-medium text-zinc-300 mb-2">M&A 타겟 등급</p>
+            <p className="text-sm font-medium text-zinc-300 mb-2">적대적 M&A 등급</p>
             <div className="flex flex-wrap gap-2">
               {MA_GRADES.map((grade) => (
                 <Badge
@@ -619,7 +619,7 @@ export default function MATargetPage() {
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <HelpCircle className="w-5 h-5 text-zinc-400" />
-            M&A 타겟 점수 계산 기준
+            적대적 M&A 점수 계산 기준
           </CardTitle>
         </CardHeader>
         <CardContent>
