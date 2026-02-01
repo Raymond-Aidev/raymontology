@@ -201,8 +201,13 @@ export const api = {
       if (params.min_market_cap !== undefined) searchParams.set('min_market_cap', params.min_market_cap.toString());
       if (params.max_market_cap !== undefined) searchParams.set('max_market_cap', params.max_market_cap.toString());
       if (params.min_cash_ratio !== undefined) searchParams.set('min_cash_ratio', params.min_cash_ratio.toString());
+      if (params.max_cash_ratio !== undefined) searchParams.set('max_cash_ratio', params.max_cash_ratio.toString());
+      if (params.min_cash_assets !== undefined) searchParams.set('min_cash_assets', params.min_cash_assets.toString());
+      if (params.max_cash_assets !== undefined) searchParams.set('max_cash_assets', params.max_cash_assets.toString());
       if (params.min_revenue_growth !== undefined) searchParams.set('min_revenue_growth', params.min_revenue_growth.toString());
+      if (params.max_revenue_growth !== undefined) searchParams.set('max_revenue_growth', params.max_revenue_growth.toString());
       if (params.min_tangible_growth !== undefined) searchParams.set('min_tangible_growth', params.min_tangible_growth.toString());
+      if (params.max_tangible_growth !== undefined) searchParams.set('max_tangible_growth', params.max_tangible_growth.toString());
       if (params.min_op_profit_growth !== undefined) searchParams.set('min_op_profit_growth', params.min_op_profit_growth.toString());
       if (params.snapshot_date) searchParams.set('snapshot_date', params.snapshot_date);
 
