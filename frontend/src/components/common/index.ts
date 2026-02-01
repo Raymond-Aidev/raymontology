@@ -56,3 +56,10 @@ export { MarketBadge, TradingStatusBadge } from './MarketBadge'
 
 // 차트 컴포넌트
 export { MiniStockChart } from './MiniStockChart'
+
+// 면책 고지 컴포넌트
+export {
+  DisclaimerBanner,
+  RiskScoreDisclaimer,
+  FooterDisclaimer,
+} from './DisclaimerBanner'

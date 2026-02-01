@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useGraphStore, selectCurrentNavEntry } from '../../store'
+import { FooterDisclaimer } from './DisclaimerBanner'
 
 function Footer() {
   const currentYear = new Date().getFullYear()
@@ -95,26 +96,36 @@ function Footer() {
             <h3 className="text-text-primary font-semibold mb-4 text-sm">정보</h3>
             <ul className="space-y-2.5">
               <li>
-                <span className="text-sm text-text-secondary hover:text-text-primary transition-colors cursor-pointer">
+                <Link to="/terms" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
                   이용약관
-                </span>
+                </Link>
               </li>
               <li>
-                <span className="text-sm text-text-secondary hover:text-text-primary transition-colors cursor-pointer">
+                <Link to="/privacy" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
                   개인정보처리방침
-                </span>
+                </Link>
               </li>
               <li>
-                <span className="text-sm text-text-secondary hover:text-text-primary transition-colors cursor-pointer">
-                  데이터 출처
-                </span>
+                <a
+                  href="https://opendart.fss.or.kr"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+                >
+                  데이터 출처 (DART)
+                </a>
               </li>
             </ul>
           </div>
         </div>
 
+        {/* Disclaimer */}
+        <div className="border-t border-theme-border mt-8 pt-6">
+          <FooterDisclaimer className="max-w-2xl" />
+        </div>
+
         {/* Bottom */}
-        <div className="border-t border-theme-border mt-8 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="border-t border-theme-border mt-6 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-xs text-text-muted">
             &copy; {currentYear} Raymontology. All rights reserved.
           </p>

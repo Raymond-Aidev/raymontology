@@ -5,7 +5,7 @@ import { getCompanyReport, type CompanyReportData } from '../api/report'
 import { getRaymondsIndexByName } from '../api/raymondsIndex'
 import type { RaymondsIndexData } from '../types/raymondsIndex'
 import { RaymondsIndexCard, SubIndexRadar, InvestmentGapMeter, RiskFlagsPanel } from '../components/RaymondsIndex'
-import { MarketBadge, TradingStatusBadge } from '../components/common'
+import { MarketBadge, TradingStatusBadge, DisclaimerBanner } from '../components/common'
 
 function ReportPage() {
   const { companyId } = useParams<{ companyId: string }>()
@@ -318,16 +318,11 @@ function ReportPage() {
         />
       </div>
 
-      {/* 면책조항 - 모바일 최적화 */}
-      <div className="mt-4 md:mt-6 p-3 md:p-4 bg-theme-surface border border-theme-border rounded-lg text-[10px] md:text-xs text-text-muted">
-        <p className="font-semibold mb-1 text-text-secondary">면책조항</p>
-        <p className="leading-relaxed">
-          본 보고서는 금융감독원 DART 공시 데이터를 기반으로 자동 생성되었으며, 투자 권유를 목적으로 하지 않습니다.
-          투자 결정 시 반드시 전문가와 상담하시기 바랍니다. 데이터의 정확성을 보장하지 않으며,
-          본 보고서로 인한 손실에 대해 책임을 지지 않습니다.
-        </p>
+      {/* 면책조항 */}
+      <div className="mt-4 md:mt-6">
+        <DisclaimerBanner variant="warning" />
         {reportData.calculatedAt && (
-          <p className="mt-2 text-text-tertiary">
+          <p className="mt-2 text-[10px] text-text-tertiary text-right">
             분석 시점: {new Date(reportData.calculatedAt).toLocaleString('ko-KR')}
           </p>
         )}

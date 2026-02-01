@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { SearchInput, MarketBadge, TradingStatusBadge, MiniStockChart } from '../components/common'
+import { SearchInput, MarketBadge, TradingStatusBadge, MiniStockChart, DisclaimerBanner } from '../components/common'
 import { getHighRiskCompanies, getPlatformStats, type PlatformStats } from '../api/company'
 import { useAuthStore } from '../store/authStore'
 import apiClient from '../api/client'
@@ -487,6 +487,13 @@ function MainSearchPage() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Disclaimer Section */}
+      <section className="py-8 px-4 border-t border-theme-border bg-theme-surface/50">
+        <div className="max-w-4xl mx-auto">
+          <DisclaimerBanner />
         </div>
       </section>
     </div>
