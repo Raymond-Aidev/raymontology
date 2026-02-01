@@ -236,4 +236,4 @@ NEXT_PUBLIC_API_URL=https://raymontology-production.up.railway.app/api
 
 ---
 
-*마지막 업데이트: 2026-01-30*
+*마지막 업데이트: 2026-02-01*

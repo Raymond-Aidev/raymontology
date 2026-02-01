@@ -184,6 +184,33 @@ export default function HomePage() {
             />
           </nav>
         </section>
+
+        {/* 법적 면책 고지 */}
+        <section
+          style={{
+            marginTop: '8px',
+            padding: '16px',
+            backgroundColor: colors.gray50,
+            borderRadius: '12px',
+          }}
+          aria-label="투자 유의사항"
+        >
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+            <span style={{ fontSize: '14px', flexShrink: 0, marginTop: '1px' }}>ℹ️</span>
+            <p style={{
+              fontSize: '11px',
+              color: colors.gray500,
+              lineHeight: '1.5',
+              margin: 0,
+            }}>
+              본 서비스는 투자 권유가 아닌 정보 제공 목적입니다.
+              투자 결정은 본인 책임 하에 이루어져야 하며, 투자 손실에 대해 당사는 책임지지 않습니다.
+              <span style={{ display: 'block', marginTop: '4px', color: colors.gray400 }}>
+                데이터 출처: 금융감독원 DART
+              </span>
+            </p>
+          </div>
+        </section>
       </main>
     </div>
   )

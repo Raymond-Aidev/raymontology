@@ -38,13 +38,34 @@ function estimateRiskScore(cbCount: number): number {
   return 10
 }
 
-// CB 발행 횟수 기반 투자등급 추정
+// CB 발행 횟수 기반 투자등급 추정 (4등급 체계 v2.1)
 function estimateInvestmentGrade(cbCount: number): string {
-  if (cbCount >= 8) return 'CCC'
-  if (cbCount >= 5) return 'B'
-  if (cbCount >= 3) return 'BB'
-  if (cbCount >= 1) return 'BBB'
-  return 'A'
+  if (cbCount >= 5) return 'HIGH_RISK'      // 고위험
+  if (cbCount >= 3) return 'MEDIUM_RISK'    // 중위험
+  if (cbCount >= 1) return 'RISK'           // 위험
+  return 'LOW_RISK'                          // 저위험
+}
+
+// 등급 라벨 변환
+function getGradeLabel(grade: string): string {
+  switch (grade) {
+    case 'LOW_RISK': return '저위험'
+    case 'RISK': return '위험'
+    case 'MEDIUM_RISK': return '중위험'
+    case 'HIGH_RISK': return '고위험'
+    default: return grade
+  }
+}
+
+// 등급 색상 반환
+function getGradeColor(grade: string): string {
+  switch (grade) {
+    case 'LOW_RISK': return colors.green500
+    case 'RISK': return colors.yellow500
+    case 'MEDIUM_RISK': return colors.orange500
+    case 'HIGH_RISK': return colors.red500
+    default: return colors.gray500
+  }
 }
 
 export default function ReportPage() {
@@ -109,8 +130,8 @@ export default function ReportPage() {
           setCompanyData({
             name: companyName,
             corp_code: corpCode,
-            risk_score: 50,
-            investment_grade: 'BB',
+            risk_score: 25,
+            investment_grade: 'LOW_RISK',
             cb_count: 0,
             officer_count: 0,
             market: null,
@@ -248,16 +269,20 @@ export default function ReportPage() {
     return null
   }
 
+  // 4등급 체계 점수 기반 색상
   const getRiskColor = (score: number) => {
-    if (score <= 30) return colors.green500
-    if (score <= 60) return colors.yellow500
-    return colors.red500
+    if (score < 20) return colors.green500     // LOW_RISK
+    if (score < 35) return colors.yellow500    // RISK
+    if (score < 50) return colors.orange500    // MEDIUM_RISK
+    return colors.red500                       // HIGH_RISK
   }
 
+  // 4등급 체계 점수 기반 라벨
   const getRiskLabel = (score: number) => {
-    if (score <= 30) return '안전'
-    if (score <= 60) return '주의'
-    return '위험'
+    if (score < 20) return '저위험'
+    if (score < 35) return '위험'
+    if (score < 50) return '중위험'
+    return '고위험'
   }
 
   return (
@@ -529,15 +554,15 @@ export default function ReportPage() {
               marginBottom: '8px',
               fontWeight: '500'
             }}>
-              투자등급
+              관계형리스크 등급
             </div>
             <div style={{
-              fontSize: '28px',
+              fontSize: '20px',
               fontWeight: '700',
-              color: needsPaywall ? colors.gray300 : colors.yellow500,
+              color: needsPaywall ? colors.gray300 : getGradeColor(companyData.investment_grade),
               letterSpacing: '-0.02em'
             }}>
-              {needsPaywall ? '?' : companyData.investment_grade}
+              {needsPaywall ? '?' : getGradeLabel(companyData.investment_grade)}
             </div>
           </article>
           <article
@@ -704,6 +729,35 @@ export default function ReportPage() {
             isLast
           />
         </nav>
+
+        {/* 법적 면책 고지 */}
+        <section
+          style={{
+            marginTop: '24px',
+            padding: '16px',
+            backgroundColor: colors.yellow500 + '10',
+            borderRadius: '12px',
+            border: `1px solid ${colors.yellow500}30`,
+          }}
+          aria-label="투자 유의사항"
+        >
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+            <span style={{ fontSize: '16px', flexShrink: 0, marginTop: '2px' }}>⚠️</span>
+            <div style={{ fontSize: '12px', color: colors.gray600, lineHeight: '1.6' }}>
+              <p style={{ margin: '0 0 8px 0' }}>
+                <strong style={{ color: colors.gray900 }}>투자 유의사항:</strong> 본 서비스에서 제공하는 정보는
+                투자 권유나 추천이 아니며, 정보 제공 목적으로만 제공됩니다.
+              </p>
+              <p style={{ margin: '0 0 8px 0' }}>
+                모든 투자 결정은 본인의 판단과 책임 하에 이루어져야 하며,
+                본 서비스 이용으로 인한 투자 손실에 대해 당사는 책임지지 않습니다.
+              </p>
+              <p style={{ margin: 0, color: colors.gray500 }}>
+                데이터 출처: 금융감독원 DART OpenAPI
+              </p>
+            </div>
+          </div>
+        </section>
       </main>
     </div>
   )

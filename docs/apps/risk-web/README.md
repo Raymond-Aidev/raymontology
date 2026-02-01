@@ -62,7 +62,7 @@
 
 ---
 
-## 컴포넌트 구조 (34개)
+## 컴포넌트 구조 (35개)
 
 ### `/components/graph/` (6개)
 | 컴포넌트 | 설명 |
@@ -93,7 +93,7 @@
 | `RaymondsIndexCard.tsx` | 인덱스 상세 카드 |
 | `InvestmentGapMeter.tsx` | 투자괴리율 미터 |
 
-### `/components/common/` (13개)
+### `/components/common/` (14개)
 | 컴포넌트 | 설명 |
 |----------|------|
 | `Header.tsx` | 공통 헤더 |
@@ -109,6 +109,7 @@
 | `DateRangePicker.tsx` | 날짜 범위 선택 |
 | `ApiStatusIndicator.tsx` | API 상태 표시 |
 | `RaymondsRiskLogo.tsx` | 로고 컴포넌트 |
+| `DisclaimerBanner.tsx` | 법적 면책 고지 배너 ⭐ |
 
 ### `/components/auth/` (3개)
 | 컴포넌트 | 설명 |
@@ -133,6 +134,7 @@
 - [x] 다크 모드 지원
 - [x] 반응형 디자인
 - [x] **관계형리스크 4등급 체계** (2026-01-28 개편)
+- [x] **법적 면책 고지 배너** (2026-02-01 추가)
 
 ### 구현 예정
 - [ ] 관계망 확장 노드 점선 테두리 (비DB 기업)
@@ -226,4 +228,4 @@ RaymondsRisk = 인적리스크 × 0.5 + CB리스크 × 0.5
 
 ---
 
-*마지막 업데이트: 2026-01-28*
+*마지막 업데이트: 2026-02-01*

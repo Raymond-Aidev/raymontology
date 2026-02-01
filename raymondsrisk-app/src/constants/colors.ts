@@ -22,6 +22,7 @@ export const colors = {
   red500: '#E74C3C',
   green500: '#10B981',
   yellow500: '#F59E0B',
+  orange500: '#F97316',  // MEDIUM_RISK 등급용
 } as const
 
 export type ColorKey = keyof typeof colors
