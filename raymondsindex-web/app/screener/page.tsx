@@ -326,7 +326,7 @@ export default function ScreenerPage() {
                   max={100}
                   step={5}
                 />
-                <div className="flex justify-between text-[10px] text-zinc-500 mt-1">
+                <div className="flex justify-between text-xs text-zinc-300 mt-1">
                   <span>{filters.scoreRange[0]}점</span>
                   <span>{filters.scoreRange[1]}점</span>
                 </div>
