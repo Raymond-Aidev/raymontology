@@ -3,6 +3,35 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 
+// 입력값을 숫자로 파싱 (억/조 단위 지원)
+function parseInputValue(input: string, unit: string): number | null {
+  if (!input.trim()) return null;
+
+  // 공백 제거
+  const cleaned = input.trim().replace(/,/g, '');
+
+  // % 단위인 경우 그냥 숫자만 파싱
+  if (unit === '%') {
+    const num = parseFloat(cleaned.replace('%', ''));
+    return isNaN(num) ? null : num;
+  }
+
+  // 억/조 단위 처리
+  if (cleaned.includes('조')) {
+    const num = parseFloat(cleaned.replace('조', '').replace('억', ''));
+    return isNaN(num) ? null : num * 10000; // 조 -> 억 변환
+  }
+
+  if (cleaned.includes('억')) {
+    const num = parseFloat(cleaned.replace('억', ''));
+    return isNaN(num) ? null : num;
+  }
+
+  // 숫자만 있는 경우 (억 단위로 간주)
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? null : num;
+}
+
 interface RangeInputProps {
   label: string;
   minValue: number;
@@ -160,7 +189,7 @@ export function RangeInput({
   );
 }
 
-// 컴팩트 버전 (그리드 레이아웃용)
+// 컴팩트 버전 (그리드 레이아웃용) - 클릭하여 직접 입력 지원
 export function CompactRangeInput({
   label,
   minValue,
@@ -176,6 +205,14 @@ export function CompactRangeInput({
   const [holdInterval, setHoldInterval] = useState<NodeJS.Timeout | null>(null);
   const holdTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const accelerationRef = useRef(1);
+
+  // 편집 모드 상태
+  const [editingMin, setEditingMin] = useState(false);
+  const [editingMax, setEditingMax] = useState(false);
+  const [minInputValue, setMinInputValue] = useState('');
+  const [maxInputValue, setMaxInputValue] = useState('');
+  const minInputRef = useRef<HTMLInputElement>(null);
+  const maxInputRef = useRef<HTMLInputElement>(null);
 
   const format = formatValue || ((v: number) => `${v.toLocaleString()}${unit}`);
 
@@ -220,6 +257,100 @@ export function CompactRangeInput({
     };
   }, [stopHold]);
 
+  // 편집 모드 진입 시 포커스
+  useEffect(() => {
+    if (editingMin && minInputRef.current) {
+      minInputRef.current.focus();
+      minInputRef.current.select();
+    }
+  }, [editingMin]);
+
+  useEffect(() => {
+    if (editingMax && maxInputRef.current) {
+      maxInputRef.current.focus();
+      maxInputRef.current.select();
+    }
+  }, [editingMax]);
+
+  // 최소값 편집 시작
+  const startEditingMin = () => {
+    setMinInputValue(minValue.toString());
+    setEditingMin(true);
+  };
+
+  // 최대값 편집 시작
+  const startEditingMax = () => {
+    setMaxInputValue(maxValue.toString());
+    setEditingMax(true);
+  };
+
+  // 최소값 입력 완료 처리
+  const commitMinValue = () => {
+    const parsed = parseInputValue(minInputValue, unit);
+
+    // 유효하지 않은 입력이면 무시하고 원래 값 유지
+    if (parsed === null) {
+      setEditingMin(false);
+      return;
+    }
+
+    // step 단위로 반올림
+    const rounded = Math.round(parsed / step) * step;
+
+    // 범위 검증: min 이상, maxValue 미만이어야 함
+    if (rounded < min || rounded >= maxValue) {
+      // 범위 벗어남 - 무효 처리, 아무 반응 없이 원래 값 유지
+      setEditingMin(false);
+      return;
+    }
+
+    // 유효한 값이면 적용
+    onChange(rounded, maxValue);
+    setEditingMin(false);
+  };
+
+  // 최대값 입력 완료 처리
+  const commitMaxValue = () => {
+    const parsed = parseInputValue(maxInputValue, unit);
+
+    // 유효하지 않은 입력이면 무시하고 원래 값 유지
+    if (parsed === null) {
+      setEditingMax(false);
+      return;
+    }
+
+    // step 단위로 반올림
+    const rounded = Math.round(parsed / step) * step;
+
+    // 범위 검증: max 이하, minValue 초과여야 함
+    if (rounded > max || rounded <= minValue) {
+      // 범위 벗어남 - 무효 처리, 아무 반응 없이 원래 값 유지
+      setEditingMax(false);
+      return;
+    }
+
+    // 유효한 값이면 적용
+    onChange(minValue, rounded);
+    setEditingMax(false);
+  };
+
+  // 키보드 이벤트 처리
+  const handleMinKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      commitMinValue();
+    } else if (e.key === 'Escape') {
+      setEditingMin(false);
+    }
+  };
+
+  const handleMaxKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      commitMaxValue();
+    } else if (e.key === 'Escape') {
+      setEditingMax(false);
+    }
+  };
+
   // 화살표 버튼 컴포넌트
   const ArrowButtons = ({ onUp, onDown }: { onUp: () => void; onDown: () => void }) => (
     <div className="flex flex-col">
@@ -263,9 +394,26 @@ export function CompactRangeInput({
             onUp={() => handleMinChange(1)}
             onDown={() => handleMinChange(-1)}
           />
-          <span className="text-[11px] font-medium text-white px-1 flex-1 text-center truncate">
-            {format(minValue)}
-          </span>
+          {editingMin ? (
+            <input
+              ref={minInputRef}
+              type="text"
+              value={minInputValue}
+              onChange={(e) => setMinInputValue(e.target.value)}
+              onBlur={commitMinValue}
+              onKeyDown={handleMinKeyDown}
+              className="text-[11px] font-medium text-white px-1 flex-1 text-center bg-transparent outline-none w-full min-w-0"
+              placeholder={minValue.toString()}
+            />
+          ) : (
+            <span
+              onClick={startEditingMin}
+              className="text-[11px] font-medium text-white px-1 flex-1 text-center truncate cursor-pointer hover:bg-zinc-700/50 rounded transition-colors"
+              title="클릭하여 직접 입력"
+            >
+              {format(minValue)}
+            </span>
+          )}
         </div>
 
         <span className="text-zinc-600 text-[10px]">~</span>
@@ -276,9 +424,26 @@ export function CompactRangeInput({
             onUp={() => handleMaxChange(1)}
             onDown={() => handleMaxChange(-1)}
           />
-          <span className="text-[11px] font-medium text-white px-1 flex-1 text-center truncate">
-            {format(maxValue)}
-          </span>
+          {editingMax ? (
+            <input
+              ref={maxInputRef}
+              type="text"
+              value={maxInputValue}
+              onChange={(e) => setMaxInputValue(e.target.value)}
+              onBlur={commitMaxValue}
+              onKeyDown={handleMaxKeyDown}
+              className="text-[11px] font-medium text-white px-1 flex-1 text-center bg-transparent outline-none w-full min-w-0"
+              placeholder={maxValue.toString()}
+            />
+          ) : (
+            <span
+              onClick={startEditingMax}
+              className="text-[11px] font-medium text-white px-1 flex-1 text-center truncate cursor-pointer hover:bg-zinc-700/50 rounded transition-colors"
+              title="클릭하여 직접 입력"
+            >
+              {format(maxValue)}
+            </span>
+          )}
         </div>
       </div>
     </div>
