@@ -175,9 +175,9 @@ function CompactMACard({ company, rank }: VulnerableMACardProps) {
       href={`/company/${company.company_id}`}
       className="block p-2 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 transition-colors border border-zinc-700/50"
     >
-      {/* 헤더: 순위 + 등급 */}
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-[10px] font-bold text-purple-400">#{rank}</span>
+      {/* 헤더: 위험 순위 + 등급 */}
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-sm font-bold text-red-500">위험{rank}</span>
         <GradeBadge grade={company.grade} size="sm" />
       </div>
 
