@@ -7,7 +7,7 @@ import { MarketBadge } from '@/components/market-badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Slider } from '@/components/ui/slider';
+import { CompactRangeInput } from '@/components/range-input';
 import {
   Table,
   TableBody,
@@ -388,144 +388,86 @@ export default function MATargetPage() {
             </div>
           </div>
 
-          {/* 시가총액 범위 (10조까지) */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-zinc-300">시가총액 범위</p>
-              <span className="text-sm text-zinc-500">
-                {filters.marketCapRange[0] >= 10000
-                  ? `${(filters.marketCapRange[0] / 10000).toFixed(1)}조`
-                  : `${filters.marketCapRange[0].toLocaleString()}억`}
-                {' - '}
-                {filters.marketCapRange[1] >= 10000
-                  ? `${(filters.marketCapRange[1] / 10000).toFixed(1)}조`
-                  : `${filters.marketCapRange[1].toLocaleString()}억`}
-              </span>
-            </div>
-            <Slider
-              value={filters.marketCapRange}
+          {/* 수치 필터 (컴팩트 그리드) */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+            {/* 시가총액 범위 */}
+            <CompactRangeInput
+              label="시가총액"
+              minValue={filters.marketCapRange[0]}
+              maxValue={filters.marketCapRange[1]}
               min={100}
               max={100000}
-              step={1000}
-              onValueChange={(value) => {
-                setFilters((prev) => ({ ...prev, marketCapRange: value as [number, number] }));
+              step={100}
+              formatValue={(v) => v >= 10000 ? `${(v / 10000).toFixed(1)}조` : `${v.toLocaleString()}억`}
+              onChange={(min, max) => {
+                setFilters((prev) => ({ ...prev, marketCapRange: [min, max] }));
                 setPage(1);
               }}
-              className="w-full"
+              tooltip="100억 단위 조절"
             />
-          </div>
 
-          {/* 현금성자산 범위 */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-zinc-300 flex items-center gap-1">
-                현금성자산 범위
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <HelpCircle className="w-4 h-4 text-zinc-500" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>현금 및 현금성 자산 + 단기금융상품</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </p>
-              <span className="text-sm text-zinc-500">
-                {filters.cashAssetsRange[0] >= 10000
-                  ? `${(filters.cashAssetsRange[0] / 10000).toFixed(1)}조`
-                  : `${filters.cashAssetsRange[0].toLocaleString()}억`}
-                {' - '}
-                {filters.cashAssetsRange[1] >= 10000
-                  ? `${(filters.cashAssetsRange[1] / 10000).toFixed(1)}조`
-                  : `${filters.cashAssetsRange[1].toLocaleString()}억`}
-              </span>
-            </div>
-            <Slider
-              value={filters.cashAssetsRange}
+            {/* 현금성자산 범위 */}
+            <CompactRangeInput
+              label="현금성자산"
+              minValue={filters.cashAssetsRange[0]}
+              maxValue={filters.cashAssetsRange[1]}
               min={0}
               max={50000}
-              step={1000}
-              onValueChange={(value) => {
-                setFilters((prev) => ({ ...prev, cashAssetsRange: value as [number, number] }));
+              step={100}
+              formatValue={(v) => v >= 10000 ? `${(v / 10000).toFixed(1)}조` : `${v.toLocaleString()}억`}
+              onChange={(min, max) => {
+                setFilters((prev) => ({ ...prev, cashAssetsRange: [min, max] }));
                 setPage(1);
               }}
-              className="w-full"
+              tooltip="현금 + 단기금융상품 (100억 단위)"
             />
-          </div>
 
-          {/* 현금/시총 비율 범위 */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-zinc-300 flex items-center gap-1">
-                현금/시총 비율
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <HelpCircle className="w-4 h-4 text-zinc-500" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>현금성 자산 / 시가총액 비율</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </p>
-              <span className="text-sm text-zinc-500">
-                {filters.cashRatioRange[0]}% - {filters.cashRatioRange[1]}%
-              </span>
-            </div>
-            <Slider
-              value={filters.cashRatioRange}
+            {/* 현금/시총 비율 */}
+            <CompactRangeInput
+              label="현금/시총 비율"
+              minValue={filters.cashRatioRange[0]}
+              maxValue={filters.cashRatioRange[1]}
               min={0}
               max={100}
               step={10}
-              onValueChange={(value) => {
-                setFilters((prev) => ({ ...prev, cashRatioRange: value as [number, number] }));
+              unit="%"
+              onChange={(min, max) => {
+                setFilters((prev) => ({ ...prev, cashRatioRange: [min, max] }));
                 setPage(1);
               }}
-              className="w-full"
+              tooltip="현금성 자산 / 시가총액 (10% 단위)"
             />
-          </div>
 
-          {/* 매출 성장률 범위 */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-zinc-300">매출 성장률</p>
-              <span className="text-sm text-zinc-500">
-                {filters.revenueGrowthRange[0]}% - {filters.revenueGrowthRange[1]}%
-              </span>
-            </div>
-            <Slider
-              value={filters.revenueGrowthRange}
+            {/* 매출 성장률 */}
+            <CompactRangeInput
+              label="매출 성장률"
+              minValue={filters.revenueGrowthRange[0]}
+              maxValue={filters.revenueGrowthRange[1]}
               min={-50}
               max={100}
               step={10}
-              onValueChange={(value) => {
-                setFilters((prev) => ({ ...prev, revenueGrowthRange: value as [number, number] }));
+              unit="%"
+              onChange={(min, max) => {
+                setFilters((prev) => ({ ...prev, revenueGrowthRange: [min, max] }));
                 setPage(1);
               }}
-              className="w-full"
+              tooltip="YoY 매출 성장률 (10% 단위)"
             />
-          </div>
 
-          {/* 유형자산 증가율 범위 */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-zinc-300">유형자산 증가율</p>
-              <span className="text-sm text-zinc-500">
-                {filters.tangibleGrowthRange[0]}% - {filters.tangibleGrowthRange[1]}%
-              </span>
-            </div>
-            <Slider
-              value={filters.tangibleGrowthRange}
+            {/* 유형자산 증가율 */}
+            <CompactRangeInput
+              label="유형자산 증가율"
+              minValue={filters.tangibleGrowthRange[0]}
+              maxValue={filters.tangibleGrowthRange[1]}
               min={-50}
               max={100}
               step={10}
-              onValueChange={(value) => {
-                setFilters((prev) => ({ ...prev, tangibleGrowthRange: value as [number, number] }));
+              unit="%"
+              onChange={(min, max) => {
+                setFilters((prev) => ({ ...prev, tangibleGrowthRange: [min, max] }));
                 setPage(1);
               }}
-              className="w-full"
+              tooltip="YoY 유형자산 증가율 (10% 단위)"
             />
           </div>
         </CardContent>
