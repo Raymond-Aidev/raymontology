@@ -13,8 +13,22 @@ import { StockPriceChart } from '@/components/stock-price-chart';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Calendar, Building2, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { ArrowLeft, Calendar, Building2, TrendingUp, TrendingDown, Minus, AlertTriangle, Loader2 } from 'lucide-react';
 import { GRADE_COLORS, METRIC_DESCRIPTIONS, type Grade } from '@/lib/constants';
+import type { RaymondsIndexResponse } from '@/lib/types';
+
+/**
+ * 데이터 완전성 체크: Sub-Index가 모두 NULL인지 확인
+ * RaymondsIndex 계산에 필요한 다년도 재무 데이터가 부족한 경우 true 반환
+ */
+function isDataIncomplete(company: RaymondsIndexResponse): boolean {
+  return (
+    company.cei_score === null &&
+    company.rii_score === null &&
+    company.cgi_score === null &&
+    company.mai_score === null
+  );
+}
 
 export default function CompanyDetailPage() {
   const params = useParams();
@@ -59,6 +73,9 @@ export default function CompanyDetailPage() {
   const _capexTrendIcon = company.capex_trend === 'increasing' ? TrendingUp :
                           company.capex_trend === 'decreasing' ? TrendingDown : Minus;
   void _capexTrendIcon; // ESLint 경고 방지 (추후 사용 예정)
+
+  // 데이터 완전성 체크
+  const dataIncomplete = isDataIncomplete(company);
 
   // Determine status for metrics
   const getStatus = (value: number | null, thresholds: { good: number; warning: number }) => {
@@ -135,6 +152,30 @@ export default function CompanyDetailPage() {
         </CardContent>
       </Card>
 
+      {/* 데이터 수집 중 안내 배너 */}
+      {dataIncomplete && (
+        <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 p-2 bg-amber-500/20 rounded-full">
+              <Loader2 className="w-5 h-5 text-amber-500 animate-spin" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-amber-500 mb-1 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4" />
+                세부 지표 수집 중
+              </h3>
+              <p className="text-sm text-zinc-400">
+                이 기업은 아직 다년도 재무 데이터 수집이 완료되지 않아 세부 지표를 계산할 수 없습니다.
+                종합 점수와 등급은 참고용이며, 정확한 분석을 위해 데이터 수집 완료 후 다시 확인해 주세요.
+              </p>
+              <p className="text-xs text-zinc-500 mt-2">
+                RaymondsIndex 계산에는 최소 3년 이상의 연간 사업보고서 데이터가 필요합니다.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content Grid */}
       <div className="grid lg:grid-cols-2 gap-6 mb-6">
         {/* Sub-Index Radar */}
@@ -143,6 +184,7 @@ export default function CompanyDetailPage() {
           rii={company.rii_score}
           cgi={company.cgi_score}
           mai={company.mai_score}
+          dataIncomplete={dataIncomplete}
         />
 
         {/* Risk Flags */}
@@ -165,8 +207,15 @@ export default function CompanyDetailPage() {
 
       {/* Core Metrics Grid */}
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-white mb-4">핵심 지표</h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-white">핵심 지표</h2>
+          {dataIncomplete && (
+            <span className="text-xs text-amber-500 bg-amber-500/10 px-2 py-1 rounded">
+              데이터 수집 중
+            </span>
+          )}
+        </div>
+        <div className={`grid sm:grid-cols-2 lg:grid-cols-3 gap-4 ${dataIncomplete ? 'opacity-50' : ''}`}>
           <MetricCard
             label="투자괴리율 (v2.1)"
             value={company.investment_gap_v21?.toFixed(1) ?? company.investment_gap?.toFixed(1)}
@@ -236,8 +285,15 @@ export default function CompanyDetailPage() {
 
       {/* Additional Metrics */}
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-white mb-4">추가 지표</h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-white">추가 지표</h2>
+          {dataIncomplete && (
+            <span className="text-xs text-amber-500 bg-amber-500/10 px-2 py-1 rounded">
+              데이터 수집 중
+            </span>
+          )}
+        </div>
+        <div className={`grid sm:grid-cols-2 lg:grid-cols-4 gap-4 ${dataIncomplete ? 'opacity-50' : ''}`}>
           <MetricCard
             label="유휴현금비율"
             value={company.idle_cash_ratio?.toFixed(1)}

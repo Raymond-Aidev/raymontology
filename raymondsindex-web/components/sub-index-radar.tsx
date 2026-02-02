@@ -24,6 +24,7 @@ interface SubIndexRadarProps {
   rii: number | null;
   cgi: number | null;
   mai: number | null;
+  dataIncomplete?: boolean;
 }
 
 // Sub-Index 항목 컴포넌트
@@ -69,7 +70,7 @@ function SubIndexItem({
   );
 }
 
-export function SubIndexRadar({ cei, rii, cgi, mai }: SubIndexRadarProps) {
+export function SubIndexRadar({ cei, rii, cgi, mai, dataIncomplete = false }: SubIndexRadarProps) {
   // v3.1: 핵심 3개 Sub-Index (CEI 45%, CGI 45%, RII 10%)
   // MAI는 가중치 0%이므로 레이더 차트에서 제외, 참고용으로만 표시
   const data = [
@@ -89,6 +90,45 @@ export function SubIndexRadar({ cei, rii, cgi, mai }: SubIndexRadarProps) {
       fullMark: 100,
     },
   ];
+
+  // 데이터 부족 시 안내 메시지 표시
+  if (dataIncomplete) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-blue-500" />
+            Sub-Index 분석
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[300px] flex items-center justify-center">
+            <div className="text-center p-6">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-500/10 flex items-center justify-center">
+                <BarChart3 className="w-8 h-8 text-amber-500/50" />
+              </div>
+              <p className="text-zinc-400 mb-2">데이터 수집 중</p>
+              <p className="text-xs text-zinc-500 max-w-[200px]">
+                Sub-Index 계산에 필요한 다년도 재무 데이터를 수집하고 있습니다.
+              </p>
+            </div>
+          </div>
+
+          {/* Sub-Index Legend - 데이터 부족 상태 */}
+          <div className="grid grid-cols-2 gap-3 mt-4 opacity-50">
+            <SubIndexItem code="CEI" value={null} highlighted />
+            <SubIndexItem code="CGI" value={null} highlighted />
+            <SubIndexItem code="RII" value={null} />
+            <div className="text-center p-2 bg-gray-100 rounded opacity-60">
+              <p className="text-xs text-gray-400">MAI</p>
+              <p className="font-semibold text-gray-500">-</p>
+              <p className="text-xs text-gray-400">{SUB_INDEX_INFO.MAI.label}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
