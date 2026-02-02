@@ -643,46 +643,20 @@ async def get_raymonds_index_statistics(
     - 평균/중앙값/분포
     - 등급별 비율
     - 주요 지표 분포
+    - KONEX 제외
     """
     try:
-        base_query = select(RaymondsIndex)
-
-        if year:
-            base_query = base_query.where(RaymondsIndex.fiscal_year == year)
-        else:
-            # 각 회사의 최신 연도만
-            subquery = (
-                select(
-                    RaymondsIndex.company_id,
-                    func.max(RaymondsIndex.fiscal_year).label('max_year')
-                )
-                .group_by(RaymondsIndex.company_id)
-            ).subquery()
-            base_query = base_query.join(
-                subquery,
-                (RaymondsIndex.company_id == subquery.c.company_id) &
-                (RaymondsIndex.fiscal_year == subquery.c.max_year)
+        # 각 회사의 최신 연도 서브쿼리
+        latest_subquery = (
+            select(
+                RaymondsIndex.company_id,
+                func.max(RaymondsIndex.fiscal_year).label('max_year')
             )
+            .group_by(RaymondsIndex.company_id)
+        ).subquery()
 
-        # 기본 통계 - 최신 연도 기준 (중복 제거)
+        # 기본 통계 - KONEX 제외
         if year:
-            stats_query = select(
-                func.count(func.distinct(RaymondsIndex.company_id)).label('total_count'),
-                func.avg(RaymondsIndex.total_score).label('avg_score'),
-                func.min(RaymondsIndex.total_score).label('min_score'),
-                func.max(RaymondsIndex.total_score).label('max_score'),
-                func.avg(RaymondsIndex.investment_gap).label('avg_gap'),
-            ).where(RaymondsIndex.fiscal_year == year)
-        else:
-            # 각 회사의 최신 연도만 집계
-            latest_subquery = (
-                select(
-                    RaymondsIndex.company_id,
-                    func.max(RaymondsIndex.fiscal_year).label('max_year')
-                )
-                .group_by(RaymondsIndex.company_id)
-            ).subquery()
-
             stats_query = (
                 select(
                     func.count(func.distinct(RaymondsIndex.company_id)).label('total_count'),
@@ -692,47 +666,59 @@ async def get_raymonds_index_statistics(
                     func.avg(RaymondsIndex.investment_gap).label('avg_gap'),
                 )
                 .select_from(RaymondsIndex)
+                .join(Company, RaymondsIndex.company_id == Company.id)
+                .where(RaymondsIndex.fiscal_year == year)
+                .where(Company.market != 'KONEX')  # KONEX 제외
+            )
+        else:
+            stats_query = (
+                select(
+                    func.count(func.distinct(RaymondsIndex.company_id)).label('total_count'),
+                    func.avg(RaymondsIndex.total_score).label('avg_score'),
+                    func.min(RaymondsIndex.total_score).label('min_score'),
+                    func.max(RaymondsIndex.total_score).label('max_score'),
+                    func.avg(RaymondsIndex.investment_gap).label('avg_gap'),
+                )
+                .select_from(RaymondsIndex)
+                .join(Company, RaymondsIndex.company_id == Company.id)
                 .join(
                     latest_subquery,
                     (RaymondsIndex.company_id == latest_subquery.c.company_id) &
                     (RaymondsIndex.fiscal_year == latest_subquery.c.max_year)
                 )
+                .where(Company.market != 'KONEX')  # KONEX 제외
             )
 
         stats_result = await db.execute(stats_query)
         stats = stats_result.first()
 
-        # 등급별 분포 - 최신 연도 기준
+        # 등급별 분포 - KONEX 제외
         if year:
             grade_query = (
                 select(
                     RaymondsIndex.grade,
                     func.count(RaymondsIndex.id).label('count')
                 )
+                .select_from(RaymondsIndex)
+                .join(Company, RaymondsIndex.company_id == Company.id)
                 .where(RaymondsIndex.fiscal_year == year)
+                .where(Company.market != 'KONEX')  # KONEX 제외
                 .group_by(RaymondsIndex.grade)
             )
         else:
-            # 각 회사의 최신 연도만 집계
-            grade_subquery = (
-                select(
-                    RaymondsIndex.company_id,
-                    func.max(RaymondsIndex.fiscal_year).label('max_year')
-                )
-                .group_by(RaymondsIndex.company_id)
-            ).subquery()
-
             grade_query = (
                 select(
                     RaymondsIndex.grade,
                     func.count(RaymondsIndex.id).label('count')
                 )
                 .select_from(RaymondsIndex)
+                .join(Company, RaymondsIndex.company_id == Company.id)
                 .join(
-                    grade_subquery,
-                    (RaymondsIndex.company_id == grade_subquery.c.company_id) &
-                    (RaymondsIndex.fiscal_year == grade_subquery.c.max_year)
+                    latest_subquery,
+                    (RaymondsIndex.company_id == latest_subquery.c.company_id) &
+                    (RaymondsIndex.fiscal_year == latest_subquery.c.max_year)
                 )
+                .where(Company.market != 'KONEX')  # KONEX 제외
                 .group_by(RaymondsIndex.grade)
             )
 

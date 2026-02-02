@@ -29,9 +29,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { Filter, RotateCcw, ChevronLeft, ChevronRight, ChevronDown, AlertTriangle, Download, Check } from 'lucide-react';
+import { Filter, RotateCcw, ChevronLeft, ChevronRight, ChevronDown, AlertTriangle, Check } from 'lucide-react';
 import { GRADE_ORDER } from '@/lib/constants';
-import { downloadCSV } from '@/lib/export-csv';
 import { useCompareStore, MAX_COMPARE_ITEMS } from '@/lib/compare-store';
 import { CompareBar } from '@/components/compare-bar';
 import { CompareModal } from '@/components/compare-modal';
@@ -69,7 +68,7 @@ const DEFAULT_FILTERS: FilterState = {
 
 export default function ScreenerPage() {
   const [page, setPage] = useState(1);
-  const [sort, setSort] = useState<RankingParams['sort']>('score_desc');
+  const [sort, setSort] = useState<RankingParams['sort']>('score_asc');
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
@@ -524,37 +523,19 @@ export default function ScreenerPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-sm">
-                검색 결과: {data?.total?.toLocaleString() || 0}개 기업
+                Filtered: {data?.total?.toLocaleString() || 0}개 기업
               </CardTitle>
-              <div className="flex items-center gap-2">
-                <div className="flex gap-1 flex-wrap">
-                  {filters.grades.map((grade) => (
-                    <Badge key={grade} variant="secondary" className="text-[10px] h-5">
-                      {grade}
-                    </Badge>
-                  ))}
-                  {filters.markets.map((market) => (
-                    <Badge key={market} variant="outline" className="text-[10px] h-5">
-                      {market}
-                    </Badge>
-                  ))}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    if (data?.items && data.items.length > 0) {
-                      downloadCSV(data.items, {
-                        filename: `raymondsindex_screener_${new Date().toISOString().split('T')[0]}.csv`,
-                      });
-                    }
-                  }}
-                  disabled={!data?.items || data.items.length === 0}
-                  className="shrink-0 h-7 text-xs"
-                >
-                  <Download className="w-3 h-3 mr-1" />
-                  CSV
-                </Button>
+              <div className="flex gap-1 flex-wrap">
+                {filters.grades.map((grade) => (
+                  <Badge key={grade} variant="secondary" className="text-[10px] h-5">
+                    {grade}
+                  </Badge>
+                ))}
+                {filters.markets.map((market) => (
+                  <Badge key={market} variant="outline" className="text-[10px] h-5">
+                    {market}
+                  </Badge>
+                ))}
               </div>
             </CardHeader>
             <CardContent>
