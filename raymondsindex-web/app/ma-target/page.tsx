@@ -327,9 +327,9 @@ export default function MATargetPage() {
         </div>
       )}
 
-      {/* 적대적 M&A 취약기업 TOP 5 */}
+      {/* 적대적 M&A 취약기업 TOP 5 (컴팩트 그리드) */}
       <div className="mb-6">
-        <VulnerableMACards limit={5} />
+        <VulnerableMACards limit={5} compact />
       </div>
 
       {/* 필터 섹션 */}

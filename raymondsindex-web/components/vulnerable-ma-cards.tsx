@@ -11,24 +11,25 @@ import type { VulnerableMACompany } from '@/lib/types';
 
 interface VulnerableMACardsProps {
   limit?: number;
+  compact?: boolean;
 }
 
-export function VulnerableMACards({ limit = 5 }: VulnerableMACardsProps) {
+export function VulnerableMACards({ limit = 5, compact = false }: VulnerableMACardsProps) {
   const { data, isLoading } = useVulnerableMA({ limit, max_share_ratio: 5 });
 
   if (isLoading) {
     return (
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-1.5 text-sm">
             <Target className="w-3.5 h-3.5 text-purple-500" />
             적대적 M&A 취약기업 TOP {limit}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="animate-pulse space-y-2">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-20 bg-zinc-800 rounded-lg" />
+          <div className={`animate-pulse ${compact ? 'grid grid-cols-5 gap-2' : 'space-y-2'}`}>
+            {[...Array(compact ? 5 : 3)].map((_, i) => (
+              <div key={i} className={compact ? 'h-24 bg-zinc-800 rounded-lg' : 'h-20 bg-zinc-800 rounded-lg'} />
             ))}
           </div>
         </CardContent>
@@ -37,6 +38,35 @@ export function VulnerableMACards({ limit = 5 }: VulnerableMACardsProps) {
   }
 
   const companies = data?.rankings || [];
+
+  if (compact) {
+    return (
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="flex items-center gap-1.5 text-sm">
+            <Target className="w-3.5 h-3.5 text-purple-500" />
+            적대적 M&A 취약기업 TOP {limit}
+            <span className="text-[10px] text-zinc-500 font-normal ml-2">
+              CEI+CGI 점수 낮음 + 대주주 지분율 5% 이하
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {companies.length === 0 ? (
+            <div className="text-center py-4 text-zinc-500 text-sm">
+              조건에 맞는 기업이 없습니다
+            </div>
+          ) : (
+            <div className="grid grid-cols-5 gap-2">
+              {companies.map((company, index) => (
+                <CompactMACard key={company.company_id} company={company} rank={index + 1} />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -75,6 +105,7 @@ interface VulnerableMACardProps {
   rank: number;
 }
 
+// 기본 카드 (홈페이지용)
 function VulnerableMACard({ company, rank }: VulnerableMACardProps) {
   return (
     <Link
@@ -131,6 +162,76 @@ function VulnerableMACard({ company, rank }: VulnerableMACardProps) {
       {company.largest_shareholder_name && (
         <p className="text-[10px] text-zinc-500 mt-1.5 truncate">
           최대주주: {company.largest_shareholder_name}
+        </p>
+      )}
+    </Link>
+  );
+}
+
+// 컴팩트 카드 (M&A 페이지용)
+function CompactMACard({ company, rank }: VulnerableMACardProps) {
+  return (
+    <Link
+      href={`/company/${company.company_id}`}
+      className="block p-2 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 transition-colors border border-zinc-700/50"
+    >
+      {/* 헤더: 순위 + 등급 */}
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[10px] font-bold text-purple-400">#{rank}</span>
+        <GradeBadge grade={company.grade} size="sm" />
+      </div>
+
+      {/* 기업명 */}
+      <p className="font-medium text-white text-xs truncate" title={company.company_name}>
+        {company.company_name}
+      </p>
+
+      {/* 종목코드 + 시장 */}
+      <div className="flex items-center gap-1 mt-0.5">
+        <span className="text-[9px] text-zinc-500">{company.stock_code}</span>
+        {company.market && (
+          <MarketBadge
+            market={company.market}
+            tradingStatus={company.trading_status}
+            size="sm"
+          />
+        )}
+      </div>
+
+      {/* 핵심 지표 */}
+      <div className="mt-2 space-y-1">
+        <div className="flex items-center justify-between text-[10px]">
+          <span className="text-zinc-500 flex items-center gap-0.5">
+            <TrendingDown className="w-2.5 h-2.5" />
+            CEI+CGI
+          </span>
+          <span className="font-semibold text-orange-400">
+            {company.vulnerability_score !== null
+              ? company.vulnerability_score.toFixed(1)
+              : '-'}
+          </span>
+        </div>
+        <div className="flex items-center justify-between text-[10px]">
+          <span className="text-zinc-500 flex items-center gap-0.5">
+            <Users className="w-2.5 h-2.5" />
+            대주주
+          </span>
+          <span className="font-semibold text-red-400">
+            {company.largest_shareholder_ratio !== null
+              ? `${company.largest_shareholder_ratio.toFixed(1)}%`
+              : '-'}
+          </span>
+        </div>
+        <div className="flex items-center justify-between text-[10px]">
+          <span className="text-zinc-500">종합</span>
+          <span className="font-semibold text-white">{company.total_score.toFixed(1)}</span>
+        </div>
+      </div>
+
+      {/* 최대주주명 */}
+      {company.largest_shareholder_name && (
+        <p className="text-[9px] text-zinc-600 mt-1 truncate" title={company.largest_shareholder_name}>
+          {company.largest_shareholder_name}
         </p>
       )}
     </Link>
