@@ -42,6 +42,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import type { MATargetResponse, MATargetParams, MATargetStatsResponse } from '@/lib/types';
+import { VulnerableMACards } from '@/components/vulnerable-ma-cards';
 
 const PAGE_SIZE = 20;
 const MARKETS = ['KOSPI', 'KOSDAQ'] as const;
@@ -325,6 +326,11 @@ export default function MATargetPage() {
           </Card>
         </div>
       )}
+
+      {/* 적대적 M&A 취약기업 TOP 5 */}
+      <div className="mb-6">
+        <VulnerableMACards limit={5} />
+      </div>
 
       {/* 필터 섹션 */}
       <Card className="mb-6">
