@@ -81,13 +81,55 @@ def calculate_human_risk(exec_count: int, total_other_companies: int) -> dict:
     }
 
 
+def calculate_subscriber_quality_score(subscriber_count: int) -> int:
+    """인수대상자 수량 기반 품질 점수 (0-30점)
+
+    CB 인수에 참여한 대상자(개인+법인) 수가 많을수록 위험 신호.
+    - 다수 참여자 = CB 인수 네트워크 광범위 = 투자자 품질 리스크 증가
+
+    점수 기준 (2026-02 개편):
+    - 50명 이상: 30점 (초대규모 네트워크)
+    - 20-49명: 25점 (대규모)
+    - 10-19명: 20점 (중대규모)
+    - 5-9명: 15점 (중규모)
+    - 2-4명: 10점 (소규모)
+    - 1명: 5점 (단독)
+    - 0명: 0점 (CB 없음)
+    """
+    if subscriber_count >= 50:
+        return 30  # 초대규모 네트워크
+    elif subscriber_count >= 20:
+        return 25  # 대규모
+    elif subscriber_count >= 10:
+        return 20  # 중대규모
+    elif subscriber_count >= 5:
+        return 15  # 중규모
+    elif subscriber_count >= 2:
+        return 10  # 소규모
+    elif subscriber_count == 1:
+        return 5   # 단독
+    else:
+        return 0   # CB 없음
+
+
 def calculate_cb_risk(cb_count: int, issue_amount_billion: float,
-                      high_risk_ratio: float, loss_company_count: int) -> dict:
-    """CB 리스크 점수 계산 (0-100점) - PRD 6.4"""
+                      subscriber_count: int, loss_company_count: int) -> dict:
+    """CB 리스크 점수 계산 (0-100점) - PRD 6.4
+
+    Components:
+    - 발행 빈도 (25점): CB 발행 횟수
+    - 발행 규모 (25점): 총 발행금액
+    - 투자자 품질 (30점): 인수대상자 수량 (2026-02 개편)
+    - 적자기업 연결 (20점): 관련 적자기업 수
+    """
 
     # CB 없음 = 리스크 없음
     if cb_count == 0 and issue_amount_billion == 0:
-        return {"score": 0, "level": "LOW", "cb_count": 0, "issue_amount": 0}
+        return {
+            "score": 0, "level": "LOW", "cb_count": 0, "issue_amount": 0,
+            "frequency_score": 0, "amount_score": 0, "quality_score": 0, "loss_score": 0,
+            "subscriber_count": 0
+        }
 
     # Component 1: 발행 빈도 (25점)
     if cb_count >= 4:
@@ -115,8 +157,8 @@ def calculate_cb_risk(cb_count: int, issue_amount_billion: float,
     else:
         amount_score = 0
 
-    # Component 3: 참여자 품질 (30점)
-    quality_score = min(int(high_risk_ratio * 60), 30)
+    # Component 3: 투자자 품질 (30점) - 인수대상자 수량 기반 (2026-02 개편)
+    quality_score = calculate_subscriber_quality_score(subscriber_count)
 
     # Component 4: 적자기업 연결 (20점)
     if loss_company_count >= 10:
@@ -145,7 +187,8 @@ def calculate_cb_risk(cb_count: int, issue_amount_billion: float,
         "frequency_score": frequency_score,
         "amount_score": amount_score,
         "quality_score": quality_score,
-        "loss_score": loss_score
+        "loss_score": loss_score,
+        "subscriber_count": subscriber_count
     }
 
 
@@ -331,35 +374,20 @@ async def calculate_risk_scores():
                 cb_count = cb_data['cb_count'] if cb_data else 0
                 total_billion = float(cb_data['total_billion']) if cb_data else 0
 
-                high_risk_ratio = 0.1
+                subscriber_count = 0
                 loss_company_count = 0
 
                 if cb_count > 0:
-                    participant_count = await conn.fetchval("""
+                    # 인수대상자 수량 조회 (개인 + 법인 모두 포함)
+                    subscriber_count = await conn.fetchval("""
                         SELECT COUNT(DISTINCT subscriber_name)
                         FROM cb_subscribers cs
                         JOIN convertible_bonds cb ON cs.cb_id = cb.id
                         WHERE cb.company_id = $1
                     """, company_id)
+                    subscriber_count = subscriber_count or 0
 
-                    if participant_count and participant_count > 0:
-                        high_risk_count = await conn.fetchval("""
-                            SELECT COUNT(DISTINCT cs.subscriber_name)
-                            FROM cb_subscribers cs
-                            JOIN convertible_bonds cb ON cs.cb_id = cb.id
-                            WHERE cb.company_id = $1
-                            AND cs.subscriber_name IN (
-                                SELECT cs2.subscriber_name
-                                FROM cb_subscribers cs2
-                                JOIN convertible_bonds cb2 ON cs2.cb_id = cb2.id
-                                WHERE cb2.company_id != $1
-                                GROUP BY cs2.subscriber_name
-                                HAVING COUNT(DISTINCT cb2.company_id) >= 3
-                            )
-                        """, company_id)
-                        high_risk_ratio = (high_risk_count or 0) / participant_count
-
-                cb_risk = calculate_cb_risk(cb_count, total_billion, high_risk_ratio, loss_company_count)
+                cb_risk = calculate_cb_risk(cb_count, total_billion, subscriber_count, loss_company_count)
 
                 # 3. 재무건전성 데이터 수집
                 fs_data = await conn.fetchrow("""
