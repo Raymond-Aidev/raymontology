@@ -1,26 +1,28 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTopRanking } from '@/hooks/use-ranking';
+import { useBottomRanking } from '@/hooks/use-ranking';
 import { useStatistics } from '@/hooks/use-statistics';
-import { TopCompaniesTable } from '@/components/top-companies-table';
+import { RiskCompaniesTable } from '@/components/risk-companies-table';
+import { SubIndexTabs } from '@/components/sub-index-tabs';
+import { VulnerableMACards } from '@/components/vulnerable-ma-cards';
 import { GradeDistribution } from '@/components/grade-distribution';
 import { KPICard, KPIGrid } from '@/components/kpi-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building2, Calendar, BarChart3, Trophy, ArrowRight } from 'lucide-react';
+import { Building2, Calendar, BarChart3, AlertTriangle, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 export default function HomePage() {
-  const { data: rankingData, isLoading: rankingLoading } = useTopRanking(10);
+  const { data: riskData, isLoading: riskLoading } = useBottomRanking(10);
   const { data: statsData, isLoading: statsLoading } = useStatistics();
 
-  // A등급 이상 기업 수 계산
-  const aGradeCount = statsData?.grade_distribution
-    ?.filter(g => g.grade.startsWith('A'))
+  // C등급 이하 기업 수 계산 (위험기업)
+  const cGradeCount = statsData?.grade_distribution
+    ?.filter(g => g.grade.startsWith('C'))
     .reduce((sum, g) => sum + g.count, 0) || 0;
 
-  const aGradePercentage = statsData?.total_companies
-    ? (aGradeCount / statsData.total_companies) * 100
+  const cGradePercentage = statsData?.total_companies
+    ? (cGradeCount / statsData.total_companies) * 100
     : 0;
 
   // 데이터 업데이트 경과일 계산 (requestAnimationFrame으로 setState 지연)
@@ -80,11 +82,11 @@ export default function HomePage() {
             isLoading={statsLoading}
           />
           <KPICard
-            title="A등급 이상"
-            value={aGradeCount || '-'}
+            title="C등급 이하"
+            value={cGradeCount || '-'}
             suffix="개"
-            icon={Trophy}
-            percentage={aGradePercentage}
+            icon={AlertTriangle}
+            percentage={cGradePercentage}
             isLoading={statsLoading}
           />
           <KPICard
@@ -105,16 +107,23 @@ export default function HomePage() {
       {/* 메인 콘텐츠 */}
       <section className="container mx-auto px-4 py-3">
         <div className="grid lg:grid-cols-3 gap-3">
-          {/* TOP 10 테이블 (2/3) */}
-          <div className="lg:col-span-2">
-            <TopCompaniesTable
-              companies={rankingData?.items || []}
-              isLoading={rankingLoading}
+          {/* 왼쪽 영역 (2/3) */}
+          <div className="lg:col-span-2 space-y-3">
+            {/* 위험기업 TOP 10 */}
+            <RiskCompaniesTable
+              companies={riskData?.items || []}
+              isLoading={riskLoading}
             />
+
+            {/* Sub-Index별 위험기업 */}
+            <SubIndexTabs />
           </div>
 
-          {/* 사이드 패널 (1/3) */}
+          {/* 오른쪽 사이드 패널 (1/3) */}
           <div className="space-y-3">
+            {/* M&A 취약기업 */}
+            <VulnerableMACards limit={5} />
+
             {/* 등급 분포 */}
             <GradeDistribution
               distribution={statsData?.grade_distribution || []}
@@ -142,10 +151,10 @@ export default function HomePage() {
                   <ArrowRight className="w-3 h-3 text-zinc-500" />
                 </Link>
                 <Link
-                  href="/screener?grade=A%2B%2B,A%2B,A,A-"
+                  href="/screener?grade=C%2B,C"
                   className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-white/5 transition-colors"
                 >
-                  <span className="text-sm text-zinc-300">A등급 기업만 보기</span>
+                  <span className="text-sm text-zinc-300">C등급 기업만 보기</span>
                   <ArrowRight className="w-3 h-3 text-zinc-500" />
                 </Link>
               </CardContent>

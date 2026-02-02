@@ -122,8 +122,9 @@ export interface RankingParams {
   // 위험신호 필터
   has_red_flags?: boolean;
 
-  // 정렬
-  sort?: 'score_desc' | 'score_asc' | 'name_asc' | 'name_desc' | 'gap_asc' | 'gap_desc' | 'cei_desc' | 'rii_desc' | 'cgi_desc' | 'mai_desc';
+  // 정렬 (오름차순 추가)
+  sort?: 'score_desc' | 'score_asc' | 'name_asc' | 'name_desc' | 'gap_asc' | 'gap_desc' |
+         'cei_desc' | 'cei_asc' | 'rii_desc' | 'rii_asc' | 'cgi_desc' | 'cgi_asc' | 'mai_desc' | 'mai_asc';
 }
 
 // 주가 데이터 타입
@@ -253,4 +254,24 @@ export interface MATargetStatsResponse {
   max_score: number | null;
   min_score: number | null;
   grade_distribution: Record<string, number>;
+}
+
+// 적대적 M&A 취약기업 타입
+export interface VulnerableMACompany extends RaymondsIndexResponse {
+  rank: number;
+  largest_shareholder_name: string | null;
+  largest_shareholder_ratio: number | null;
+  vulnerability_score: number | null;  // CEI + CGI 합산 점수
+}
+
+export interface VulnerableMAResponse {
+  total: number;
+  max_share_ratio: number;
+  description: string;
+  rankings: VulnerableMACompany[];
+}
+
+export interface VulnerableMAParams {
+  limit?: number;
+  max_share_ratio?: number;  // 기본 5%
 }

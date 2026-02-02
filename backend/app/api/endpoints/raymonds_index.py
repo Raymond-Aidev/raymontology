@@ -15,6 +15,7 @@ import logging
 from app.database import get_db
 from app.models.raymonds_index import RaymondsIndex
 from app.models.companies import Company
+from app.models.major_shareholders import MajorShareholder
 
 logger = logging.getLogger(__name__)
 
@@ -293,7 +294,7 @@ async def get_raymonds_index_history(
 
 @router.get("/ranking/list")
 async def get_raymonds_index_ranking(
-    sort: str = Query("score_desc", regex="^(score_desc|score_asc|gap_asc|gap_desc|name_asc|name_desc|cei_desc|rii_desc|cgi_desc|mai_desc)$"),
+    sort: str = Query("score_desc", regex="^(score_desc|score_asc|gap_asc|gap_desc|name_asc|name_desc|cei_desc|cei_asc|rii_desc|rii_asc|cgi_desc|cgi_asc|mai_desc|mai_asc)$"),
     grade: Optional[str] = None,
     market: Optional[str] = None,
     year: Optional[int] = None,
@@ -430,9 +431,13 @@ async def get_raymonds_index_ranking(
             "name_asc": Company.name,
             "name_desc": desc(Company.name),
             "cei_desc": desc(RaymondsIndex.cei_score),
+            "cei_asc": RaymondsIndex.cei_score,
             "rii_desc": desc(RaymondsIndex.rii_score),
+            "rii_asc": RaymondsIndex.rii_score,
             "cgi_desc": desc(RaymondsIndex.cgi_score),
+            "cgi_asc": RaymondsIndex.cgi_score,
             "mai_desc": desc(RaymondsIndex.mai_score),
+            "mai_asc": RaymondsIndex.mai_score,
         }
         query = query.order_by(sort_map.get(sort, desc(RaymondsIndex.total_score)))
 
@@ -852,4 +857,116 @@ async def get_raymonds_index_by_name(
         raise
     except Exception as e:
         logger.error(f"Error fetching by name {company_name}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/vulnerable-ma/ranking")
+async def get_vulnerable_ma_companies(
+    limit: int = Query(5, ge=1, le=50, description="결과 개수"),
+    max_share_ratio: float = Query(5.0, ge=0, le=100, description="최대주주 지분율 상한(%)"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    적대적 M&A 취약기업 랭킹
+
+    **조건:**
+    - CEI(자본효율성) + CGI(현금거버넌스) 합산 점수가 낮은 기업
+    - 최대주주 지분율 ≤ max_share_ratio (기본 5%)
+    - KONEX 시장 제외
+    - CEI, CGI 점수가 모두 존재하는 기업 (N/A 제외)
+
+    **반환:**
+    - 취약도 높은 순서로 정렬 (CEI+CGI 오름차순)
+    """
+    try:
+        # 각 회사의 최신 연도 서브쿼리
+        latest_subquery = (
+            select(
+                RaymondsIndex.company_id,
+                func.max(RaymondsIndex.fiscal_year).label('max_year')
+            )
+            .group_by(RaymondsIndex.company_id)
+        ).subquery()
+
+        # 각 회사의 최신 최대주주 정보 서브쿼리
+        shareholder_subquery = (
+            select(
+                MajorShareholder.company_id,
+                MajorShareholder.shareholder_name,
+                MajorShareholder.share_ratio,
+                func.row_number().over(
+                    partition_by=MajorShareholder.company_id,
+                    order_by=MajorShareholder.report_year.desc()
+                ).label('rn')
+            )
+            .where(MajorShareholder.is_largest_shareholder == True)
+            .where(MajorShareholder.share_ratio.isnot(None))
+        ).subquery()
+
+        # 최신 주주 정보만 (row_number = 1)
+        latest_shareholder = (
+            select(
+                shareholder_subquery.c.company_id,
+                shareholder_subquery.c.shareholder_name,
+                shareholder_subquery.c.share_ratio
+            )
+            .where(shareholder_subquery.c.rn == 1)
+        ).subquery()
+
+        # 메인 쿼리: CEI + CGI 합산이 낮은 기업
+        query = (
+            select(
+                RaymondsIndex,
+                Company,
+                latest_shareholder.c.shareholder_name.label('largest_shareholder_name'),
+                latest_shareholder.c.share_ratio.label('largest_shareholder_ratio'),
+                (RaymondsIndex.cei_score + RaymondsIndex.cgi_score).label('vulnerability_score')
+            )
+            .join(Company, RaymondsIndex.company_id == Company.id)
+            .join(
+                latest_subquery,
+                (RaymondsIndex.company_id == latest_subquery.c.company_id) &
+                (RaymondsIndex.fiscal_year == latest_subquery.c.max_year)
+            )
+            .join(
+                latest_shareholder,
+                RaymondsIndex.company_id == latest_shareholder.c.company_id
+            )
+            # 필터 조건
+            .where(Company.market != 'KONEX')  # KONEX 제외
+            .where(RaymondsIndex.cei_score.isnot(None))  # CEI 존재
+            .where(RaymondsIndex.cgi_score.isnot(None))  # CGI 존재
+            .where(latest_shareholder.c.share_ratio <= max_share_ratio)  # 지분율 조건
+            # 정렬: CEI + CGI 오름차순 (취약도 높은 순)
+            .order_by(RaymondsIndex.cei_score + RaymondsIndex.cgi_score)
+            .limit(limit)
+        )
+
+        result = await db.execute(query)
+        rows = result.all()
+
+        rankings = []
+        for i, row in enumerate(rows, start=1):
+            index = row[0]
+            company = row[1]
+            shareholder_name = row[2]
+            shareholder_ratio = row[3]
+            vulnerability_score = row[4]
+
+            item = format_index_response(index, company)
+            item["rank"] = i
+            item["largest_shareholder_name"] = shareholder_name
+            item["largest_shareholder_ratio"] = float(shareholder_ratio) if shareholder_ratio else None
+            item["vulnerability_score"] = float(vulnerability_score) if vulnerability_score else None
+            rankings.append(item)
+
+        return {
+            "total": len(rankings),
+            "max_share_ratio": max_share_ratio,
+            "description": f"CEI+CGI 합산 점수가 낮고 최대주주 지분율 {max_share_ratio}% 이하인 기업",
+            "rankings": rankings
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching vulnerable M&A companies: {e}")
         raise HTTPException(status_code=500, detail=str(e))

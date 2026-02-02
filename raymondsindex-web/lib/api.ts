@@ -12,7 +12,9 @@ import type {
   MATargetResponse,
   MATargetRankingResponse,
   MATargetParams,
-  MATargetStatsResponse
+  MATargetStatsResponse,
+  VulnerableMAResponse,
+  VulnerableMAParams
 } from './types';
 
 async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -96,6 +98,47 @@ export const api = {
         limit: number;
         rankings: RaymondsIndexResponse[];
       }>(`/raymonds-index/ranking/list?limit=${limit}&offset=0&sort=score_desc`);
+
+      return {
+        items: data.rankings,
+        total: data.total,
+        page: 1,
+        size: limit,
+        total_pages: Math.ceil(data.total / limit),
+      };
+    },
+
+    // 위험기업 TOP (낮은 점수순)
+    getBottom: async (limit: number = 10): Promise<RankingResponse> => {
+      const data = await fetchAPI<{
+        total: number;
+        offset: number;
+        limit: number;
+        rankings: RaymondsIndexResponse[];
+      }>(`/raymonds-index/ranking/list?limit=${limit}&offset=0&sort=score_asc`);
+
+      return {
+        items: data.rankings,
+        total: data.total,
+        page: 1,
+        size: limit,
+        total_pages: Math.ceil(data.total / limit),
+      };
+    },
+
+    // Sub-Index별 랭킹 (오름차순 - 낮은 점수가 위험)
+    getBySubIndex: async (
+      subIndex: 'cei' | 'rii' | 'cgi' | 'mai',
+      limit: number = 10,
+      ascending: boolean = true
+    ): Promise<RankingResponse> => {
+      const sortOrder = ascending ? `${subIndex}_asc` : `${subIndex}_desc`;
+      const data = await fetchAPI<{
+        total: number;
+        offset: number;
+        limit: number;
+        rankings: RaymondsIndexResponse[];
+      }>(`/raymonds-index/ranking/list?limit=${limit}&offset=0&sort=${sortOrder}`);
 
       return {
         items: data.rankings,
@@ -255,6 +298,20 @@ export const api = {
     // 기업 상세 조회
     getCompany: async (companyId: string): Promise<MATargetResponse> => {
       return fetchAPI<MATargetResponse>(`/ma-target/company/${companyId}`);
+    },
+  },
+
+  // 적대적 M&A 취약기업 API
+  vulnerableMA: {
+    // 취약기업 랭킹 (CEI+CGI 낮고 대주주 지분율 낮은 기업)
+    getRanking: async (params: VulnerableMAParams = {}): Promise<VulnerableMAResponse> => {
+      const searchParams = new URLSearchParams();
+
+      if (params.limit !== undefined) searchParams.set('limit', params.limit.toString());
+      if (params.max_share_ratio !== undefined) searchParams.set('max_share_ratio', params.max_share_ratio.toString());
+
+      const query = searchParams.toString();
+      return fetchAPI<VulnerableMAResponse>(`/raymonds-index/vulnerable-ma/ranking${query ? `?${query}` : ''}`);
     },
   },
 };
