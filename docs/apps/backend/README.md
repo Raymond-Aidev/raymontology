@@ -127,6 +127,22 @@ Raymontology 서비스의 백엔드 API 서버입니다. FastAPI 기반으로 Po
 | 엔드포인트 | 파일 | 설명 |
 |-----------|------|------|
 | `/api/raymonds-index` | `raymonds_index.py` | 인덱스 조회/스크리너/랭킹 |
+| `/api/raymonds-index/vulnerable-ma/ranking` | `raymonds_index.py` | 적대적 M&A 취약기업 랭킹 ⭐ |
+
+#### RaymondsIndex API 상세 (2026-02-02 업데이트)
+
+**`/api/raymonds-index/ranking/list` 정렬 옵션**:
+- 기본: `score_desc`, `score_asc`, `name_asc`, `name_desc`, `gap_asc`, `gap_desc`
+- Sub-Index 내림차순: `cei_desc`, `rii_desc`, `cgi_desc`, `mai_desc`
+- **Sub-Index 오름차순 (신규)**: `cei_asc`, `rii_asc`, `cgi_asc`, `mai_asc`
+
+**`/api/raymonds-index/vulnerable-ma/ranking` (신규)**:
+| 파라미터 | 타입 | 기본값 | 설명 |
+|----------|------|--------|------|
+| `limit` | int | 5 | 조회 개수 (1-50) |
+| `max_share_ratio` | float | 5.0 | 최대주주 지분율 상한 (%) |
+- 필터 조건: KONEX 제외, N/A 등급 제외, 지분율 NULL 제외
+- 정렬: CEI+CGI 합산 점수 오름차순 (취약도 높은 순)
 
 ### 그래프/기타
 | 엔드포인트 | 파일 | 설명 |
@@ -306,4 +322,4 @@ DART API → 다운로드 → 파싱 → PostgreSQL → Neo4j 동기화
 
 ---
 
-*마지막 업데이트: 2026-01-24*
+*마지막 업데이트: 2026-02-02*

@@ -29,7 +29,7 @@
 
 | 경로 | 파일 | 설명 |
 |------|------|------|
-| `/` | `app/page.tsx` | 홈 (Hero + TOP 10 + 등급분포) |
+| `/` | `app/page.tsx` | 홈 (위험기업 TOP 10 + Sub-Index 탭 + M&A 취약기업) ⭐ |
 | `/screener` | `app/screener/page.tsx` | 기업 스크리닝 (필터, 정렬, 페이징) |
 | `/company/[id]` | `app/company/[id]/page.tsx` | 기업 상세 (레이더 차트, 지표 카드) |
 | `/methodology` | `app/methodology/page.tsx` | 평가 방법론 설명 |
@@ -59,7 +59,7 @@
 | `separator.tsx` | 구분선 |
 | `collapsible.tsx` | 접기/펼치기 |
 
-### 비즈니스 컴포넌트 - 15개
+### 비즈니스 컴포넌트 - 18개
 | 컴포넌트 | 설명 |
 |----------|------|
 | `grade-badge.tsx` | 9등급 배지 (A++ ~ C) |
@@ -71,6 +71,9 @@
 | `risk-flags-panel.tsx` | 위험 신호 패널 |
 | `company-search-bar.tsx` | 기업 검색 (자동완성) |
 | `top-companies-table.tsx` | TOP 10 기업 테이블 |
+| `risk-companies-table.tsx` | 위험기업 TOP 10 (2열 그리드) ⭐ |
+| `sub-index-tabs.tsx` | Sub-Index별 위험기업 TOP 10 (4탭) ⭐ |
+| `vulnerable-ma-cards.tsx` | 적대적 M&A 취약기업 카드 ⭐ |
 | `stock-price-chart.tsx` | 주가 차트 |
 | `market-badge.tsx` | 시장 배지 (KOSPI/KOSDAQ/KONEX/ETF) |
 | `ai-analysis-section.tsx` | AI 분석 섹션 |
@@ -116,7 +119,7 @@
 ## 주요 기능
 
 ### 구현 완료
-- [x] 홈페이지 (Hero + TOP 10 + 등급분포)
+- [x] 홈페이지 개편 (위험기업 중심 대시보드) ⭐ (2026-02-02)
 - [x] 스크리너 (필터, 정렬, 페이징)
 - [x] 기업 상세 (레이더 차트, 지표 카드)
 - [x] 평가 방법론 페이지
@@ -183,6 +186,7 @@ NEXT_PUBLIC_API_URL=https://raymontology-production.up.railway.app/api
 | `/api/ma-target/ranking` | 적대적 M&A 랭킹 |
 | `/api/ma-target/stats` | 적대적 M&A 통계 |
 | `/api/ma-target/company/{id}` | 적대적 M&A 상세 |
+| `/api/raymonds-index/vulnerable-ma/ranking` | M&A 취약기업 랭킹 (홈 위젯용) ⭐ |
 
 ### 주가 API
 | 엔드포인트 | 용도 |
@@ -203,13 +207,25 @@ NEXT_PUBLIC_API_URL=https://raymontology-production.up.railway.app/api
 | 모듈 | 설명 |
 |------|------|
 | `api.ts` | API 클라이언트 (fetch 래퍼) |
-| `types.ts` | 타입 정의 (RaymondsIndex, MATarget 등) |
+| `types.ts` | 타입 정의 (RaymondsIndex, MATarget, VulnerableMA 등) |
 | `constants.ts` | 상수 (등급 색상, API URL 등) |
 | `utils.ts` | 유틸리티 함수 |
 | `auth.ts` | 인증 상태 관리 (Zustand) |
 | `chart-theme.ts` | Recharts 테마 설정 |
 | `compare-store.ts` | 기업 비교 상태 관리 (Zustand) ⭐ |
 | `export-csv.ts` | CSV 내보내기 유틸리티 ⭐ |
+
+---
+
+## hooks 모듈 (5개)
+
+| Hook | 파일 | 설명 |
+|------|------|------|
+| `useRanking` | `hooks/use-ranking.ts` | 전체 랭킹 조회 |
+| `useTopRanking` | `hooks/use-ranking.ts` | TOP N 우수 기업 조회 |
+| `useBottomRanking` | `hooks/use-ranking.ts` | TOP N 위험 기업 조회 (낮은 점수순) ⭐ |
+| `useSubIndexRanking` | `hooks/use-ranking.ts` | Sub-Index별 랭킹 (CEI/RII/CGI/MAI) ⭐ |
+| `useVulnerableMA` | `hooks/use-ranking.ts` | 적대적 M&A 취약기업 조회 ⭐ |
 
 ---
 
@@ -236,4 +252,31 @@ NEXT_PUBLIC_API_URL=https://raymontology-production.up.railway.app/api
 
 ---
 
-*마지막 업데이트: 2026-02-01*
+---
+
+## 홈페이지 레이아웃 (2026-02-02 개편) ⭐
+
+**변경 내역**: 우수 기업 중심 → 위험 기업 중심 대시보드
+
+```
+┌─────────────────────────────────────────────────┐
+│ KPI Cards (4열) - C등급 이하 기업 수 표시       │
+├─────────────────────────┬───────────────────────┤
+│ 위험기업 TOP 10 (2열)   │ M&A 취약기업 TOP 5    │
+│ (컴팩트 그리드 카드)    │                       │
+├─────────────────────────┤ 등급 분포 차트        │
+│ Sub-Index 탭 (4개)      │                       │
+│ CEI│RII│CGI│MAI        │ 빠른 탐색 링크        │
+└─────────────────────────┴───────────────────────┘
+```
+
+| 영역 | 변경 전 | 변경 후 |
+|------|---------|---------|
+| 메인 테이블 | TOP 10 우수기업 | **위험기업 TOP 10** (2열 그리드) |
+| Sub-Index | 없음 | **CEI/RII/CGI/MAI별 최저점수 기업 TOP 10** |
+| 사이드 패널 | 없음 | **적대적 M&A 취약기업 TOP 5** |
+| KPI 카드 | A등급 이상 | **C등급 이하** (위험 기업 수) |
+
+---
+
+*마지막 업데이트: 2026-02-02*
