@@ -194,9 +194,20 @@ async def get_company_network_fallback(
                 deficit_counts = {(row.name, row.birth_date): row.deficit_count for row in deficit_result.fetchall()}
             else:
                 deficit_counts = {}
+
+            # 배치 쿼리: 모든 임원의 경영분쟁 참여 횟수를 한 번에 조회
+            batch_dispute_query = text("""
+                SELECT d.officer_name, d.birth_date, COUNT(DISTINCT d.egm_disclosure_id) as dispute_count
+                FROM dispute_officers d
+                WHERE d.officer_name = ANY(:names)
+                GROUP BY d.officer_name, d.birth_date
+            """)
+            dispute_result = await db.execute(batch_dispute_query, {"names": officer_names})
+            dispute_counts = {(row.officer_name, row.birth_date): row.dispute_count for row in dispute_result.fetchall()}
         else:
             career_counts = {}
             deficit_counts = {}
+            dispute_counts = {}
 
         # 배치 조회 결과를 사용하여 노드 생성 (N+1 쿼리 제거됨)
         for officer in officers:
@@ -204,6 +215,7 @@ async def get_company_network_fallback(
                 identity_key = (officer.name, officer.birth_date)
                 listed_career_count = career_counts.get(identity_key, 0)
                 deficit_career_count = deficit_counts.get(identity_key, 0)
+                dispute_career_count = dispute_counts.get(identity_key, 0)
 
                 nodes.append(GraphNode(
                     id=officer.id,
@@ -213,7 +225,8 @@ async def get_company_network_fallback(
                         "birth_date": officer.birth_date,
                         "position": officer.position,
                         "listed_career_count": listed_career_count,
-                        "deficit_career_count": deficit_career_count
+                        "deficit_career_count": deficit_career_count,
+                        "dispute_career_count": dispute_career_count
                     }
                 ))
                 seen_node_ids.add(officer.id)

@@ -34,6 +34,12 @@ from app.models.news import (
 from app.models.daily_stock_price import DailyStockPrice
 from app.models.stock_info import StockInfo
 from app.models.financial_snapshot import FinancialSnapshot
+# EGM (임시주주총회) 관련 모델
+from app.models.egm_disclosures import (
+    EGMDisclosure, EGMType, DisputeType, ParseStatus,
+    EGM_REPORT_TYPES, DISPUTE_STRONG_KEYWORDS, DISPUTE_MEDIUM_KEYWORDS
+)
+from app.models.dispute_officers import DisputeOfficer, AppointmentContext
 
 __all__ = [
     "Base",
@@ -79,4 +85,14 @@ __all__ = [
     "DailyStockPrice",
     "StockInfo",
     "FinancialSnapshot",
+    # EGM (임시주주총회) 관련 모델
+    "EGMDisclosure",
+    "EGMType",
+    "DisputeType",
+    "ParseStatus",
+    "EGM_REPORT_TYPES",
+    "DISPUTE_STRONG_KEYWORDS",
+    "DISPUTE_MEDIUM_KEYWORDS",
+    "DisputeOfficer",
+    "AppointmentContext",
 ]

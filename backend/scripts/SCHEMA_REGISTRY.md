@@ -36,6 +36,8 @@
 > - **report_views: 6건** (리포트 조회)
 > - **pipeline_runs: 0건** (파이프라인 실행 이력)
 > - **service_applications: 1건** (서비스 이용신청)
+> - **egm_disclosures: 0건** (임시주주총회 공시) ⭐신규
+> - **dispute_officers: 0건** (분쟁 선임 임원) ⭐신규
 > - **financial_ratios: -** (재무비율 분석 - 25개 재무비율)
 > - **company_view_history: -** (사용자 기업 조회 기록)
 > - **crawl_jobs: -** (크롤링 작업)
@@ -1136,6 +1138,124 @@
 
 ---
 
+## EGM(임시주주총회) 관련 테이블 (2026-02-04 추가) ⭐
+
+경영분쟁으로 인한 임시주주총회에서 선임된 임원 정보 수집 시스템.
+
+### 34. egm_disclosures (임시주주총회 공시) - 0건
+
+임시주주총회 관련 공시 메타데이터 및 분쟁 분류 결과.
+
+| 컬럼명 | 데이터타입 | NULL | 설명 |
+|--------|-----------|------|------|
+| id | uuid | NO | PK |
+| disclosure_id | varchar(50) | NO | 공시번호 (disclosures.rcept_no, UNIQUE) |
+| company_id | uuid | YES | FK → companies |
+| corp_code | varchar(8) | NO | DART 회사코드 |
+| corp_name | varchar(200) | YES | 회사명 |
+| egm_date | date | YES | 주주총회 개최일 |
+| egm_type | varchar(30) | YES | 주총 유형 (REGULAR/SPECIAL/COURT_ORDERED), 기본값: 'REGULAR' |
+| disclosure_date | date | YES | 공시일 |
+| **분쟁 분류** |
+| is_dispute_related | boolean | YES | 경영분쟁 관련 여부, 기본값: false |
+| dispute_type | varchar(50) | YES | 분쟁 유형 (HOSTILE_TAKEOVER/MANAGEMENT_CONFLICT/SHAREHOLDER_ACTIVISM/PROXY_FIGHT/OTHER) |
+| dispute_confidence | numeric(3,2) | YES | 분쟁 판정 신뢰도 (0.00~1.00) |
+| dispute_keywords | jsonb | YES | 탐지된 키워드 목록 |
+| **안건/임원 정보** |
+| agenda_items | jsonb | YES | 안건 목록 [{number, title, result, vote_for, vote_against}] |
+| officer_changes | jsonb | YES | 임원 변동 [{action, officer_name, position, vote_result, replaced_officer}] |
+| officers_appointed | integer | YES | 선임된 임원 수, 기본값: 0 |
+| officers_dismissed | integer | YES | 해임된 임원 수, 기본값: 0 |
+| **파싱 메타데이터** |
+| raw_content | text | YES | 원문 일부 (디버깅용) |
+| parse_status | varchar(20) | YES | 파싱 상태 (PENDING/PARSED/MANUAL_REVIEW/FAILED/SKIPPED), 기본값: 'PENDING' |
+| parse_confidence | numeric(3,2) | YES | 파싱 신뢰도 |
+| parse_errors | jsonb | YES | 파싱 오류 목록 |
+| parse_version | varchar(10) | YES | 파서 버전, 기본값: 'v1.0' |
+| **수동 검토** |
+| needs_manual_review | boolean | YES | 수동 검토 필요 여부, 기본값: false |
+| manual_review_reason | varchar(200) | YES | 검토 필요 사유 |
+| reviewed_at | timestamp(tz) | YES | 검토일시 |
+| reviewed_by | varchar(100) | YES | 검토자 |
+| **타임스탬프** |
+| created_at | timestamp(tz) | NO | 생성일시 |
+| updated_at | timestamp(tz) | NO | 수정일시 |
+
+**연관 모델**: `app/models/egm_disclosures.py`
+**연관 스크립트**: `scripts/collection/collect_egm_disclosures.py`, `scripts/pipeline/run_egm_officer_pipeline.py`
+**인덱스**: disclosure_id(UNIQUE), corp_code, is_dispute_related, egm_date, parse_status
+
+**분쟁 유형**:
+| dispute_type | 설명 |
+|--------------|------|
+| HOSTILE_TAKEOVER | 적대적 M&A |
+| MANAGEMENT_CONFLICT | 경영진 갈등 |
+| SHAREHOLDER_ACTIVISM | 주주 행동주의 |
+| PROXY_FIGHT | 위임장 대결 |
+| OTHER | 기타 |
+
+---
+
+### 35. dispute_officers (분쟁 선임 임원) - 0건
+
+경영분쟁 상황에서 임시주주총회를 통해 선임된 임원 정보.
+
+| 컬럼명 | 데이터타입 | NULL | 설명 |
+|--------|-----------|------|------|
+| id | uuid | NO | PK |
+| **임원 연결** |
+| officer_id | uuid | YES | FK → officers (소프트 참조) |
+| officer_match_confidence | varchar(10) | YES | 매칭 신뢰도 (HIGH/MEDIUM/LOW) |
+| **임원 기본 정보** |
+| officer_name | varchar(100) | NO | 임원명 |
+| birth_date | varchar(10) | YES | 출생년월 (YYYYMM) |
+| gender | varchar(10) | YES | 성별 |
+| **선임 정보** |
+| company_id | uuid | YES | FK → companies |
+| position | varchar(100) | YES | 선임 직책 |
+| egm_disclosure_id | uuid | NO | FK → egm_disclosures |
+| appointment_date | date | YES | 선임일 (주총 개최일) |
+| **경력 정보** |
+| career_from_disclosure | text | YES | 공시 원문 경력 |
+| career_parsed | jsonb | YES | 구조화된 경력 [{text, status}] |
+| education_from_disclosure | text | YES | 학력 정보 |
+| **분쟁 맥락** |
+| appointment_context | varchar(30) | YES | 선임 맥락 (DISPUTE_NEW/DISPUTE_REPLACEMENT/REGULAR/UNKNOWN), 기본값: 'UNKNOWN' |
+| replaced_officer_name | varchar(100) | YES | 해임된 전임자 이름 |
+| replacement_reason | text | YES | 교체 사유 |
+| **투표 결과** |
+| vote_result | varchar(200) | YES | 투표 결과 ("가결 (찬성 85.3%, 반대 14.7%)") |
+| vote_for_ratio | varchar(10) | YES | 찬성률 ("85.3%") |
+| vote_against_ratio | varchar(10) | YES | 반대률 ("14.7%") |
+| **안건 정보** |
+| agenda_number | varchar(20) | YES | 안건 번호 (제1호 의안) |
+| agenda_title | varchar(300) | YES | 안건 제목 |
+| **검증 상태** |
+| is_verified | boolean | YES | 수동 검증 완료 여부, 기본값: false |
+| verification_notes | text | YES | 검증 메모 |
+| verified_at | timestamp(tz) | YES | 검증일시 |
+| verified_by | varchar(100) | YES | 검증자 |
+| **파싱 메타데이터** |
+| extraction_confidence | varchar(10) | YES | 추출 신뢰도 (HIGH/MEDIUM/LOW) |
+| extraction_source | varchar(50) | YES | 추출 위치 (agenda/table/text) |
+| **타임스탬프** |
+| created_at | timestamp(tz) | NO | 생성일시 |
+| updated_at | timestamp(tz) | NO | 수정일시 |
+
+**연관 모델**: `app/models/dispute_officers.py`
+**연관 스크립트**: `scripts/parsers/egm_officer.py`, `scripts/pipeline/run_egm_officer_pipeline.py`
+**인덱스**: officer_id, officer_name, company_id, egm_disclosure_id, appointment_context, is_verified
+
+**선임 맥락**:
+| appointment_context | 설명 |
+|--------------------|------|
+| DISPUTE_NEW | 분쟁으로 인한 신규 선임 |
+| DISPUTE_REPLACEMENT | 분쟁으로 인한 교체 선임 |
+| REGULAR | 일반 선임 (비분쟁) |
+| UNKNOWN | 판단 불가 |
+
+---
+
 ## 시스템/기타 테이블
 
 | 테이블명 | 레코드 수 | 용도 | 주의사항 |
@@ -1202,7 +1322,11 @@ companies (1) ─────┬────── (N) officers
                    │
                    ├────── (N) stock_prices
                    │
-                   └────── (N) largest_shareholder_info
+                   ├────── (N) largest_shareholder_info
+                   │
+                   ├────── (N) egm_disclosures ──── (N) dispute_officers
+                   │
+                   └────── (N) dispute_officers
 
 users (1) ─────────┬────── (N) user_query_usage
                    │
@@ -1264,6 +1388,8 @@ UNION ALL SELECT 'report_views', COUNT(*) FROM report_views
 UNION ALL SELECT 'pipeline_runs', COUNT(*) FROM pipeline_runs
 UNION ALL SELECT 'service_applications', COUNT(*) FROM service_applications
 UNION ALL SELECT 'users', COUNT(*) FROM users
+UNION ALL SELECT 'egm_disclosures', COUNT(*) FROM egm_disclosures
+UNION ALL SELECT 'dispute_officers', COUNT(*) FROM dispute_officers
 ORDER BY 1;
 ```
 
