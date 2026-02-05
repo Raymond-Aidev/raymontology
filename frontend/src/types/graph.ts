@@ -17,6 +17,7 @@ export interface GraphNode {
   position?: string
   listedCareerCount?: number  // 상장사 임원 경력 수 (DB 조회 결과)
   deficitCareerCount?: number // 적자기업 경력 수 (최근 2년 적자 회사)
+  disputeCareerCount?: number // 경영분쟁 참여 횟수 (dispute_officers 테이블)
   // CB 노드 추가 정보
   amount?: number
   issue_date?: string

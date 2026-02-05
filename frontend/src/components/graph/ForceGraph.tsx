@@ -16,6 +16,10 @@ const COMPANY_TEXT_COLOR = '#000000'     // black
 const DEFICIT_BADGE_COLOR = '#F97316'    // orange-500
 const DEFICIT_BADGE_STROKE = '#EA580C'   // orange-600
 
+// 경영분쟁 참여 경고 배지 색상
+const DISPUTE_BADGE_COLOR = '#DC2626'    // red-600
+const DISPUTE_BADGE_STROKE = '#B91C1C'   // red-700
+
 // 이동 가능한 기업 노드 표시 (DB에 있는 기업)
 const NAVIGABLE_COMPANY_GLOW = '#60A5FA'  // blue-400 (호버 시 글로우)
 
@@ -378,6 +382,36 @@ const ForceGraph = forwardRef<ForceGraphRef, ForceGraphProps>(({
       .attr('font-weight', '700')
       .attr('font-family', 'Inter, system-ui, sans-serif')
       .text('주의')
+
+    // 경영분쟁 참여 경고 배지 (임원 노드에만 표시)
+    // 노드 좌측 상단에 작은 원형 배지로 "분쟁N" 표시
+    const disputeBadgeGroup = node.filter(d => d.type === 'officer' && (d.disputeCareerCount ?? 0) >= 1)
+      .append('g')
+      .attr('class', 'dispute-badge')
+      .attr('transform', d => {
+        const radius = getNodeRadius(d)
+        // 노드 좌측 상단에 배치 (적자기업 배지와 반대쪽)
+        const badgeX = -radius * 0.7
+        const badgeY = -radius * 0.7
+        return `translate(${badgeX}, ${badgeY})`
+      })
+
+    // 분쟁 배지 배경 원
+    disputeBadgeGroup.append('circle')
+      .attr('r', 14)
+      .attr('fill', DISPUTE_BADGE_COLOR)
+      .attr('stroke', DISPUTE_BADGE_STROKE)
+      .attr('stroke-width', 2)
+
+    // 분쟁 배지 텍스트 "분쟁N"
+    disputeBadgeGroup.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dominant-baseline', 'central')
+      .attr('fill', 'white')
+      .attr('font-size', '7px')
+      .attr('font-weight', '700')
+      .attr('font-family', 'Inter, system-ui, sans-serif')
+      .text(d => `분쟁${d.disputeCareerCount}`)
 
     // 클릭 이벤트 - 노드 채우기 (단일 선택) + 상세 패널 열기
     node.on('click', (event, d) => {
