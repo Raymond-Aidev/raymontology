@@ -86,11 +86,12 @@ docs/
 
 ---
 
-## 상태: 기업 데이터 정리 완료 v2.9 (2026-01-21)
-전체 **43개 테이블** 데이터 적재 완료. **RaymondsIndex 계산 완료 (5,257건)**.
+## 상태: 기업 데이터 정리 완료 v3.0 (2026-02-05)
+전체 **45개 테이블** 데이터 적재 완료. **RaymondsIndex 계산 완료 (5,354건)**.
 **RaymondsIndex 독립 사이트**: https://raymondsindex.konnect-ai.net 배포 완료.
 **RaymondsRisk 앱인토스**: 토스 로그인 연동 완료, 샌드박스 테스트 진행 중.
-**최근 업데이트**: 유령기업 39개 + 상장폐지 기업 774개 삭제 (총 813개), 현재 3,109개 기업 관리 중 (2026-01-21)
+**경영분쟁 임원 시스템**: EGM 공시 기반 분쟁 참여 임원 수집 완료 (391건, 255명 고유)
+**최근 업데이트**: 경영분쟁 임원 배지 기능 추가 (그래프 UI), 현재 3,109개 기업 관리 중 (2026-02-05)
 
 ---
 
@@ -263,25 +264,27 @@ cd raymondsrisk-app && npm run granite:build  # .ait 빌드
 
 ---
 
-## 현재 DB 상태 (2026-01-21 기준) ⭐
+## 현재 DB 상태 (2026-02-05 기준) ⭐
 
 | 테이블 | 레코드 수 | 상태 |
 |--------|----------|------|
-| companies | **3,109** | ✅ (3,021 LISTED + 88 ETF) - 813개 삭제 후 |
-| officers | 47,444 | ✅ |
-| officer_positions | 62,141 | ✅ |
-| disclosures | 279,258 | ✅ |
-| convertible_bonds | 1,133 | ✅ |
-| cb_subscribers | 7,026 | ✅ |
+| companies | **3,109** | ✅ (3,021 LISTED + 88 ETF) |
+| officers | 49,446 | ✅ |
+| officer_positions | 75,059 | ✅ |
+| disclosures | 279,148 | ✅ |
+| convertible_bonds | 1,128 | ✅ |
+| cb_subscribers | 7,021 | ✅ |
 | financial_statements | 9,820 | ✅ |
-| risk_signals | 1,412 | ✅ |
-| risk_scores | **3,138** | ✅ (774건 삭제 후) |
-| major_shareholders | 44,574 | ✅ |
-| affiliates | **864** | ✅ (109건 삭제 후) |
-| financial_details | 10,288 | ✅ (XBRL v3.0 파서 적용) |
-| **raymonds_index** | **5,257** | ✅ 계산 완료 |
-| **stock_prices** | **126,506** | ✅ (818건 삭제 후) |
+| risk_signals | 1,408 | ✅ |
+| risk_scores | **3,100** | ✅ |
+| major_shareholders | 60,214 | ✅ |
+| affiliates | **858** | ✅ |
+| financial_details | 9,761 | ✅ (XBRL v3.0 파서 적용) |
+| **raymonds_index** | **5,354** | ✅ 계산 완료 |
+| **stock_prices** | **129,150** | ✅ |
 | **largest_shareholder_info** | **4,599** | ✅ |
+| **egm_disclosures** | **393** | ✅ 임시주주총회 공시 ⭐신규 |
+| **dispute_officers** | **391** | ✅ 경영분쟁 선임 임원 ⭐신규 |
 | user_query_usage | - | ✅ |
 | page_contents | - | ✅ |
 

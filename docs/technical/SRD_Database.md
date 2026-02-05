@@ -1,6 +1,6 @@
 # Raymontology 데이터베이스 스키마
 
-> System Requirements Document (SRD) - 버전 1.1 | 최종 수정: 2026-01-24
+> System Requirements Document (SRD) - 버전 1.2 | 최종 수정: 2026-02-05
 
 ---
 
@@ -13,7 +13,7 @@
 | PostgreSQL | 주 데이터 저장소 | PostgreSQL 15 |
 | Neo4j | 그래프 쿼리 (선택) | Neo4j 5.x |
 
-### 1.2 테이블 현황 요약 (43개 테이블)
+### 1.2 테이블 현황 요약 (45개 테이블)
 
 | 분류 | 테이블 수 | 비고 |
 |------|----------|------|
@@ -21,6 +21,7 @@
 | 재무 | 3 | financial_* |
 | 리스크 | 4 | risk_*, convertible_bonds 등 |
 | RaymondsIndex | 2 | raymonds_index, raymonds_index_v3 |
+| **경영분쟁/임시주총** | **2** | **egm_disclosures, dispute_officers ⭐신규** |
 | 사용자/인증 | 4 | users, tokens 등 |
 | 구독/결제 | 3 | subscription_*, user_query_usage |
 | 크레딧 (토스) | 3 | credit_*, report_views |
@@ -889,6 +890,82 @@ CREATE INDEX idx_disclosures_rcept_dt ON disclosures (rcept_dt);
 
 ---
 
+## 12.5 경영분쟁/임시주총 테이블 (2026-02-05 신규) ⭐
+
+### egm_disclosures (임시주주총회 공시)
+
+```sql
+CREATE TABLE egm_disclosures (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    disclosure_id VARCHAR(50) UNIQUE NOT NULL,  -- DART 공시번호
+    company_id UUID REFERENCES companies(id),
+    corp_code VARCHAR(8) NOT NULL,
+    corp_name VARCHAR(200),
+    egm_date DATE,                              -- 주총 개최일
+    egm_type VARCHAR(30) DEFAULT 'REGULAR',     -- REGULAR, SPECIAL, COURT_ORDERED
+    disclosure_date DATE,
+    -- 분쟁 분류
+    is_dispute_related BOOLEAN DEFAULT FALSE,
+    dispute_type VARCHAR(50),                   -- HOSTILE_TAKEOVER, MANAGEMENT_CONFLICT 등
+    dispute_confidence NUMERIC(3,2),            -- 0.00~1.00
+    dispute_keywords JSONB,
+    -- 안건/임원 정보
+    agenda_items JSONB,
+    officer_changes JSONB,
+    officers_appointed INTEGER DEFAULT 0,
+    officers_dismissed INTEGER DEFAULT 0,
+    -- 파싱 상태
+    parse_status VARCHAR(20) DEFAULT 'PENDING',
+    parse_version VARCHAR(10) DEFAULT 'v2.0',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
+**레코드 수**: 393건
+
+### dispute_officers (경영분쟁 선임 임원)
+
+```sql
+CREATE TABLE dispute_officers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    officer_name VARCHAR(100) NOT NULL,
+    birth_date VARCHAR(10),                     -- YYYYMM 형식
+    position VARCHAR(100),
+    company_id UUID REFERENCES companies(id),
+    egm_disclosure_id UUID REFERENCES egm_disclosures(id) NOT NULL,
+    -- 경력 정보
+    career_from_disclosure TEXT,                -- 공시 원문 경력
+    -- 분쟁 맥락
+    appointment_context VARCHAR(30) DEFAULT 'UNKNOWN', -- DISPUTE_NEW, DISPUTE_REPLACEMENT, REGULAR
+    -- 투표 결과
+    vote_result VARCHAR(200),
+    vote_for_ratio VARCHAR(10),
+    vote_against_ratio VARCHAR(10),
+    -- 파싱 메타데이터
+    extraction_confidence VARCHAR(10),          -- HIGH, MEDIUM, LOW
+    extraction_source VARCHAR(50),              -- 테이블명 또는 'regex'
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
+**레코드 수**: 391건 (255명 고유 임원)
+
+### 경영분쟁 인덱스
+
+```sql
+CREATE INDEX idx_egm_disclosure_id ON egm_disclosures (disclosure_id);
+CREATE INDEX idx_egm_corp_code ON egm_disclosures (corp_code);
+CREATE INDEX idx_egm_is_dispute ON egm_disclosures (is_dispute_related);
+
+CREATE INDEX idx_dispute_officers_name ON dispute_officers (officer_name);
+CREATE INDEX idx_dispute_officers_company ON dispute_officers (company_id);
+CREATE INDEX idx_dispute_officers_egm ON dispute_officers (egm_disclosure_id);
+```
+
+---
+
 ## 13. 데이터 무결성 규칙
 
 ### 13.1 외래 키 제약
@@ -897,6 +974,7 @@ CREATE INDEX idx_disclosures_rcept_dt ON disclosures (rcept_dt);
 - `officer_positions.officer_id`는 `officers.id` 참조
 - `cb_subscribers.cb_id`는 `convertible_bonds.id` 참조
 - `toss_users.user_id`는 `users.id` 참조
+- `dispute_officers.egm_disclosure_id`는 `egm_disclosures.id` 참조
 
 ### 13.2 유니크 제약
 
@@ -916,4 +994,4 @@ CREATE INDEX idx_disclosures_rcept_dt ON disclosures (rcept_dt);
 
 ---
 
-*마지막 업데이트: 2026-01-24*
+*마지막 업데이트: 2026-02-05*
