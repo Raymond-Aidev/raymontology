@@ -1,8 +1,13 @@
 """
-XBRLEnhancer - IFRS ACODE 기반 재무 데이터 보완 모듈 (v3.2)
+XBRLEnhancer - IFRS ACODE 기반 재무 데이터 보완 모듈 (v3.3)
 
 기존 FinancialParser가 텍스트 패턴 매칭으로 추출하지 못한 항목을
 DART XML의 IFRS 표준 코드(ACODE)를 활용하여 보완합니다.
+
+v3.3 버그 수정 (2026-02-05):
+- TE 태그 단위 변환 버그 수정: XBRL TE 태그 값은 항상 원 단위이므로 섹션 단위 적용 제거
+- 영향: 44개 기업의 short_term_investments가 1,000,000배 오염 → 수정 필요
+- 원인: v3.1에서 섹션별 단위 감지를 TE 태그에도 적용하는 버그
 
 v3.2 확장 (2026-01-17):
 - treasury_stock ACODE 매핑 확장 (dart_TreasuryShares, dart_AcquisitionOfTreasuryShares)
@@ -309,12 +314,13 @@ class XBRLEnhancer:
             if fs_match != fs_type:
                 continue
 
-            # v3.1: 필드에 맞는 섹션의 단위 적용
-            section = self._get_section_for_field(field_name)
-            unit_multiplier = section_units.get(section, 1)
+            # v3.2 수정: XBRL TE 태그 값은 항상 원 단위이므로 단위 변환 불필요!
+            # - TE 태그: <TE ACODE="..."><P>123456789</P></TE> → 이미 원 단위
+            # - 섹션 단위 표기 (단위: 백만원)는 표 렌더링용일 뿐, TE 값에는 미적용
+            # - v3.1 버그: 44개 기업의 short_term_investments가 1,000,000배 오염됨
 
-            # 금액 파싱 (단위 적용)
-            amount = self._parse_amount(value_str, unit_multiplier)
+            # 금액 파싱 (단위 변환 없이 원본 값 사용)
+            amount = self._parse_amount(value_str, unit_multiplier=1)
             if amount is not None:
                 # 이미 값이 있으면 덮어쓰지 않음 (첫 번째 값 우선)
                 if field_name not in result:
