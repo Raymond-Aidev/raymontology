@@ -89,16 +89,16 @@ const RISK_COLORS: Record<string, string> = {
 };
 
 const HEALTH_ICONS: Record<string, string> = {
-  healthy: '\u2705',
-  warning: '\u26A0\uFE0F',
-  critical: '\u274C',
+  healthy: '✅',
+  warning: '⚠️',
+  critical: '❌',
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
-  officer: '\uC784\uC6D0',
+  officer: '임원',
   cb: 'CB',
-  shareholder: '\uB300\uC8FC\uC8FC',
-  index: '\uC778\uB371\uC2A4',
+  shareholder: '대주주',
+  index: '인덱스',
 };
 
 // =============================================================================
@@ -187,7 +187,7 @@ export default function MLTab({ token }: { token: string }) {
   }, [trainStatus?.status]);
 
   const handleActivateModel = async (version: string) => {
-    if (!confirm(`\uBAA8\uB378 ${version}\uC744 \uD65C\uC131\uD654\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?`)) return;
+    if (!confirm(`모델 ${version}을 활성화하시겠습니까?`)) return;
     try {
       const res = await fetch(`${API_BASE_URL}/admin/ml/models/${version}/activate`, {
         method: 'POST', headers,
@@ -201,7 +201,7 @@ export default function MLTab({ token }: { token: string }) {
   };
 
   const handleStartTraining = async () => {
-    const version = prompt('\uC0C8 \uBAA8\uB378 \uBC84\uC804\uC744 \uC785\uB825\uD558\uC138\uC694 (e.g. v3.0.0):');
+    const version = prompt('새 모델 버전을 입력하세요 (e.g. v3.0.0):');
     if (!version) return;
 
     try {
@@ -226,14 +226,14 @@ export default function MLTab({ token }: { token: string }) {
         setSubTab('training');
       } else {
         const err = await res.json();
-        alert(err.detail || '\uD559\uC2B5 \uC2DC\uC791 \uC2E4\uD328');
+        alert(err.detail || '학습 시작 실패');
       }
     } catch (e) {
       alert(String(e));
     }
   };
 
-  if (loading) return <div className="text-center py-12 text-gray-500">\uB85C\uB529 \uC911...</div>;
+  if (loading) return <div className="text-center py-12 text-gray-500">로딩 중...</div>;
 
   return (
     <div className="space-y-6">
@@ -246,7 +246,7 @@ export default function MLTab({ token }: { token: string }) {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Model Card */}
           <div className="bg-white border rounded-lg p-4">
-            <div className="text-xs text-gray-500 mb-1">\uD65C\uC131 \uBAA8\uB378</div>
+            <div className="text-xs text-gray-500 mb-1">활성 모델</div>
             <div className="text-2xl font-bold text-blue-600">
               {overview.active_model?.version || 'N/A'}
             </div>
@@ -257,7 +257,7 @@ export default function MLTab({ token }: { token: string }) {
 
           {/* Prediction Card */}
           <div className="bg-white border rounded-lg p-4">
-            <div className="text-xs text-gray-500 mb-1">\uC608\uCE21 \uAE30\uC5C5</div>
+            <div className="text-xs text-gray-500 mb-1">예측 기업</div>
             <div className="text-2xl font-bold">
               {overview.prediction_summary.total_companies.toLocaleString()}
             </div>
@@ -271,13 +271,13 @@ export default function MLTab({ token }: { token: string }) {
 
           {/* Feature Health Card */}
           <div className="bg-white border rounded-lg p-4">
-            <div className="text-xs text-gray-500 mb-1">\uD53C\uCC98 \uAC74\uAC15</div>
+            <div className="text-xs text-gray-500 mb-1">피처 건강</div>
             <div className="text-2xl font-bold text-green-600">
               {overview.feature_health.healthy}/{overview.feature_health.total_features}
             </div>
             <div className="text-sm text-gray-600 mt-1">
               {overview.feature_health.warning > 0 && (
-                <span className="text-yellow-600 mr-2">\u26A0 {overview.feature_health.warning}</span>
+                <span className="text-yellow-600 mr-2">⚠ {overview.feature_health.warning}</span>
               )}
               {overview.feature_health.critical > 0 && (
                 <span className="text-red-600">{"❌"} {overview.feature_health.critical}</span>
@@ -287,12 +287,12 @@ export default function MLTab({ token }: { token: string }) {
 
           {/* Detection Rate Card */}
           <div className="bg-white border rounded-lg p-4">
-            <div className="text-xs text-gray-500 mb-1">\uD0D0\uC9C0\uC728</div>
+            <div className="text-xs text-gray-500 mb-1">탐지율</div>
             <div className="text-2xl font-bold text-purple-600">
               {overview.detection_rates.suspended_critical}%
             </div>
             <div className="text-sm text-gray-600 mt-1">
-              SUSPENDED \u2192 CRITICAL
+              SUSPENDED → CRITICAL
             </div>
           </div>
         </div>
@@ -301,10 +301,10 @@ export default function MLTab({ token }: { token: string }) {
       {/* Sub-tabs */}
       <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
         {([
-          ['models', '\uBAA8\uB378 \uBE44\uAD50'],
-          ['distribution', '\uC608\uCE21 \uBD84\uD3EC'],
-          ['features', '\uD53C\uCC98 \uBAA8\uB2C8\uD130\uB9C1'],
-          ['training', '\uD559\uC2B5 \uC81C\uC5B4'],
+          ['models', '모델 비교'],
+          ['distribution', '예측 분포'],
+          ['features', '피처 모니터링'],
+          ['training', '학습 제어'],
         ] as [SubTab, string][]).map(([key, label]) => (
           <button
             key={key}
@@ -346,13 +346,13 @@ function ModelsPanel({
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-4 py-3 text-left font-medium text-gray-700">\uBC84\uC804</th>
+              <th className="px-4 py-3 text-left font-medium text-gray-700">버전</th>
               <th className="px-4 py-3 text-right font-medium text-gray-700">AUC-ROC</th>
               <th className="px-4 py-3 text-right font-medium text-gray-700">P@10%</th>
               <th className="px-4 py-3 text-right font-medium text-gray-700">Recall</th>
               <th className="px-4 py-3 text-right font-medium text-gray-700">Brier</th>
-              <th className="px-4 py-3 text-right font-medium text-gray-700">\uD559\uC2B5\uC77C</th>
-              <th className="px-4 py-3 text-center font-medium text-gray-700">\uC0C1\uD0DC</th>
+              <th className="px-4 py-3 text-right font-medium text-gray-700">학습일</th>
+              <th className="px-4 py-3 text-center font-medium text-gray-700">상태</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -367,14 +367,14 @@ function ModelsPanel({
                 <td className="px-4 py-3 text-center">
                   {m.is_active ? (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                      \u25CF \uD65C\uC131
+                      ● 활성
                     </span>
                   ) : (
                     <button
                       onClick={() => onActivate(m.version)}
                       className="text-xs text-gray-500 hover:text-blue-600 underline"
                     >
-                      \uD65C\uC131\uD654
+                      활성화
                     </button>
                   )}
                 </td>
@@ -386,8 +386,8 @@ function ModelsPanel({
 
       {validation && (
         <div className="grid grid-cols-2 gap-4">
-          <DetectionCard title="\uAC70\uB798\uC815\uC9C0 \uD0D0\uC9C0" data={validation.suspended_detection} />
-          <DetectionCard title="\uAD00\uB9AC\uC885\uBAA9 \uD0D0\uC9C0" data={validation.managed_detection} />
+          <DetectionCard title="거래정지 탐지" data={validation.suspended_detection} />
+          <DetectionCard title="관리종목 탐지" data={validation.managed_detection} />
         </div>
       )}
     </div>
@@ -397,7 +397,7 @@ function ModelsPanel({
 function DetectionCard({ title, data }: { title: string; data: DetectionStat }) {
   return (
     <div className="bg-white border rounded-lg p-4">
-      <h4 className="text-sm font-medium text-gray-700 mb-3">{title} ({data.total}\uAC1C)</h4>
+      <h4 className="text-sm font-medium text-gray-700 mb-3">{title} ({data.total}개)</h4>
       <div className="space-y-2">
         {Object.entries(data.by_risk_level)
           .sort(([a], [b]) => {
@@ -438,7 +438,7 @@ function DistributionPanel({
     <div className="space-y-4">
       {/* Histogram */}
       <div className="bg-white border rounded-lg p-4">
-        <h4 className="text-sm font-medium text-gray-700 mb-3">\uD655\uB960 \uBD84\uD3EC \uD788\uC2A4\uD1A0\uADF8\uB7A8</h4>
+        <h4 className="text-sm font-medium text-gray-700 mb-3">확률 분포 히스토그램</h4>
         <div className="space-y-1">
           {data.histogram.map((bucket) => {
             const prob = parseFloat(bucket.range.split('-')[0]);
@@ -490,7 +490,7 @@ function DistributionPanel({
       {/* Market Distribution */}
       {Object.keys(data.by_market).length > 0 && (
         <div className="bg-white border rounded-lg p-4">
-          <h4 className="text-sm font-medium text-gray-700 mb-3">\uC2DC\uC7A5\uBCC4 \uBD84\uD3EC</h4>
+          <h4 className="text-sm font-medium text-gray-700 mb-3">시장별 분포</h4>
           <div className="space-y-2">
             {Object.entries(data.by_market).map(([market, levels]) => {
               const total = Object.values(levels).reduce((a, b) => a + b, 0);
@@ -550,7 +550,7 @@ function FeaturesPanel({
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
-            {cat === 'all' ? '\uC804\uCCB4' : CATEGORY_LABELS[cat] || cat}
+            {cat === 'all' ? '전체' : CATEGORY_LABELS[cat] || cat}
           </button>
         ))}
       </div>
@@ -560,14 +560,14 @@ function FeaturesPanel({
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-4 py-3 text-left font-medium text-gray-700">\uD53C\uCC98</th>
-              <th className="px-4 py-3 text-left font-medium text-gray-700">\uCE74\uD14C\uACE0\uB9AC</th>
+              <th className="px-4 py-3 text-left font-medium text-gray-700">피처</th>
+              <th className="px-4 py-3 text-left font-medium text-gray-700">카테고리</th>
               <th className="px-4 py-3 text-right font-medium text-gray-700">NULL%</th>
-              <th className="px-4 py-3 text-right font-medium text-gray-700">\uD3C9\uADE0</th>
-              <th className="px-4 py-3 text-right font-medium text-gray-700">\uD45C\uC900\uD3B8\uCC28</th>
+              <th className="px-4 py-3 text-right font-medium text-gray-700">평균</th>
+              <th className="px-4 py-3 text-right font-medium text-gray-700">표준편차</th>
               <th className="px-4 py-3 text-right font-medium text-gray-700">Min</th>
               <th className="px-4 py-3 text-right font-medium text-gray-700">Max</th>
-              <th className="px-4 py-3 text-center font-medium text-gray-700">\uC0C1\uD0DC</th>
+              <th className="px-4 py-3 text-center font-medium text-gray-700">상태</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -608,9 +608,9 @@ function TrainingPanel({
       <div className="bg-white border rounded-lg p-4">
         <div className="flex items-center justify-between">
           <div>
-            <h4 className="text-sm font-medium text-gray-700">\uBAA8\uB378 \uC7AC\uD559\uC2B5</h4>
+            <h4 className="text-sm font-medium text-gray-700">모델 재학습</h4>
             <p className="text-xs text-gray-500 mt-1">
-              \uD604\uC7AC \uD53C\uCC98 \uB370\uC774\uD130\uB85C \uC0C8 \uBAA8\uB378\uC744 \uD559\uC2B5\uD569\uB2C8\uB2E4
+              현재 피처 데이터로 새 모델을 학습합니다
             </p>
           </div>
           <button
@@ -622,7 +622,7 @@ function TrainingPanel({
                 : 'bg-blue-600 text-white hover:bg-blue-700'
             }`}
           >
-            {isRunning ? '\uD559\uC2B5 \uC911...' : '\uD559\uC2B5 \uC2DC\uC791'}
+            {isRunning ? '학습 중...' : '학습 시작'}
           </button>
         </div>
       </div>
@@ -632,7 +632,7 @@ function TrainingPanel({
         <div className="bg-white border rounded-lg p-4">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-medium text-gray-700">
-              \uD559\uC2B5 \uC9C4\uD589 \uC0C1\uD669
+              학습 진행 상황
               <span className="ml-2 text-xs text-gray-400">{trainStatus.task_id}</span>
             </h4>
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -660,10 +660,10 @@ function TrainingPanel({
             {trainStatus.phases.map((phase, i) => (
               <div key={i} className="flex items-center gap-2 text-xs">
                 <span className="w-4 text-center">
-                  {phase.status === 'completed' ? '\u2705' :
-                   phase.status === 'in_progress' ? '\u27F3' :
-                   phase.status === 'failed' ? '\u274C' :
-                   phase.status === 'skipped' ? '\u23ED' : '\u23F3'}
+                  {phase.status === 'completed' ? '✅' :
+                   phase.status === 'in_progress' ? '⟳' :
+                   phase.status === 'failed' ? '❌' :
+                   phase.status === 'skipped' ? '⏭' : '⏳'}
                 </span>
                 <span className={`${phase.status === 'in_progress' ? 'text-blue-700 font-medium' : 'text-gray-600'}`}>
                   {phase.name}
@@ -675,7 +675,7 @@ function TrainingPanel({
           {/* Elapsed time */}
           {trainStatus.elapsed_sec != null && (
             <div className="mt-3 text-xs text-gray-500">
-              \uACBD\uACFC: {Math.floor(trainStatus.elapsed_sec / 60)}\uBD84 {trainStatus.elapsed_sec % 60}\uCD08
+              경과: {Math.floor(trainStatus.elapsed_sec / 60)}분 {trainStatus.elapsed_sec % 60}초
             </div>
           )}
 
