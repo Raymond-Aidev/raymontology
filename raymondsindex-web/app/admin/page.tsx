@@ -132,7 +132,7 @@ type TabType = 'users' | 'database' | 'quality' | 'ml';
 
 export default function AdminPage() {
   const router = useRouter();
-  const { user, isAuthenticated, isLoading: authLoading, token } = useAuthStore();
+  const { user, isAuthenticated, isLoading: authLoading, isHydrated, token } = useAuthStore();
 
   // Tab state
   const [activeTab, setActiveTab] = useState<TabType>('users');
@@ -161,9 +161,9 @@ export default function AdminPage() {
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
   const [isUpdatingSubscription, setIsUpdatingSubscription] = useState(false);
 
-  // Auth check
+  // Auth check - isHydrated 확인으로 Zustand persist 복원 완료 대기
   useEffect(() => {
-    if (authLoading) return;
+    if (!isHydrated || authLoading) return;
 
     if (!isAuthenticated) {
       router.push('/login');
@@ -174,7 +174,7 @@ export default function AdminPage() {
       router.push('/');
       return;
     }
-  }, [isAuthenticated, user, authLoading, router]);
+  }, [isAuthenticated, user, authLoading, isHydrated, router]);
 
   // API helper
   const apiCall = useCallback(async (endpoint: string, options: RequestInit = {}) => {
@@ -334,7 +334,7 @@ export default function AdminPage() {
   };
 
   // Loading or no permission
-  if (authLoading || !user?.is_superuser) {
+  if (!isHydrated || authLoading || !user?.is_superuser) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />

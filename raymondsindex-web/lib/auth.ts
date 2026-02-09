@@ -56,6 +56,7 @@ interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isHydrated: boolean;
   error: string | null;
 
   login: (credentials: LoginCredentials) => Promise<boolean>;
@@ -64,6 +65,7 @@ interface AuthState {
   checkAuth: () => Promise<boolean>;
   clearError: () => void;
   setToken: (token: string) => void;
+  setHydrated: () => void;
 }
 
 const initialState = {
@@ -71,6 +73,7 @@ const initialState = {
   token: null,
   isAuthenticated: false,
   isLoading: false,
+  isHydrated: false,
   error: null,
 };
 
@@ -212,6 +215,8 @@ export const useAuthStore = create<AuthState>()(
         setToken(token);
         set({ token });
       },
+
+      setHydrated: () => set({ isHydrated: true }),
     }),
     {
       name: 'raymondsindex-auth',
@@ -220,6 +225,9 @@ export const useAuthStore = create<AuthState>()(
         token: state.token,
         isAuthenticated: state.isAuthenticated,
       }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHydrated();
+      },
     }
   )
 );
