@@ -48,7 +48,7 @@ export default function LoginPage() {
   }, [email, password, login, clearError, router]);
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center py-8 px-4">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-8 px-4">
       <div className="w-full max-w-md">
         {/* 로고 */}
         <div className="flex justify-center mb-8">
@@ -58,8 +58,8 @@ export default function LoginPage() {
         </div>
 
         {/* 로그인 카드 */}
-        <div className="bg-zinc-900/50 border border-white/10 rounded-2xl p-8 shadow-xl shadow-black/50 backdrop-blur-sm">
-          <h2 className="text-2xl font-bold text-white mb-6 text-center">
+        <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-xl shadow-gray-200/50 backdrop-blur-sm">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
             로그인
           </h2>
 
@@ -71,7 +71,7 @@ export default function LoginPage() {
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-zinc-400 mb-2">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-600 mb-2">
                 이메일
               </label>
               <input
@@ -81,12 +81,12 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="example@email.com"
                 autoComplete="email"
-                className="w-full px-4 py-3 bg-zinc-800/50 border border-white/10 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#5E6AD2]/30 focus:border-[#5E6AD2]/50 transition-colors"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5E6AD2]/30 focus:border-[#5E6AD2]/50 transition-colors"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-zinc-400 mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-600 mb-2">
                 비밀번호
               </label>
               <div className="relative">
@@ -97,12 +97,12 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="비밀번호 입력"
                   autoComplete="current-password"
-                  className="w-full px-4 py-3 pr-12 bg-zinc-800/50 border border-white/10 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#5E6AD2]/30 focus:border-[#5E6AD2]/50 transition-colors"
+                  className="w-full px-4 py-3 pr-12 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5E6AD2]/30 focus:border-[#5E6AD2]/50 transition-colors"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-zinc-500 hover:text-zinc-300"
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-500 hover:text-gray-700"
                 >
                   {showPassword ? (
                     <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -139,8 +139,8 @@ export default function LoginPage() {
           </form>
 
           {/* 회원가입 링크 */}
-          <div className="mt-6 pt-6 border-t border-white/10 text-center">
-            <p className="text-sm text-zinc-500">
+          <div className="mt-6 pt-6 border-t border-gray-200 text-center">
+            <p className="text-sm text-gray-500">
               계정이 없으신가요?{' '}
               <Link href="/signup" className="text-[#8B95E8] hover:underline font-medium">
                 회원가입
@@ -151,12 +151,12 @@ export default function LoginPage() {
 
         {/* 하단 링크 */}
         <div className="mt-6 text-center">
-          <p className="text-sm text-zinc-500">
-            <Link href="/" className="hover:text-zinc-300 hover:underline transition-colors">
+          <p className="text-sm text-gray-500">
+            <Link href="/" className="hover:text-gray-700 hover:underline transition-colors">
               메인으로
             </Link>
             {' · '}
-            <Link href="/methodology" className="hover:text-zinc-300 hover:underline transition-colors">
+            <Link href="/methodology" className="hover:text-gray-700 hover:underline transition-colors">
               평가 방법론
             </Link>
           </p>

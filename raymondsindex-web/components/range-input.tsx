@@ -115,18 +115,18 @@ export function RangeInput({
     <div className="flex items-center gap-2">
       {/* 라벨 */}
       <div className="w-24 shrink-0">
-        <span className="text-xs text-zinc-400" title={tooltip}>
+        <span className="text-xs text-gray-600" title={tooltip}>
           {label}
         </span>
       </div>
 
       {/* 최소값 조절 */}
-      <div className="flex items-center bg-zinc-800 rounded border border-zinc-700">
-        <span className="text-xs text-zinc-500 px-1.5">최소</span>
-        <div className="flex flex-col border-l border-zinc-700">
+      <div className="flex items-center bg-gray-100 rounded border border-gray-300">
+        <span className="text-xs text-gray-500 px-1.5">최소</span>
+        <div className="flex flex-col border-l border-gray-300">
           <button
             type="button"
-            className="px-1 py-0 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-colors"
+            className="px-1 py-0 hover:bg-gray-200 text-gray-600 hover:text-gray-900 transition-colors"
             onMouseDown={() => startHold(() => handleMinChange(1))}
             onMouseUp={stopHold}
             onMouseLeave={stopHold}
@@ -137,7 +137,7 @@ export function RangeInput({
           </button>
           <button
             type="button"
-            className="px-1 py-0 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-colors"
+            className="px-1 py-0 hover:bg-gray-200 text-gray-600 hover:text-gray-900 transition-colors"
             onMouseDown={() => startHold(() => handleMinChange(-1))}
             onMouseUp={stopHold}
             onMouseLeave={stopHold}
@@ -147,20 +147,20 @@ export function RangeInput({
             <ChevronDown className="w-3 h-3" />
           </button>
         </div>
-        <span className="text-xs font-medium text-white px-2 min-w-[60px] text-right">
+        <span className="text-xs font-medium text-gray-900 px-2 min-w-[60px] text-right">
           {format(minValue)}
         </span>
       </div>
 
-      <span className="text-zinc-600">~</span>
+      <span className="text-gray-400">~</span>
 
       {/* 최대값 조절 */}
-      <div className="flex items-center bg-zinc-800 rounded border border-zinc-700">
-        <span className="text-xs text-zinc-500 px-1.5">최대</span>
-        <div className="flex flex-col border-l border-zinc-700">
+      <div className="flex items-center bg-gray-100 rounded border border-gray-300">
+        <span className="text-xs text-gray-500 px-1.5">최대</span>
+        <div className="flex flex-col border-l border-gray-300">
           <button
             type="button"
-            className="px-1 py-0 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-colors"
+            className="px-1 py-0 hover:bg-gray-200 text-gray-600 hover:text-gray-900 transition-colors"
             onMouseDown={() => startHold(() => handleMaxChange(1))}
             onMouseUp={stopHold}
             onMouseLeave={stopHold}
@@ -171,7 +171,7 @@ export function RangeInput({
           </button>
           <button
             type="button"
-            className="px-1 py-0 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-colors"
+            className="px-1 py-0 hover:bg-gray-200 text-gray-600 hover:text-gray-900 transition-colors"
             onMouseDown={() => startHold(() => handleMaxChange(-1))}
             onMouseUp={stopHold}
             onMouseLeave={stopHold}
@@ -181,7 +181,7 @@ export function RangeInput({
             <ChevronDown className="w-3 h-3" />
           </button>
         </div>
-        <span className="text-xs font-medium text-white px-2 min-w-[60px] text-right">
+        <span className="text-xs font-medium text-gray-900 px-2 min-w-[60px] text-right">
           {format(maxValue)}
         </span>
       </div>
@@ -356,7 +356,7 @@ export function CompactRangeInput({
     <div className="flex flex-col">
       <button
         type="button"
-        className="px-0.5 hover:bg-zinc-600 text-zinc-400 hover:text-white transition-colors rounded-t"
+        className="px-0.5 hover:bg-gray-200 text-gray-600 hover:text-gray-900 transition-colors rounded-t"
         onMouseDown={() => startHold(onUp)}
         onMouseUp={stopHold}
         onMouseLeave={stopHold}
@@ -367,7 +367,7 @@ export function CompactRangeInput({
       </button>
       <button
         type="button"
-        className="px-0.5 hover:bg-zinc-600 text-zinc-400 hover:text-white transition-colors rounded-b"
+        className="px-0.5 hover:bg-gray-200 text-gray-600 hover:text-gray-900 transition-colors rounded-b"
         onMouseDown={() => startHold(onDown)}
         onMouseUp={stopHold}
         onMouseLeave={stopHold}
@@ -380,16 +380,16 @@ export function CompactRangeInput({
   );
 
   return (
-    <div className="bg-zinc-800/50 rounded-lg p-2 border border-zinc-700/50">
+    <div className="bg-gray-100/50 rounded-lg p-2 border border-gray-300/50">
       {/* 라벨 */}
-      <div className="text-[10px] text-zinc-500 mb-1.5 truncate" title={tooltip}>
+      <div className="text-[10px] text-gray-500 mb-1.5 truncate" title={tooltip}>
         {label}
       </div>
 
       {/* 입력 영역 */}
       <div className="flex items-center gap-1">
         {/* 최소값 */}
-        <div className="flex items-center bg-zinc-900/50 rounded border border-zinc-600/50 flex-1">
+        <div className="flex items-center bg-white rounded border border-gray-200 flex-1">
           <ArrowButtons
             onUp={() => handleMinChange(1)}
             onDown={() => handleMinChange(-1)}
@@ -402,13 +402,13 @@ export function CompactRangeInput({
               onChange={(e) => setMinInputValue(e.target.value)}
               onBlur={commitMinValue}
               onKeyDown={handleMinKeyDown}
-              className="text-[11px] font-medium text-white px-1 flex-1 text-center bg-transparent outline-none w-full min-w-0"
+              className="text-[11px] font-medium text-gray-900 px-1 flex-1 text-center bg-transparent outline-none w-full min-w-0"
               placeholder={minValue.toString()}
             />
           ) : (
             <span
               onClick={startEditingMin}
-              className="text-[11px] font-medium text-white px-1 flex-1 text-center truncate cursor-pointer hover:bg-zinc-700/50 rounded transition-colors"
+              className="text-[11px] font-medium text-gray-900 px-1 flex-1 text-center truncate cursor-pointer hover:bg-gray-200/50 rounded transition-colors"
               title="클릭하여 직접 입력"
             >
               {format(minValue)}
@@ -416,10 +416,10 @@ export function CompactRangeInput({
           )}
         </div>
 
-        <span className="text-zinc-600 text-[10px]">~</span>
+        <span className="text-gray-400 text-[10px]">~</span>
 
         {/* 최대값 */}
-        <div className="flex items-center bg-zinc-900/50 rounded border border-zinc-600/50 flex-1">
+        <div className="flex items-center bg-white rounded border border-gray-200 flex-1">
           <ArrowButtons
             onUp={() => handleMaxChange(1)}
             onDown={() => handleMaxChange(-1)}
@@ -432,13 +432,13 @@ export function CompactRangeInput({
               onChange={(e) => setMaxInputValue(e.target.value)}
               onBlur={commitMaxValue}
               onKeyDown={handleMaxKeyDown}
-              className="text-[11px] font-medium text-white px-1 flex-1 text-center bg-transparent outline-none w-full min-w-0"
+              className="text-[11px] font-medium text-gray-900 px-1 flex-1 text-center bg-transparent outline-none w-full min-w-0"
               placeholder={maxValue.toString()}
             />
           ) : (
             <span
               onClick={startEditingMax}
-              className="text-[11px] font-medium text-white px-1 flex-1 text-center truncate cursor-pointer hover:bg-zinc-700/50 rounded transition-colors"
+              className="text-[11px] font-medium text-gray-900 px-1 flex-1 text-center truncate cursor-pointer hover:bg-gray-200/50 rounded transition-colors"
               title="클릭하여 직접 입력"
             >
               {format(maxValue)}

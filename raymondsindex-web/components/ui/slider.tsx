@@ -41,8 +41,8 @@ function Slider({
       <SliderPrimitive.Track
         data-slot="slider-track"
         className={cn(
-          // Linear-style track
-          "bg-zinc-800 relative grow overflow-hidden rounded-full",
+          // Light track
+          "bg-gray-200 relative grow overflow-hidden rounded-full",
           "data-[orientation=horizontal]:h-1.5 data-[orientation=horizontal]:w-full",
           "data-[orientation=vertical]:h-full data-[orientation=vertical]:w-1.5"
         )}
@@ -65,7 +65,7 @@ function Slider({
             // Linear-style thumb
             "block size-4 shrink-0 rounded-full",
             "bg-white border-2 border-[#5E6AD2]",
-            "shadow-md shadow-black/30",
+            "shadow-md shadow-gray-300",
             "transition-all",
             // Hover/focus ring
             "ring-[#5E6AD2]/30 hover:ring-4 focus-visible:ring-4 focus-visible:outline-none",

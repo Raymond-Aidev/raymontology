@@ -103,9 +103,9 @@ function formatPercent(num: number | null | undefined): string {
 
 // M&A 등급 배지 컴포넌트
 function MAGradeBadge({ grade }: { grade: string | null }) {
-  if (!grade) return <span className="text-zinc-500">-</span>;
+  if (!grade) return <span className="text-gray-500">-</span>;
   return (
-    <Badge className={`${MA_GRADE_COLORS[grade] || 'bg-zinc-600'} font-medium`}>
+    <Badge className={`${MA_GRADE_COLORS[grade] || 'bg-gray-400'} font-medium`}>
       {grade}
     </Badge>
   );
@@ -265,13 +265,13 @@ export default function MATargetPage() {
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <Target className="w-8 h-8 text-red-500" />
-          <h1 className="text-3xl font-bold text-white">적대적 M&A 분석</h1>
+          <h1 className="text-3xl font-bold text-gray-900">적대적 M&A 분석</h1>
         </div>
-        <p className="text-zinc-400">
+        <p className="text-gray-600">
           적대적 M&A 검토 대상 기업을 분석합니다. 현금성 자산, 시가총액, 성장성 지표를 종합 평가합니다.
         </p>
         {data?.snapshot_date && (
-          <p className="text-sm text-zinc-500 mt-1">
+          <p className="text-sm text-gray-500 mt-1">
             기준일: {data.snapshot_date}
           </p>
         )}
@@ -285,8 +285,8 @@ export default function MATargetPage() {
               <div className="flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-[#8B95E8]" />
                 <div>
-                  <p className="text-sm text-zinc-500">분석 기업</p>
-                  <p className="text-2xl font-bold text-white">{formatNumber(stats.total_companies)}</p>
+                  <p className="text-sm text-gray-500">분석 기업</p>
+                  <p className="text-2xl font-bold text-gray-900">{formatNumber(stats.total_companies)}</p>
                 </div>
               </div>
             </CardContent>
@@ -296,8 +296,8 @@ export default function MATargetPage() {
               <div className="flex items-center gap-2">
                 <Target className="w-5 h-5 text-red-500" />
                 <div>
-                  <p className="text-sm text-zinc-500">평균 점수</p>
-                  <p className="text-2xl font-bold text-white">{stats.average_score?.toFixed(1) || '-'}</p>
+                  <p className="text-sm text-gray-500">평균 점수</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.average_score?.toFixed(1) || '-'}</p>
                 </div>
               </div>
             </CardContent>
@@ -307,8 +307,8 @@ export default function MATargetPage() {
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-green-400" />
                 <div>
-                  <p className="text-sm text-zinc-500">최고 점수</p>
-                  <p className="text-2xl font-bold text-white">{stats.max_score?.toFixed(1) || '-'}</p>
+                  <p className="text-sm text-gray-500">최고 점수</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.max_score?.toFixed(1) || '-'}</p>
                 </div>
               </div>
             </CardContent>
@@ -318,8 +318,8 @@ export default function MATargetPage() {
               <div className="flex items-center gap-2">
                 <TrendingDown className="w-5 h-5 text-orange-400" />
                 <div>
-                  <p className="text-sm text-zinc-500">최저 점수</p>
-                  <p className="text-2xl font-bold text-white">{stats.min_score?.toFixed(1) || '-'}</p>
+                  <p className="text-sm text-gray-500">최저 점수</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.min_score?.toFixed(1) || '-'}</p>
                 </div>
               </div>
             </CardContent>
@@ -354,7 +354,7 @@ export default function MATargetPage() {
         <CardContent className="space-y-6">
           {/* 등급 필터 */}
           <div>
-            <p className="text-sm font-medium text-zinc-300 mb-2">적대적 M&A 등급</p>
+            <p className="text-sm font-medium text-gray-700 mb-2">적대적 M&A 등급</p>
             <div className="flex flex-wrap gap-2">
               {MA_GRADES.map((grade) => (
                 <Badge
@@ -373,7 +373,7 @@ export default function MATargetPage() {
 
           {/* 시장 필터 */}
           <div>
-            <p className="text-sm font-medium text-zinc-300 mb-2">시장</p>
+            <p className="text-sm font-medium text-gray-700 mb-2">시장</p>
             <div className="flex flex-wrap gap-2">
               {MARKETS.map((market) => (
                 <Badge
@@ -475,8 +475,8 @@ export default function MATargetPage() {
 
       {/* 정렬 및 결과 수 */}
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-zinc-400">
-          총 <span className="font-medium text-white">{formatNumber(data?.total || 0)}</span>개 기업
+        <p className="text-sm text-gray-600">
+          총 <span className="font-medium text-gray-900">{formatNumber(data?.total || 0)}</span>개 기업
         </p>
         <Select value={sort} onValueChange={(value) => {
           setSort(value as MATargetParams['sort']);
@@ -505,11 +505,11 @@ export default function MATargetPage() {
               <Loader2 className="w-8 h-8 animate-spin text-[#5E6AD2]" />
             </div>
           ) : error ? (
-            <div className="text-center py-20 text-zinc-500">
+            <div className="text-center py-20 text-gray-500">
               <p>{error}</p>
             </div>
           ) : data?.items.length === 0 ? (
-            <div className="text-center py-20 text-zinc-500">
+            <div className="text-center py-20 text-gray-500">
               <p>조건에 맞는 기업이 없습니다.</p>
               <p className="text-sm mt-2">필터 조건을 조정해 보세요.</p>
             </div>
@@ -529,15 +529,15 @@ export default function MATargetPage() {
               </TableHeader>
               <TableBody>
                 {data?.items.map((company, index) => (
-                  <TableRow key={company.company_id} className="hover:bg-white/5">
-                    <TableCell className="text-center text-zinc-500">
+                  <TableRow key={company.company_id} className="hover:bg-gray-50">
+                    <TableCell className="text-center text-gray-500">
                       {(page - 1) * PAGE_SIZE + index + 1}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Link
                           href={`/company/${company.company_id}`}
-                          className="font-medium text-white hover:text-[#8B95E8]"
+                          className="font-medium text-gray-900 hover:text-[#5E6AD2]"
                         >
                           {company.name}
                         </Link>
@@ -549,18 +549,18 @@ export default function MATargetPage() {
                           />
                         )}
                       </div>
-                      <p className="text-xs text-zinc-500">{company.stock_code}</p>
+                      <p className="text-xs text-gray-500">{company.stock_code}</p>
                     </TableCell>
                     <TableCell className="text-center">
                       <MAGradeBadge grade={company.ma_target_grade} />
                     </TableCell>
-                    <TableCell className="text-center font-medium text-white">
+                    <TableCell className="text-center font-medium text-gray-900">
                       {company.ma_target_score?.toFixed(1) || '-'}
                     </TableCell>
-                    <TableCell className="text-right text-zinc-300">
+                    <TableCell className="text-right text-gray-700">
                       {formatMarketCap(company.market_cap_calculated)}
                     </TableCell>
-                    <TableCell className="text-right text-zinc-300">
+                    <TableCell className="text-right text-gray-700">
                       {formatMarketCap(company.total_liquid_assets)}
                     </TableCell>
                     <TableCell className="text-right">
@@ -592,7 +592,7 @@ export default function MATargetPage() {
           >
             <ChevronLeft className="w-4 h-4" />
           </Button>
-          <span className="text-sm text-zinc-400 px-4">
+          <span className="text-sm text-gray-600 px-4">
             {page} / {totalPages}
           </span>
           <Button
@@ -610,46 +610,46 @@ export default function MATargetPage() {
       <Card className="mt-8">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <HelpCircle className="w-5 h-5 text-zinc-400" />
+            <HelpCircle className="w-5 h-5 text-gray-600" />
             적대적 M&A 점수 계산 기준
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div className="p-3 bg-zinc-800/50 rounded-lg border border-white/5">
+            <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-sm font-medium text-white">현금/시총 비율</span>
+                <span className="text-sm font-medium text-gray-900">현금/시총 비율</span>
                 <Badge variant="outline">25점</Badge>
               </div>
-              <p className="text-xs text-zinc-500">현금성 자산이 시가총액 대비 높을수록 고점수</p>
+              <p className="text-xs text-gray-500">현금성 자산이 시가총액 대비 높을수록 고점수</p>
             </div>
-            <div className="p-3 bg-zinc-800/50 rounded-lg border border-white/5">
+            <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-sm font-medium text-white">유형자산 증가율</span>
+                <span className="text-sm font-medium text-gray-900">유형자산 증가율</span>
                 <Badge variant="outline">20점</Badge>
               </div>
-              <p className="text-xs text-zinc-500">YoY 유형자산 성장률 (20% 이상 만점)</p>
+              <p className="text-xs text-gray-500">YoY 유형자산 성장률 (20% 이상 만점)</p>
             </div>
-            <div className="p-3 bg-zinc-800/50 rounded-lg border border-white/5">
+            <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-sm font-medium text-white">매출 증감율</span>
+                <span className="text-sm font-medium text-gray-900">매출 증감율</span>
                 <Badge variant="outline">20점</Badge>
               </div>
-              <p className="text-xs text-zinc-500">YoY 매출 성장률 (20% 이상 만점)</p>
+              <p className="text-xs text-gray-500">YoY 매출 성장률 (20% 이상 만점)</p>
             </div>
-            <div className="p-3 bg-zinc-800/50 rounded-lg border border-white/5">
+            <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-sm font-medium text-white">영업이익 증감율</span>
+                <span className="text-sm font-medium text-gray-900">영업이익 증감율</span>
                 <Badge variant="outline">20점</Badge>
               </div>
-              <p className="text-xs text-zinc-500">YoY 영업이익 성장률 (20% 이상 만점)</p>
+              <p className="text-xs text-gray-500">YoY 영업이익 성장률 (20% 이상 만점)</p>
             </div>
-            <div className="p-3 bg-zinc-800/50 rounded-lg border border-white/5">
+            <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-sm font-medium text-white">시가총액 규모</span>
+                <span className="text-sm font-medium text-gray-900">시가총액 규모</span>
                 <Badge variant="outline">15점</Badge>
               </div>
-              <p className="text-xs text-zinc-500">적정 인수 규모 (500억~5000억 만점)</p>
+              <p className="text-xs text-gray-500">적정 인수 규모 (500억~5000억 만점)</p>
             </div>
           </div>
         </CardContent>

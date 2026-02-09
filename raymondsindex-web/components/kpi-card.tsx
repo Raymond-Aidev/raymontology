@@ -40,16 +40,16 @@ export function KPICard({
     ? 'text-green-400'
     : trend?.direction === 'down'
       ? 'text-red-400'
-      : 'text-zinc-500';
+      : 'text-gray-500';
 
   if (isLoading) {
     return (
       <Card className={cn('relative overflow-hidden', className)}>
         <CardContent className="p-2.5">
           <div className="animate-pulse">
-            <div className="h-3 w-16 bg-zinc-800 rounded mb-1.5" />
-            <div className="h-6 w-20 bg-zinc-800 rounded mb-0.5" />
-            <div className="h-2.5 w-14 bg-zinc-800 rounded" />
+            <div className="h-3 w-16 bg-gray-200 rounded mb-1.5" />
+            <div className="h-6 w-20 bg-gray-200 rounded mb-0.5" />
+            <div className="h-2.5 w-14 bg-gray-200 rounded" />
           </div>
         </CardContent>
       </Card>
@@ -57,25 +57,25 @@ export function KPICard({
   }
 
   return (
-    <Card className={cn('relative overflow-hidden hover:bg-white/[0.02] transition-colors', className)}>
+    <Card className={cn('relative overflow-hidden hover:bg-gray-50 transition-colors', className)}>
       <CardContent className="p-2.5">
         {/* 헤더: 타이틀 + 아이콘 */}
         <div className="flex items-center justify-between mb-1">
-          <span className="text-xs font-medium text-zinc-500">
+          <span className="text-xs font-medium text-gray-500">
             {title}
           </span>
           {Icon && (
-            <Icon className="w-3.5 h-3.5 text-zinc-500" />
+            <Icon className="w-3.5 h-3.5 text-gray-500" />
           )}
         </div>
 
         {/* 메인 값 */}
         <div className="flex items-baseline gap-0.5">
-          <span className="text-lg font-semibold text-white">
+          <span className="text-lg font-semibold text-gray-900">
             {typeof value === 'number' ? value.toLocaleString() : value}
           </span>
           {suffix && (
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-gray-500">
               {suffix}
             </span>
           )}
@@ -90,12 +90,12 @@ export function KPICard({
             </div>
           )}
           {percentage !== undefined && (
-            <span className="text-[10px] text-zinc-500">
+            <span className="text-[10px] text-gray-500">
               전체의 {percentage.toFixed(1)}%
             </span>
           )}
           {subtitle && (
-            <span className="text-[10px] text-zinc-500">
+            <span className="text-[10px] text-gray-500">
               {subtitle}
             </span>
           )}

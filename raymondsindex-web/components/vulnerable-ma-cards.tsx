@@ -29,7 +29,7 @@ export function VulnerableMACards({ limit = 5, compact = false }: VulnerableMACa
         <CardContent>
           <div className={`animate-pulse ${compact ? 'grid grid-cols-5 gap-2' : 'space-y-2'}`}>
             {[...Array(compact ? 5 : 3)].map((_, i) => (
-              <div key={i} className={compact ? 'h-24 bg-zinc-800 rounded-lg' : 'h-20 bg-zinc-800 rounded-lg'} />
+              <div key={i} className={compact ? 'h-24 bg-gray-200 rounded-lg' : 'h-20 bg-gray-200 rounded-lg'} />
             ))}
           </div>
         </CardContent>
@@ -46,14 +46,14 @@ export function VulnerableMACards({ limit = 5, compact = false }: VulnerableMACa
           <CardTitle className="flex items-center gap-1.5 text-sm">
             <Target className="w-3.5 h-3.5 text-purple-500" />
             적대적 M&A 취약기업 TOP {limit}
-            <span className="text-[10px] text-zinc-500 font-normal ml-2">
+            <span className="text-[10px] text-gray-500 font-normal ml-2">
               CEI+CGI 점수 낮음 + 대주주 지분율 5% 이하
             </span>
           </CardTitle>
         </CardHeader>
         <CardContent>
           {companies.length === 0 ? (
-            <div className="text-center py-4 text-zinc-500 text-sm">
+            <div className="text-center py-4 text-gray-500 text-sm">
               조건에 맞는 기업이 없습니다
             </div>
           ) : (
@@ -82,12 +82,12 @@ export function VulnerableMACards({ limit = 5, compact = false }: VulnerableMACa
         </Button>
       </CardHeader>
       <CardContent className="space-y-2">
-        <p className="text-xs text-zinc-500 mb-3">
+        <p className="text-xs text-gray-500 mb-3">
           <AlertTriangle className="w-3 h-3 inline mr-1 text-yellow-500" />
           CEI+CGI 점수가 낮고 대주주 지분율 5% 이하인 기업
         </p>
         {companies.length === 0 ? (
-          <div className="text-center py-6 text-zinc-500 text-sm">
+          <div className="text-center py-6 text-gray-500 text-sm">
             조건에 맞는 기업이 없습니다
           </div>
         ) : (
@@ -110,13 +110,13 @@ function VulnerableMACard({ company, rank }: VulnerableMACardProps) {
   return (
     <Link
       href={`/company/${company.company_id}`}
-      className="block p-3 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 transition-colors border border-zinc-700/50"
+      className="block p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-200"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-purple-400">#{rank}</span>
-            <span className="font-medium text-white text-sm truncate">
+            <span className="font-medium text-gray-900 text-sm truncate">
               {company.company_name}
             </span>
             {company.market && (
@@ -127,13 +127,13 @@ function VulnerableMACard({ company, rank }: VulnerableMACardProps) {
               />
             )}
           </div>
-          <p className="text-[10px] text-zinc-500 mt-0.5">{company.stock_code}</p>
+          <p className="text-[10px] text-gray-500 mt-0.5">{company.stock_code}</p>
         </div>
         <GradeBadge grade={company.grade} size="sm" />
       </div>
       <div className="grid grid-cols-3 gap-2 mt-2 text-xs">
-        <div className="bg-zinc-900/50 rounded p-1.5">
-          <div className="flex items-center gap-1 text-zinc-500">
+        <div className="bg-white rounded p-1.5">
+          <div className="flex items-center gap-1 text-gray-500">
             <TrendingDown className="w-3 h-3" />
             <span>CEI+CGI</span>
           </div>
@@ -143,8 +143,8 @@ function VulnerableMACard({ company, rank }: VulnerableMACardProps) {
               : '-'}
           </p>
         </div>
-        <div className="bg-zinc-900/50 rounded p-1.5">
-          <div className="flex items-center gap-1 text-zinc-500">
+        <div className="bg-white rounded p-1.5">
+          <div className="flex items-center gap-1 text-gray-500">
             <Users className="w-3 h-3" />
             <span>대주주</span>
           </div>
@@ -154,13 +154,13 @@ function VulnerableMACard({ company, rank }: VulnerableMACardProps) {
               : '-'}
           </p>
         </div>
-        <div className="bg-zinc-900/50 rounded p-1.5">
-          <div className="text-zinc-500">종합점수</div>
-          <p className="font-semibold text-white">{company.total_score.toFixed(1)}</p>
+        <div className="bg-white rounded p-1.5">
+          <div className="text-gray-500">종합점수</div>
+          <p className="font-semibold text-gray-900">{company.total_score.toFixed(1)}</p>
         </div>
       </div>
       {company.largest_shareholder_name && (
-        <p className="text-[10px] text-zinc-500 mt-1.5 truncate">
+        <p className="text-[10px] text-gray-500 mt-1.5 truncate">
           최대주주: {company.largest_shareholder_name}
         </p>
       )}
@@ -173,7 +173,7 @@ function CompactMACard({ company, rank }: VulnerableMACardProps) {
   return (
     <Link
       href={`/company/${company.company_id}`}
-      className="block p-2 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 transition-colors border border-zinc-700/50"
+      className="block p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-200"
     >
       {/* 헤더: 위험 순위 + 등급 */}
       <div className="flex items-center justify-between mb-1.5">
@@ -182,13 +182,13 @@ function CompactMACard({ company, rank }: VulnerableMACardProps) {
       </div>
 
       {/* 기업명 */}
-      <p className="font-medium text-white text-xs truncate" title={company.company_name}>
+      <p className="font-medium text-gray-900 text-xs truncate" title={company.company_name}>
         {company.company_name}
       </p>
 
       {/* 종목코드 + 시장 */}
       <div className="flex items-center gap-1 mt-0.5">
-        <span className="text-[9px] text-zinc-500">{company.stock_code}</span>
+        <span className="text-[9px] text-gray-500">{company.stock_code}</span>
         {company.market && (
           <MarketBadge
             market={company.market}
@@ -201,7 +201,7 @@ function CompactMACard({ company, rank }: VulnerableMACardProps) {
       {/* 핵심 지표 */}
       <div className="mt-2 space-y-1">
         <div className="flex items-center justify-between text-[10px]">
-          <span className="text-zinc-500 flex items-center gap-0.5">
+          <span className="text-gray-500 flex items-center gap-0.5">
             <TrendingDown className="w-2.5 h-2.5" />
             CEI+CGI
           </span>
@@ -212,7 +212,7 @@ function CompactMACard({ company, rank }: VulnerableMACardProps) {
           </span>
         </div>
         <div className="flex items-center justify-between text-[10px]">
-          <span className="text-zinc-500 flex items-center gap-0.5">
+          <span className="text-gray-500 flex items-center gap-0.5">
             <Users className="w-2.5 h-2.5" />
             대주주
           </span>
@@ -223,14 +223,14 @@ function CompactMACard({ company, rank }: VulnerableMACardProps) {
           </span>
         </div>
         <div className="flex items-center justify-between text-[10px]">
-          <span className="text-zinc-500">종합</span>
-          <span className="font-semibold text-white">{company.total_score.toFixed(1)}</span>
+          <span className="text-gray-500">종합</span>
+          <span className="font-semibold text-gray-900">{company.total_score.toFixed(1)}</span>
         </div>
       </div>
 
       {/* 최대주주명 */}
       {company.largest_shareholder_name && (
-        <p className="text-[9px] text-zinc-600 mt-1 truncate" title={company.largest_shareholder_name}>
+        <p className="text-[9px] text-gray-400 mt-1 truncate" title={company.largest_shareholder_name}>
           {company.largest_shareholder_name}
         </p>
       )}

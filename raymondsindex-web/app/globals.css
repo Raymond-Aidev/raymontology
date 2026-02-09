@@ -47,46 +47,46 @@
 }
 
 /* ============================================
-   Linear-Style Dark Theme for RaymondsIndex
+   Light Theme for RaymondsIndex
    ============================================ */
 :root {
   --radius: 0.5rem;
 
-  /* Linear Dark Theme - Primary Colors */
-  --background: #000000;
-  --foreground: #FAFAFA;
+  /* Light Theme - Primary Colors */
+  --background: #FFFFFF;
+  --foreground: #111827;
 
   /* Card & Surface */
-  --card: #0A0A0B;
-  --card-foreground: #FAFAFA;
-  --popover: #111113;
-  --popover-foreground: #FAFAFA;
+  --card: #FFFFFF;
+  --card-foreground: #111827;
+  --popover: #FFFFFF;
+  --popover-foreground: #111827;
 
-  /* Primary Action (White on Dark) */
-  --primary: #FFFFFF;
-  --primary-foreground: #000000;
+  /* Primary Action (Dark on Light) */
+  --primary: #111827;
+  --primary-foreground: #FFFFFF;
 
   /* Secondary */
-  --secondary: #18181B;
-  --secondary-foreground: #A1A1AA;
+  --secondary: #F3F4F6;
+  --secondary-foreground: #4B5563;
 
   /* Muted */
-  --muted: #27272A;
-  --muted-foreground: #71717A;
+  --muted: #F3F4F6;
+  --muted-foreground: #6B7280;
 
-  /* Accent (Linear Purple) */
+  /* Accent (Purple - keep) */
   --accent: #5E6AD2;
   --accent-foreground: #FFFFFF;
 
   /* Destructive */
   --destructive: #EF4444;
 
-  /* Borders - Very subtle white */
-  --border: rgba(255, 255, 255, 0.08);
-  --input: rgba(255, 255, 255, 0.1);
+  /* Borders */
+  --border: #E5E7EB;
+  --input: #D1D5DB;
   --ring: #5E6AD2;
 
-  /* Chart Colors - Optimized for Dark */
+  /* Chart Colors */
   --chart-1: #5E6AD2;
   --chart-2: #22C55E;
   --chart-3: #3B82F6;
@@ -94,13 +94,13 @@
   --chart-5: #EF4444;
 
   /* Sidebar */
-  --sidebar: #0A0A0B;
-  --sidebar-foreground: #FAFAFA;
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #111827;
   --sidebar-primary: #5E6AD2;
-  --sidebar-primary-foreground: #FAFAFA;
-  --sidebar-accent: #18181B;
-  --sidebar-accent-foreground: #FAFAFA;
-  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F3F4F6;
+  --sidebar-accent-foreground: #111827;
+  --sidebar-border: #E5E7EB;
   --sidebar-ring: #5E6AD2;
 }
 
@@ -110,7 +110,7 @@
   }
 
   html {
-    color-scheme: dark;
+    color-scheme: light;
   }
 
   body {
@@ -144,18 +144,18 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.15);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.25);
 }
 
 /* Firefox scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
 }
 
 /* ============================================
@@ -215,17 +215,17 @@
 
 /* Subtle hover background */
 .hover-bg {
-  @apply transition-colors hover:bg-white/5;
+  @apply transition-colors hover:bg-gray-100;
 }
 
 /* Focus ring - Linear purple */
 .focus-ring {
-  @apply focus:outline-none focus:ring-2 focus:ring-[#5E6AD2]/50 focus:ring-offset-2 focus:ring-offset-black;
+  @apply focus:outline-none focus:ring-2 focus:ring-[#5E6AD2]/50 focus:ring-offset-2 focus:ring-offset-white;
 }
 
 /* Glass effect for elevated surfaces */
 .glass {
-  @apply bg-black/80 backdrop-blur-xl border border-white/10;
+  @apply bg-white/80 backdrop-blur-xl border border-gray-200;
 }
 
 /* Glow effect for badges */
@@ -251,7 +251,7 @@
 
 /* Gradient text - Linear style */
 .gradient-text {
-  @apply bg-clip-text text-transparent bg-gradient-to-r from-white to-zinc-400;
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-500;
 }
 
 /* Subtle border glow on focus */

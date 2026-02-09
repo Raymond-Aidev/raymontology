@@ -107,8 +107,8 @@ export function SubIndexRadar({ cei, rii, cgi, mai, dataIncomplete = false }: Su
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-500/10 flex items-center justify-center">
                 <BarChart3 className="w-8 h-8 text-amber-500/50" />
               </div>
-              <p className="text-zinc-400 mb-2">데이터 수집 중</p>
-              <p className="text-xs text-zinc-500 max-w-[200px]">
+              <p className="text-gray-600 mb-2">데이터 수집 중</p>
+              <p className="text-xs text-gray-500 max-w-[200px]">
                 Sub-Index 계산에 필요한 다년도 재무 데이터를 수집하고 있습니다.
               </p>
             </div>

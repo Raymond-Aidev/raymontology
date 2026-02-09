@@ -31,7 +31,7 @@ export function RiskCompaniesTable({
         <CardContent>
           <div className="grid grid-cols-2 gap-2">
             {[...Array(10)].map((_, i) => (
-              <div key={i} className="h-14 bg-zinc-800 rounded animate-pulse" />
+              <div key={i} className="h-14 bg-gray-200 rounded animate-pulse" />
             ))}
           </div>
         </CardContent>
@@ -72,15 +72,15 @@ function RiskCompanyCard({ company, rank }: RiskCompanyCardProps) {
   return (
     <Link
       href={`/company/${company.company_id}`}
-      className="flex items-center gap-2 p-2 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 transition-colors border border-zinc-700/30"
+      className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-200"
     >
       {/* 순위 */}
-      <span className="text-xs font-bold text-zinc-500 w-5 text-center">{rank}</span>
+      <span className="text-xs font-bold text-gray-500 w-5 text-center">{rank}</span>
 
       {/* 기업 정보 */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <span className="font-medium text-white text-sm truncate">
+          <span className="font-medium text-gray-900 text-sm truncate">
             {company.company_name}
           </span>
           {company.market && (
@@ -91,7 +91,7 @@ function RiskCompanyCard({ company, rank }: RiskCompanyCardProps) {
             />
           )}
         </div>
-        <span className="text-[10px] text-zinc-500">{company.stock_code}</span>
+        <span className="text-[10px] text-gray-500">{company.stock_code}</span>
       </div>
 
       {/* 등급 & 점수 */}

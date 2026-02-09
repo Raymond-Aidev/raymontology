@@ -42,7 +42,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* 컴팩트 헤더 섹션 - Linear 스타일 */}
-      <section className="border-b border-white/10">
+      <section className="border-b border-gray-200">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -138,24 +138,24 @@ export default function HomePage() {
               <CardContent className="space-y-0.5">
                 <Link
                   href="/screener"
-                  className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-white/5 transition-colors"
+                  className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-gray-50 transition-colors"
                 >
-                  <span className="text-sm text-zinc-300">전체 기업 스크리너</span>
-                  <ArrowRight className="w-3 h-3 text-zinc-500" />
+                  <span className="text-sm text-gray-700">전체 기업 스크리너</span>
+                  <ArrowRight className="w-3 h-3 text-gray-500" />
                 </Link>
                 <Link
                   href="/ma-target"
-                  className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-white/5 transition-colors"
+                  className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-gray-50 transition-colors"
                 >
-                  <span className="text-sm text-zinc-300">적대적 M&A 분석</span>
-                  <ArrowRight className="w-3 h-3 text-zinc-500" />
+                  <span className="text-sm text-gray-700">적대적 M&A 분석</span>
+                  <ArrowRight className="w-3 h-3 text-gray-500" />
                 </Link>
                 <Link
                   href="/screener?grade=C%2B,C"
-                  className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-white/5 transition-colors"
+                  className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-gray-50 transition-colors"
                 >
-                  <span className="text-sm text-zinc-300">C등급 기업만 보기</span>
-                  <ArrowRight className="w-3 h-3 text-zinc-500" />
+                  <span className="text-sm text-gray-700">C등급 기업만 보기</span>
+                  <ArrowRight className="w-3 h-3 text-gray-500" />
                 </Link>
               </CardContent>
             </Card>

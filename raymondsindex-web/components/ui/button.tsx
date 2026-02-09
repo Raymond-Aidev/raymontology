@@ -6,26 +6,26 @@ import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
   // Linear-style base button
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-[#5E6AD2]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-black",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-[#5E6AD2]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white",
   {
     variants: {
       variant: {
-        // Primary: White button (Linear style)
-        default: "bg-white text-black hover:bg-zinc-200 active:bg-zinc-300",
+        // Primary button
+        default: "bg-gray-900 text-white hover:bg-gray-800 active:bg-gray-700",
         // Destructive: Red
         destructive:
           "bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500/50",
         // Outline: Transparent with border
         outline:
-          "border border-white/20 bg-transparent text-zinc-300 hover:bg-white/5 hover:text-white hover:border-white/30",
-        // Secondary: Dark surface
+          "border border-gray-300 bg-transparent text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-400",
+        // Secondary: Light surface
         secondary:
-          "bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-white/10",
+          "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200",
         // Ghost: Minimal, no border
         ghost:
-          "text-zinc-400 hover:text-white hover:bg-white/5",
+          "text-gray-500 hover:text-gray-900 hover:bg-gray-100",
         // Link: Underlined text
-        link: "text-zinc-300 underline-offset-4 hover:underline hover:text-white",
+        link: "text-gray-600 underline-offset-4 hover:underline hover:text-gray-900",
         // Accent: Linear purple
         accent:
           "bg-[#5E6AD2] text-white hover:bg-[#7C85E0] focus-visible:ring-[#5E6AD2]/50",

@@ -16,10 +16,10 @@ export default function MethodologyPage() {
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
       <div className="text-center mb-12">
-        <h1 className="text-3xl font-bold text-white mb-4">
+        <h1 className="text-3xl font-bold text-gray-900 mb-4">
           RaymondsIndex 평가 방법론
         </h1>
-        <p className="text-lg text-zinc-400 max-w-2xl mx-auto">
+        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
           RaymondsIndex는 기업의 자본 배분 효율성을 투자자 관점에서 평가하는 종합 지표입니다.
           기업이 벌어들인 돈을 어디에, 어떻게 쓰는지 분석합니다.
         </p>
@@ -37,8 +37,8 @@ export default function MethodologyPage() {
           <CardContent>
             <div className="grid md:grid-cols-2 gap-8">
               <div>
-                <h3 className="font-semibold text-white mb-3">평가 목적</h3>
-                <ul className="space-y-2 text-zinc-400">
+                <h3 className="font-semibold text-gray-900 mb-3">평가 목적</h3>
+                <ul className="space-y-2 text-gray-600">
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="w-4 h-4 text-green-400 mt-1 shrink-0" />
                     <span>현금만 쌓아두는 기업과 성장에 재투자하는 기업 구별</span>
@@ -54,8 +54,8 @@ export default function MethodologyPage() {
                 </ul>
               </div>
               <div>
-                <h3 className="font-semibold text-white mb-3">데이터 출처</h3>
-                <ul className="space-y-2 text-zinc-400">
+                <h3 className="font-semibold text-gray-900 mb-3">데이터 출처</h3>
+                <ul className="space-y-2 text-gray-600">
                   <li>- DART 전자공시시스템 공시 데이터</li>
                   <li>- 분기/반기/사업보고서 재무제표</li>
                   <li>- CB 발행 및 자금 조달 공시</li>
@@ -69,7 +69,7 @@ export default function MethodologyPage() {
 
       {/* Grade System */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-white mb-6">등급 체계 (9등급)</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">등급 체계 (9등급)</h2>
         <div className="grid sm:grid-cols-3 lg:grid-cols-5 gap-4">
           {GRADE_ORDER.map((grade) => {
             const colors = GRADE_COLORS[grade as Grade];
@@ -86,8 +86,8 @@ export default function MethodologyPage() {
                   >
                     {grade}
                   </div>
-                  <p className="font-medium text-white">{gradeInfo.label}</p>
-                  <p className="text-sm text-zinc-500">{gradeInfo.range}</p>
+                  <p className="font-medium text-gray-900">{gradeInfo.label}</p>
+                  <p className="text-sm text-gray-500">{gradeInfo.range}</p>
                 </CardContent>
               </Card>
             );
@@ -97,7 +97,7 @@ export default function MethodologyPage() {
 
       {/* Sub-Index Section */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-white mb-6">Sub-Index 구성</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Sub-Index 구성</h2>
 
         <div className="space-y-6">
           {/* CEI */}
@@ -105,28 +105,28 @@ export default function MethodologyPage() {
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <PieChart className="w-5 h-5 text-zinc-400" />
+                  <PieChart className="w-5 h-5 text-gray-600" />
                   CEI (Capital Efficiency Index)
                 </div>
                 <Badge variant="outline">가중치 15%</Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-zinc-400 mb-4">
-                <strong className="text-white">자본 효율성 지표</strong>: 기업이 투입한 자본 대비 얼마나 효율적으로 수익을 창출하는지 평가
+              <p className="text-gray-600 mb-4">
+                <strong className="text-gray-900">자본 효율성 지표</strong>: 기업이 투입한 자본 대비 얼마나 효율적으로 수익을 창출하는지 평가
               </p>
               <div className="grid sm:grid-cols-3 gap-4 text-sm">
-                <div className="bg-zinc-800/50 p-3 rounded border border-white/5">
-                  <p className="font-medium text-white">ROIC</p>
-                  <p className="text-zinc-500">투하자본수익률</p>
+                <div className="bg-gray-50 p-3 rounded border border-gray-100">
+                  <p className="font-medium text-gray-900">ROIC</p>
+                  <p className="text-gray-500">투하자본수익률</p>
                 </div>
-                <div className="bg-zinc-800/50 p-3 rounded border border-white/5">
-                  <p className="font-medium text-white">자산회전율</p>
-                  <p className="text-zinc-500">자산 활용 효율성</p>
+                <div className="bg-gray-50 p-3 rounded border border-gray-100">
+                  <p className="font-medium text-gray-900">자산회전율</p>
+                  <p className="text-gray-500">자산 활용 효율성</p>
                 </div>
-                <div className="bg-zinc-800/50 p-3 rounded border border-white/5">
-                  <p className="font-medium text-white">ROE</p>
-                  <p className="text-zinc-500">자기자본이익률</p>
+                <div className="bg-gray-50 p-3 rounded border border-gray-100">
+                  <p className="font-medium text-gray-900">ROE</p>
+                  <p className="text-gray-500">자기자본이익률</p>
                 </div>
               </div>
             </CardContent>
@@ -145,26 +145,26 @@ export default function MethodologyPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-zinc-400 mb-4">
-                <strong className="text-white">재투자 강도 지표</strong>: 벌어들인 돈을 성장을 위해 얼마나 적극적으로 재투자하는지 평가.
+              <p className="text-gray-600 mb-4">
+                <strong className="text-gray-900">재투자 강도 지표</strong>: 벌어들인 돈을 성장을 위해 얼마나 적극적으로 재투자하는지 평가.
                 <span className="text-[#8B95E8]"> 현금만 쌓아두는 기업은 감점.</span>
               </p>
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                <div className="bg-zinc-800/50 p-3 rounded border border-[#5E6AD2]/20">
-                  <p className="font-medium text-white">재투자율</p>
-                  <p className="text-zinc-500">CAPEX / 영업현금흐름</p>
+                <div className="bg-gray-50 p-3 rounded border border-[#5E6AD2]/20">
+                  <p className="font-medium text-gray-900">재투자율</p>
+                  <p className="text-gray-500">CAPEX / 영업현금흐름</p>
                 </div>
-                <div className="bg-zinc-800/50 p-3 rounded border border-[#5E6AD2]/20">
-                  <p className="font-medium text-white">CAPEX 증가율</p>
-                  <p className="text-zinc-500">투자 확대 여부</p>
+                <div className="bg-gray-50 p-3 rounded border border-[#5E6AD2]/20">
+                  <p className="font-medium text-gray-900">CAPEX 증가율</p>
+                  <p className="text-gray-500">투자 확대 여부</p>
                 </div>
-                <div className="bg-zinc-800/50 p-3 rounded border border-[#5E6AD2]/20">
-                  <p className="font-medium text-white">투자괴리율</p>
-                  <p className="text-zinc-500">현금 vs CAPEX 증가 차이</p>
+                <div className="bg-gray-50 p-3 rounded border border-[#5E6AD2]/20">
+                  <p className="font-medium text-gray-900">투자괴리율</p>
+                  <p className="text-gray-500">현금 vs CAPEX 증가 차이</p>
                 </div>
-                <div className="bg-zinc-800/50 p-3 rounded border border-[#5E6AD2]/20">
-                  <p className="font-medium text-white">CAPEX 변동계수</p>
-                  <p className="text-zinc-500">투자 지속성</p>
+                <div className="bg-gray-50 p-3 rounded border border-[#5E6AD2]/20">
+                  <p className="font-medium text-gray-900">CAPEX 변동계수</p>
+                  <p className="text-gray-500">투자 지속성</p>
                 </div>
               </div>
             </CardContent>
@@ -175,32 +175,32 @@ export default function MethodologyPage() {
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Wallet className="w-5 h-5 text-zinc-400" />
+                  <Wallet className="w-5 h-5 text-gray-600" />
                   CGI (Cash Governance Index)
                 </div>
                 <Badge variant="outline">가중치 30%</Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-zinc-400 mb-4">
-                <strong className="text-white">현금 거버넌스 지표</strong>: 보유 현금을 생산적 자산으로 전환하는지, 단기 금융상품에만 묻어두는지 평가
+              <p className="text-gray-600 mb-4">
+                <strong className="text-gray-900">현금 거버넌스 지표</strong>: 보유 현금을 생산적 자산으로 전환하는지, 단기 금융상품에만 묻어두는지 평가
               </p>
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                <div className="bg-zinc-800/50 p-3 rounded border border-white/5">
-                  <p className="font-medium text-white">현금/유형자산 비율</p>
-                  <p className="text-zinc-500">현금 vs 생산자산</p>
+                <div className="bg-gray-50 p-3 rounded border border-gray-100">
+                  <p className="font-medium text-gray-900">현금/유형자산 비율</p>
+                  <p className="text-gray-500">현금 vs 생산자산</p>
                 </div>
-                <div className="bg-zinc-800/50 p-3 rounded border border-white/5">
-                  <p className="font-medium text-white">조달자금 전환율</p>
-                  <p className="text-zinc-500">자금 활용 효율</p>
+                <div className="bg-gray-50 p-3 rounded border border-gray-100">
+                  <p className="font-medium text-gray-900">조달자금 전환율</p>
+                  <p className="text-gray-500">자금 활용 효율</p>
                 </div>
-                <div className="bg-zinc-800/50 p-3 rounded border border-white/5">
-                  <p className="font-medium text-white">단기금융비율</p>
-                  <p className="text-zinc-500">유동성 과잉 여부</p>
+                <div className="bg-gray-50 p-3 rounded border border-gray-100">
+                  <p className="font-medium text-gray-900">단기금융비율</p>
+                  <p className="text-gray-500">유동성 과잉 여부</p>
                 </div>
-                <div className="bg-zinc-800/50 p-3 rounded border border-white/5">
-                  <p className="font-medium text-white">유휴현금 비율</p>
-                  <p className="text-zinc-500">비생산적 현금 보유</p>
+                <div className="bg-gray-50 p-3 rounded border border-gray-100">
+                  <p className="font-medium text-gray-900">유휴현금 비율</p>
+                  <p className="text-gray-500">비생산적 현금 보유</p>
                 </div>
               </div>
             </CardContent>
@@ -211,28 +211,28 @@ export default function MethodologyPage() {
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-zinc-400" />
+                  <Activity className="w-5 h-5 text-gray-600" />
                   MAI (Momentum Alignment Index)
                 </div>
                 <Badge variant="outline">가중치 15%</Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-zinc-400 mb-4">
-                <strong className="text-white">모멘텀 정합성 지표</strong>: 기업의 투자 방향과 시장 모멘텀이 일치하는지 평가
+              <p className="text-gray-600 mb-4">
+                <strong className="text-gray-900">모멘텀 정합성 지표</strong>: 기업의 투자 방향과 시장 모멘텀이 일치하는지 평가
               </p>
               <div className="grid sm:grid-cols-3 gap-4 text-sm">
-                <div className="bg-zinc-800/50 p-3 rounded border border-white/5">
-                  <p className="font-medium text-white">주주환원율</p>
-                  <p className="text-zinc-500">배당 + 자사주 매입</p>
+                <div className="bg-gray-50 p-3 rounded border border-gray-100">
+                  <p className="font-medium text-gray-900">주주환원율</p>
+                  <p className="text-gray-500">배당 + 자사주 매입</p>
                 </div>
-                <div className="bg-zinc-800/50 p-3 rounded border border-white/5">
-                  <p className="font-medium text-white">CAPEX 추세</p>
-                  <p className="text-zinc-500">증가/유지/감소</p>
+                <div className="bg-gray-50 p-3 rounded border border-gray-100">
+                  <p className="font-medium text-gray-900">CAPEX 추세</p>
+                  <p className="text-gray-500">증가/유지/감소</p>
                 </div>
-                <div className="bg-zinc-800/50 p-3 rounded border border-white/5">
-                  <p className="font-medium text-white">매출 성장 정합성</p>
-                  <p className="text-zinc-500">투자와 성장의 연관성</p>
+                <div className="bg-gray-50 p-3 rounded border border-gray-100">
+                  <p className="font-medium text-gray-900">매출 성장 정합성</p>
+                  <p className="text-gray-500">투자와 성장의 연관성</p>
                 </div>
               </div>
             </CardContent>
@@ -242,12 +242,12 @@ export default function MethodologyPage() {
 
       {/* Special Rules */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-white mb-6">특별 규칙 (등급 제한)</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">특별 규칙 (등급 제한)</h2>
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-start gap-3 mb-4">
               <AlertTriangle className="w-5 h-5 text-yellow-400 mt-0.5" />
-              <p className="text-zinc-400">
+              <p className="text-gray-600">
                 특정 조건에 해당하는 기업은 점수와 관계없이 최대 등급이 제한됩니다.
               </p>
             </div>
@@ -256,7 +256,7 @@ export default function MethodologyPage() {
                 <p className="font-medium text-yellow-400 mb-2">
                   현금/유형자산 비율 &gt; 30:1 → 최대 등급 B-
                 </p>
-                <p className="text-sm text-zinc-400">
+                <p className="text-sm text-gray-600">
                   현금 증가율이 유형자산 증가율의 30배를 초과하는 경우
                 </p>
               </div>
@@ -264,7 +264,7 @@ export default function MethodologyPage() {
                 <p className="font-medium text-yellow-400 mb-2">
                   조달자금 전환율 &lt; 30% → 최대 등급 B-
                 </p>
-                <p className="text-sm text-zinc-400">
+                <p className="text-sm text-gray-600">
                   CB/유상증자 등으로 조달한 자금의 CAPEX 전환율이 30% 미만인 경우
                 </p>
               </div>
@@ -272,7 +272,7 @@ export default function MethodologyPage() {
                 <p className="font-medium text-yellow-400 mb-2">
                   단기금융비율 &gt; 65% + CAPEX 감소 → 최대 등급 B
                 </p>
-                <p className="text-sm text-zinc-400">
+                <p className="text-sm text-gray-600">
                   현금의 65% 이상을 단기금융상품으로 보유하면서 CAPEX가 감소하는 경우
                 </p>
               </div>
@@ -280,7 +280,7 @@ export default function MethodologyPage() {
                 <p className="font-medium text-red-400 mb-2">
                   위 조건 2개 이상 해당 → 최대 등급 C+
                 </p>
-                <p className="text-sm text-zinc-400">
+                <p className="text-sm text-gray-600">
                   복합적인 자본 배분 문제가 있는 경우
                 </p>
               </div>
@@ -291,10 +291,10 @@ export default function MethodologyPage() {
 
       {/* Disclaimer */}
       <section>
-        <Card className="bg-zinc-800/30 border-white/5">
+        <Card className="bg-gray-50 border-gray-100">
           <CardContent className="pt-6">
-            <h3 className="font-semibold text-white mb-3">면책조항</h3>
-            <p className="text-sm text-zinc-400 leading-relaxed">
+            <h3 className="font-semibold text-gray-900 mb-3">면책조항</h3>
+            <p className="text-sm text-gray-600 leading-relaxed">
               RaymondsIndex는 공시 데이터를 기반으로 한 참고용 지표입니다.
               투자 결정의 유일한 근거로 사용하지 마시고, 반드시 전문가 상담 및 추가 조사를 병행하시기 바랍니다.
               과거의 자본 배분 패턴이 미래의 성과를 보장하지 않습니다.

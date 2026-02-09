@@ -26,7 +26,7 @@ export function GradeDistribution({ distribution, isLoading }: GradeDistribution
         <CardContent>
           <div className="animate-pulse space-y-1">
             {[...Array(9)].map((_, i) => (
-              <div key={i} className="h-5 bg-zinc-800 rounded" />
+              <div key={i} className="h-5 bg-gray-200 rounded" />
             ))}
           </div>
         </CardContent>
@@ -71,7 +71,7 @@ export function GradeDistribution({ distribution, isLoading }: GradeDistribution
                 >
                   {grade}
                 </div>
-                <div className="flex-1 h-5 bg-zinc-800 rounded overflow-hidden">
+                <div className="flex-1 h-5 bg-gray-200 rounded overflow-hidden">
                   <div
                     className="h-full rounded transition-all duration-500 flex items-center justify-end pr-1.5"
                     style={{
@@ -86,7 +86,7 @@ export function GradeDistribution({ distribution, isLoading }: GradeDistribution
                     )}
                   </div>
                 </div>
-                <div className="w-12 text-right text-xs text-zinc-400 shrink-0">
+                <div className="w-12 text-right text-xs text-gray-600 shrink-0">
                   {count.toLocaleString()}
                 </div>
               </div>

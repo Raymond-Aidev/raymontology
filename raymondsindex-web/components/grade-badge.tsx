@@ -32,7 +32,7 @@ export function GradeBadge({ grade, size = 'md', showLabel = false, className }:
         className={cn(
           'rounded-lg flex items-center justify-center font-semibold',
           sizeClasses[size],
-          isExcellent && 'ring-2 ring-[#FFD700] ring-offset-1 ring-offset-zinc-900 shadow-[0_0_12px_rgba(255,215,0,0.4)]'
+          isExcellent && 'ring-2 ring-[#FFD700] ring-offset-1 ring-offset-white shadow-[0_0_12px_rgba(255,215,0,0.4)]'
         )}
         style={{
           backgroundColor: colors.bg,

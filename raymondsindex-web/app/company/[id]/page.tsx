@@ -39,11 +39,11 @@ export default function CompanyDetailPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="animate-pulse space-y-6">
-          <div className="h-8 w-48 bg-zinc-800 rounded" />
-          <div className="h-40 bg-zinc-800/50 rounded-lg" />
+          <div className="h-8 w-48 bg-gray-200 rounded" />
+          <div className="h-40 bg-gray-50 rounded-lg" />
           <div className="grid lg:grid-cols-2 gap-6">
-            <div className="h-80 bg-zinc-800/50 rounded-lg" />
-            <div className="h-80 bg-zinc-800/50 rounded-lg" />
+            <div className="h-80 bg-gray-50 rounded-lg" />
+            <div className="h-80 bg-gray-50 rounded-lg" />
           </div>
         </div>
       </div>
@@ -54,10 +54,10 @@ export default function CompanyDetailPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center py-12">
-          <h2 className="text-xl font-semibold text-white mb-2">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
             기업 정보를 불러올 수 없습니다
           </h2>
-          <p className="text-zinc-400 mb-4">
+          <p className="text-gray-600 mb-4">
             요청하신 기업 정보가 존재하지 않거나 오류가 발생했습니다.
           </p>
           <Button asChild>
@@ -102,13 +102,13 @@ export default function CompanyDetailPage() {
             {/* Company Info */}
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-2xl font-bold text-white">
+                <h1 className="text-2xl font-bold text-gray-900">
                   {company.company_name}
                 </h1>
                 <Badge variant="outline">{company.stock_code}</Badge>
               </div>
               {company.sector && (
-                <div className="flex items-center gap-2 text-zinc-400">
+                <div className="flex items-center gap-2 text-gray-600">
                   <Building2 className="w-4 h-4" />
                   <span>{company.sector}</span>
                 </div>
@@ -123,7 +123,7 @@ export default function CompanyDetailPage() {
               <GradeBadge grade={company.grade} size="xl" showLabel />
               <div>
                 <ScoreDisplay score={company.total_score} size="lg" />
-                <p className="text-sm text-zinc-500 mt-1">
+                <p className="text-sm text-gray-500 mt-1">
                   {getPercentileText(company.total_score)}
                 </p>
               </div>
@@ -131,7 +131,7 @@ export default function CompanyDetailPage() {
           </div>
 
           {/* Meta Info */}
-          <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-white/10 text-sm text-zinc-500">
+          <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-gray-200 text-sm text-gray-500">
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4" />
               <span>
@@ -164,11 +164,11 @@ export default function CompanyDetailPage() {
                 <AlertTriangle className="w-4 h-4" />
                 세부 지표 수집 중
               </h3>
-              <p className="text-sm text-zinc-400">
+              <p className="text-sm text-gray-600">
                 이 기업은 아직 다년도 재무 데이터 수집이 완료되지 않아 세부 지표를 계산할 수 없습니다.
                 종합 점수와 등급은 참고용이며, 정확한 분석을 위해 데이터 수집 완료 후 다시 확인해 주세요.
               </p>
-              <p className="text-xs text-zinc-500 mt-2">
+              <p className="text-xs text-gray-500 mt-2">
                 RaymondsIndex 계산에는 최소 3년 이상의 연간 사업보고서 데이터가 필요합니다.
               </p>
             </div>
@@ -208,7 +208,7 @@ export default function CompanyDetailPage() {
       {/* Core Metrics Grid */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white">핵심 지표</h2>
+          <h2 className="text-lg font-semibold text-gray-900">핵심 지표</h2>
           {dataIncomplete && (
             <span className="text-xs text-amber-500 bg-amber-500/10 px-2 py-1 rounded">
               데이터 수집 중
@@ -286,7 +286,7 @@ export default function CompanyDetailPage() {
       {/* Additional Metrics */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white">추가 지표</h2>
+          <h2 className="text-lg font-semibold text-gray-900">추가 지표</h2>
           {dataIncomplete && (
             <span className="text-xs text-amber-500 bg-amber-500/10 px-2 py-1 rounded">
               데이터 수집 중

@@ -10,18 +10,18 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        // Primary: White on dark
+        // Primary: Dark on light
         default:
-          "border-transparent bg-white text-black",
-        // Secondary: Dark surface
+          "border-transparent bg-gray-900 text-white",
+        // Secondary: Light surface
         secondary:
-          "border-white/10 bg-zinc-800 text-zinc-300",
+          "border-gray-200 bg-gray-100 text-gray-700",
         // Destructive: Red
         destructive:
           "border-transparent bg-red-600/20 text-red-400",
         // Outline: Transparent with border
         outline:
-          "border-white/20 bg-transparent text-zinc-300",
+          "border-gray-300 bg-transparent text-gray-600",
         // Success: Green
         success:
           "border-transparent bg-green-600/20 text-green-400",

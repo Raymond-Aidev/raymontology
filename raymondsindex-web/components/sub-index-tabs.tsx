@@ -107,7 +107,7 @@ function SubIndexTabContent({ config }: SubIndexTabContentProps) {
     return (
       <div className="animate-pulse space-y-1.5">
         {[...Array(5)].map((_, i) => (
-          <div key={i} className="h-8 bg-zinc-800 rounded" />
+          <div key={i} className="h-8 bg-gray-200 rounded" />
         ))}
       </div>
     );
@@ -118,7 +118,7 @@ function SubIndexTabContent({ config }: SubIndexTabContentProps) {
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-gray-500">
           <config.icon className="w-3 h-3 inline mr-1" />
           {config.fullName} ({config.label}) - {config.description}
         </p>
@@ -143,14 +143,14 @@ function SubIndexTabContent({ config }: SubIndexTabContentProps) {
             const subIndexScore = company[config.scoreKey];
             return (
               <TableRow key={company.id}>
-                <TableCell className="font-medium text-zinc-500 text-xs">
+                <TableCell className="font-medium text-gray-500 text-xs">
                   {index + 1}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1.5">
                     <Link
                       href={`/company/${company.company_id}`}
-                      className="font-medium text-white hover:text-[#8B95E8] text-sm transition-colors truncate max-w-[120px]"
+                      className="font-medium text-gray-900 hover:text-[#8B95E8] text-sm transition-colors truncate max-w-[120px]"
                     >
                       {company.company_name}
                     </Link>
@@ -171,7 +171,7 @@ function SubIndexTabContent({ config }: SubIndexTabContentProps) {
                 <TableCell className="text-right font-semibold text-sm text-orange-400">
                   {subIndexScore !== null ? subIndexScore.toFixed(1) : '-'}
                 </TableCell>
-                <TableCell className="text-right text-xs text-zinc-500 hidden sm:table-cell">
+                <TableCell className="text-right text-xs text-gray-500 hidden sm:table-cell">
                   {company.total_score.toFixed(1)}
                 </TableCell>
               </TableRow>

@@ -175,8 +175,8 @@ export default function ScreenerPage() {
     <div className={`container mx-auto px-4 py-3 ${compareItems.length > 0 ? 'pb-20' : ''}`}>
       <div className="mb-3 flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-white">스크리너</h1>
-          <p className="text-xs text-zinc-500">
+          <h1 className="text-lg font-semibold text-gray-900">스크리너</h1>
+          <p className="text-xs text-gray-500">
             조건에 맞는 기업을 검색하고 비교해보세요
           </p>
         </div>
@@ -274,7 +274,7 @@ export default function ScreenerPage() {
           <CardContent className="space-y-3">
             {/* Market Filter */}
             <div>
-              <h4 className="text-xs font-medium text-zinc-400 mb-1.5">거래소</h4>
+              <h4 className="text-xs font-medium text-gray-600 mb-1.5">거래소</h4>
               <div className="flex gap-1.5">
                 {MARKETS.map((market) => (
                   <button
@@ -283,7 +283,7 @@ export default function ScreenerPage() {
                     className={`px-2 py-1 text-xs font-medium rounded border transition-colors ${
                       filters.markets.includes(market)
                         ? 'bg-[#5E6AD2] text-white border-[#5E6AD2]'
-                        : 'bg-zinc-800 text-zinc-300 border-white/10 hover:border-[#5E6AD2]/50'
+                        : 'bg-gray-200 text-gray-700 border-gray-200 hover:border-[#5E6AD2]/50'
                     }`}
                   >
                     {market}
@@ -294,7 +294,7 @@ export default function ScreenerPage() {
 
             {/* Grade Filter */}
             <div>
-              <h4 className="text-xs font-medium text-zinc-400 mb-1.5">등급</h4>
+              <h4 className="text-xs font-medium text-gray-600 mb-1.5">등급</h4>
               <div className="grid grid-cols-3 gap-1">
                 {GRADE_ORDER.map((grade) => (
                   <button
@@ -303,7 +303,7 @@ export default function ScreenerPage() {
                     className={`px-1.5 py-1 text-xs font-medium rounded border transition-colors ${
                       filters.grades.includes(grade)
                         ? 'bg-[#5E6AD2] text-white border-[#5E6AD2]'
-                        : 'bg-zinc-800 text-zinc-300 border-white/10 hover:border-[#5E6AD2]/50'
+                        : 'bg-gray-200 text-gray-700 border-gray-200 hover:border-[#5E6AD2]/50'
                     }`}
                   >
                     {grade}
@@ -314,7 +314,7 @@ export default function ScreenerPage() {
 
             {/* Score Range */}
             <div>
-              <h4 className="text-xs font-medium text-zinc-400 mb-1.5">종합 점수</h4>
+              <h4 className="text-xs font-medium text-gray-600 mb-1.5">종합 점수</h4>
               <div className="px-0.5">
                 <Slider
                   value={filters.scoreRange}
@@ -326,7 +326,7 @@ export default function ScreenerPage() {
                   max={100}
                   step={5}
                 />
-                <div className="flex justify-between text-xs text-zinc-300 mt-1">
+                <div className="flex justify-between text-xs text-gray-700 mt-1">
                   <span>{filters.scoreRange[0]}점</span>
                   <span>{filters.scoreRange[1]}점</span>
                 </div>
@@ -335,7 +335,7 @@ export default function ScreenerPage() {
 
             {/* Red Flag Filter */}
             <div>
-              <h4 className="text-xs font-medium text-zinc-400 mb-1.5">위험 신호</h4>
+              <h4 className="text-xs font-medium text-gray-600 mb-1.5">위험 신호</h4>
               <div className="flex gap-1.5">
                 <button
                   onClick={() => {
@@ -348,7 +348,7 @@ export default function ScreenerPage() {
                   className={`px-2 py-1 text-xs font-medium rounded border transition-colors ${
                     filters.hasRedFlags === false
                       ? 'bg-green-600 text-white border-green-600'
-                      : 'bg-zinc-800 text-zinc-300 border-white/10 hover:border-green-500/50'
+                      : 'bg-gray-200 text-gray-700 border-gray-200 hover:border-green-500/50'
                   }`}
                 >
                   없음
@@ -364,7 +364,7 @@ export default function ScreenerPage() {
                   className={`flex items-center gap-0.5 px-2 py-1 text-xs font-medium rounded border transition-colors ${
                     filters.hasRedFlags === true
                       ? 'bg-red-600 text-white border-red-600'
-                      : 'bg-zinc-800 text-zinc-300 border-white/10 hover:border-red-500/50'
+                      : 'bg-gray-200 text-gray-700 border-gray-200 hover:border-red-500/50'
                   }`}
                 >
                   <AlertTriangle className="w-2.5 h-2.5" />
@@ -375,7 +375,7 @@ export default function ScreenerPage() {
 
             {/* Sort */}
             <div>
-              <h4 className="text-xs font-medium text-zinc-400 mb-1.5">정렬</h4>
+              <h4 className="text-xs font-medium text-gray-600 mb-1.5">정렬</h4>
               <Select
                 value={sort}
                 onValueChange={(value) => {
@@ -410,7 +410,7 @@ export default function ScreenerPage() {
               <CollapsibleContent className="space-y-2.5 pt-2">
                 {/* CEI Range */}
                 <div>
-                  <h4 className="text-[10px] font-medium text-zinc-500 mb-1">CEI (자본효율성)</h4>
+                  <h4 className="text-[10px] font-medium text-gray-500 mb-1">CEI (자본효율성)</h4>
                   <Slider
                     value={filters.ceiRange}
                     onValueChange={(value) => {
@@ -421,7 +421,7 @@ export default function ScreenerPage() {
                     max={100}
                     step={5}
                   />
-                  <div className="flex justify-between text-[10px] text-zinc-500 mt-0.5">
+                  <div className="flex justify-between text-[10px] text-gray-500 mt-0.5">
                     <span>{filters.ceiRange[0]}</span>
                     <span>{filters.ceiRange[1]}</span>
                   </div>
@@ -429,7 +429,7 @@ export default function ScreenerPage() {
 
                 {/* RII Range */}
                 <div>
-                  <h4 className="text-[10px] font-medium text-zinc-500 mb-1">RII (재투자)</h4>
+                  <h4 className="text-[10px] font-medium text-gray-500 mb-1">RII (재투자)</h4>
                   <Slider
                     value={filters.riiRange}
                     onValueChange={(value) => {
@@ -440,7 +440,7 @@ export default function ScreenerPage() {
                     max={100}
                     step={5}
                   />
-                  <div className="flex justify-between text-[10px] text-zinc-500 mt-0.5">
+                  <div className="flex justify-between text-[10px] text-gray-500 mt-0.5">
                     <span>{filters.riiRange[0]}</span>
                     <span>{filters.riiRange[1]}</span>
                   </div>
@@ -448,7 +448,7 @@ export default function ScreenerPage() {
 
                 {/* CGI Range */}
                 <div>
-                  <h4 className="text-[10px] font-medium text-zinc-500 mb-1">CGI (현금거버넌스)</h4>
+                  <h4 className="text-[10px] font-medium text-gray-500 mb-1">CGI (현금거버넌스)</h4>
                   <Slider
                     value={filters.cgiRange}
                     onValueChange={(value) => {
@@ -459,7 +459,7 @@ export default function ScreenerPage() {
                     max={100}
                     step={5}
                   />
-                  <div className="flex justify-between text-[10px] text-zinc-500 mt-0.5">
+                  <div className="flex justify-between text-[10px] text-gray-500 mt-0.5">
                     <span>{filters.cgiRange[0]}</span>
                     <span>{filters.cgiRange[1]}</span>
                   </div>
@@ -467,7 +467,7 @@ export default function ScreenerPage() {
 
                 {/* MAI Range */}
                 <div>
-                  <h4 className="text-[10px] font-medium text-zinc-500 mb-1">MAI (시장정렬)</h4>
+                  <h4 className="text-[10px] font-medium text-gray-500 mb-1">MAI (시장정렬)</h4>
                   <Slider
                     value={filters.maiRange}
                     onValueChange={(value) => {
@@ -478,7 +478,7 @@ export default function ScreenerPage() {
                     max={100}
                     step={5}
                   />
-                  <div className="flex justify-between text-[10px] text-zinc-500 mt-0.5">
+                  <div className="flex justify-between text-[10px] text-gray-500 mt-0.5">
                     <span>{filters.maiRange[0]}</span>
                     <span>{filters.maiRange[1]}</span>
                   </div>
@@ -486,7 +486,7 @@ export default function ScreenerPage() {
 
                 {/* Investment Gap Range */}
                 <div>
-                  <h4 className="text-[10px] font-medium text-zinc-500 mb-1">투자괴리율 (%)</h4>
+                  <h4 className="text-[10px] font-medium text-gray-500 mb-1">투자괴리율 (%)</h4>
                   <Slider
                     value={filters.gapRange}
                     onValueChange={(value) => {
@@ -497,7 +497,7 @@ export default function ScreenerPage() {
                     max={100}
                     step={10}
                   />
-                  <div className="flex justify-between text-[10px] text-zinc-500 mt-0.5">
+                  <div className="flex justify-between text-[10px] text-gray-500 mt-0.5">
                     <span>{filters.gapRange[0]}%</span>
                     <span>{filters.gapRange[1]}%</span>
                   </div>
@@ -542,7 +542,7 @@ export default function ScreenerPage() {
               {isLoading ? (
                 <div className="animate-pulse space-y-1">
                   {[...Array(10)].map((_, i) => (
-                    <div key={i} className="h-9 bg-zinc-800 rounded" />
+                    <div key={i} className="h-9 bg-gray-200 rounded" />
                   ))}
                 </div>
               ) : (
@@ -572,8 +572,8 @@ export default function ScreenerPage() {
                                 isSelected(company.company_id)
                                   ? 'bg-[#5E6AD2] border-[#5E6AD2] text-white'
                                   : compareItems.length >= MAX_COMPARE_ITEMS
-                                    ? 'bg-zinc-800 border-zinc-700 text-zinc-600 cursor-not-allowed'
-                                    : 'border-zinc-600 hover:border-[#5E6AD2]'
+                                    ? 'bg-gray-200 border-gray-300 text-gray-400 cursor-not-allowed'
+                                    : 'border-gray-300 hover:border-[#5E6AD2]'
                               }`}
                             >
                               {isSelected(company.company_id) && <Check className="w-3 h-3" />}
@@ -581,7 +581,7 @@ export default function ScreenerPage() {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1.5">
-                              <p className="font-medium text-sm text-white">{company.company_name}</p>
+                              <p className="font-medium text-sm text-gray-900">{company.company_name}</p>
                               {company.market && (
                                 <MarketBadge
                                   market={company.market}
@@ -590,26 +590,26 @@ export default function ScreenerPage() {
                                 />
                               )}
                             </div>
-                            <p className="text-[10px] text-zinc-500">{company.stock_code}</p>
+                            <p className="text-[10px] text-gray-500">{company.stock_code}</p>
                           </TableCell>
                           <TableCell className="text-center">
                             <div className="flex justify-center">
                               <GradeBadge grade={company.grade} size="sm" />
                             </div>
                           </TableCell>
-                          <TableCell className="text-right font-semibold text-sm text-white">
+                          <TableCell className="text-right font-semibold text-sm text-gray-900">
                             {company.total_score.toFixed(1)}
                           </TableCell>
-                          <TableCell className="text-right hidden md:table-cell text-zinc-500 text-xs">
+                          <TableCell className="text-right hidden md:table-cell text-gray-500 text-xs">
                             {company.cei_score?.toFixed(1) || '-'}
                           </TableCell>
-                          <TableCell className="text-right hidden md:table-cell text-zinc-500 text-xs">
+                          <TableCell className="text-right hidden md:table-cell text-gray-500 text-xs">
                             {company.rii_score?.toFixed(1) || '-'}
                           </TableCell>
-                          <TableCell className="text-right hidden md:table-cell text-zinc-500 text-xs">
+                          <TableCell className="text-right hidden md:table-cell text-gray-500 text-xs">
                             {company.cgi_score?.toFixed(1) || '-'}
                           </TableCell>
-                          <TableCell className="text-right hidden md:table-cell text-zinc-500 text-xs">
+                          <TableCell className="text-right hidden md:table-cell text-gray-500 text-xs">
                             {company.mai_score?.toFixed(1) || '-'}
                           </TableCell>
                           <TableCell className="text-center">
@@ -626,7 +626,7 @@ export default function ScreenerPage() {
 
                   {/* Empty State */}
                   {data?.items.length === 0 && (
-                    <div className="text-center py-8 text-zinc-500">
+                    <div className="text-center py-8 text-gray-500">
                       <p className="text-sm">조건에 맞는 기업이 없습니다.</p>
                       <Button variant="link" onClick={handleReset} className="text-xs text-[#8B95E8]">
                         필터 초기화하기
@@ -646,7 +646,7 @@ export default function ScreenerPage() {
                       >
                         <ChevronLeft className="w-3.5 h-3.5" />
                       </Button>
-                      <span className="text-xs text-zinc-500 min-w-[60px] text-center">
+                      <span className="text-xs text-gray-500 min-w-[60px] text-center">
                         {currentPage} / {totalPages}
                       </span>
                       <Button
