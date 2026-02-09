@@ -40,6 +40,11 @@ from app.models.egm_disclosures import (
     EGM_REPORT_TYPES, DISPUTE_STRONG_KEYWORDS, DISPUTE_MEDIUM_KEYWORDS
 )
 from app.models.dispute_officers import DisputeOfficer, AppointmentContext
+# ML Pipeline models
+from app.models.ml_features import MLFeature
+from app.models.risk_predictions import RiskPrediction
+from app.models.ml_models import MLModel
+from app.models.suspension_classifications import SuspensionClassification
 
 __all__ = [
     "Base",
@@ -95,4 +100,9 @@ __all__ = [
     "DISPUTE_MEDIUM_KEYWORDS",
     "DisputeOfficer",
     "AppointmentContext",
+    # ML Pipeline models
+    "MLFeature",
+    "RiskPrediction",
+    "MLModel",
+    "SuspensionClassification",
 ]

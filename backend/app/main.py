@@ -28,11 +28,13 @@ from app.api.endpoints import (
     stock_prices,
     news,
     financial_ratios,
-    ma_target
+    ma_target,
+    ml_predictions
 )
 from app.routes import auth, oauth, admin, subscription, content, service_application
 from app.routes import toss_auth, credits
 from app.routes import view_history  # 조회 기록 API
+from app.routes import ml_admin  # ML 관리 API
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -83,6 +85,7 @@ app.include_router(toss_auth.router)
 app.include_router(credits.router)
 app.include_router(service_application.router)
 app.include_router(view_history.router)  # 조회 기록 API
+app.include_router(ml_admin.router)  # ML 관리 API
 
 # Static files (이미지 업로드)
 os.makedirs("uploads/content", exist_ok=True)
@@ -105,6 +108,7 @@ app.include_router(stock_prices.router, prefix="/api")
 app.include_router(news.router, prefix="/api")
 app.include_router(financial_ratios.router, prefix="/api")
 app.include_router(ma_target.router, prefix="/api")
+app.include_router(ml_predictions.router, prefix="/api")  # ML 예측 API
 
 @app.get("/")
 async def root():

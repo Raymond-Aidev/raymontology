@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/auth';
+import MLTab from './ml-tab';
 
 // API URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://raymontology-production.up.railway.app/api';
@@ -123,7 +124,7 @@ const SEVERITY_LABELS: Record<string, string> = {
   info: '정보'
 };
 
-type TabType = 'users' | 'database' | 'quality';
+type TabType = 'users' | 'database' | 'quality' | 'ml';
 
 // ============================================================================
 // Main Component
@@ -397,6 +398,16 @@ export default function AdminPage() {
             }`}
           >
             데이터 품질
+          </button>
+          <button
+            onClick={() => setActiveTab('ml')}
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+              activeTab === 'ml'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            ML 관리
           </button>
         </div>
 
@@ -710,6 +721,9 @@ export default function AdminPage() {
             )}
           </>
         )}
+
+        {/* ============== ML Tab ============== */}
+        {activeTab === 'ml' && token && <MLTab token={token} />}
       </div>
 
       {/* Subscription Modal */}
