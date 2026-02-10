@@ -81,22 +81,19 @@ export async function searchCompanies(
 }
 
 /**
- * 고위험 회사 목록 API
+ * 주의 필요 기업 목록 API
+ * 관계형리스크등급 HIGH_RISK 기업을 랜덤으로 조회
  */
 export async function getHighRiskCompanies(
-  minCbCount: number = 5,
-  limit: number = 50
+  _minCbCount: number = 5,
+  limit: number = 3
 ): Promise<CompanySearchResult[]> {
   try {
-    const response = await apiClient.get<ApiCompanySearchResponse>('/api/companies/', {
-      params: { page_size: 100, has_cb: true },
+    const response = await apiClient.get<ApiCompanySearchResponse>('/api/companies/high-risk', {
+      params: { limit, min_grade: 'HIGH_RISK', has_cb: true },
     })
 
-    return response.data.items
-      .filter(item => item.cb_count >= minCbCount)
-      .sort((a, b) => b.cb_count - a.cb_count)
-      .slice(0, limit)
-      .map(mapApiResponseToFrontend)
+    return response.data.items.map(mapApiResponseToFrontend)
   } catch {
     return []
   }

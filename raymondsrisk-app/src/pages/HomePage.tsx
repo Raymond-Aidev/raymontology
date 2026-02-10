@@ -2,23 +2,30 @@ import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { colors } from '../constants/colors'
 import { ListItem } from '../components'
-import { getPlatformStats, type PlatformStats } from '../api/company'
+import { getPlatformStats, getHighRiskCompanies, type PlatformStats } from '../api/company'
+import type { CompanySearchResult } from '../types/company'
+import { riskLevelConfig, type RiskLevel } from '../types/company'
 
 export default function HomePage() {
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [stats, setStats] = useState<PlatformStats | null>(null)
+  const [highRiskCompanies, setHighRiskCompanies] = useState<CompanySearchResult[]>([])
 
-  // 통계 데이터 로드
+  // 통계 데이터 + 주의필요기업 로드
   useEffect(() => {
-    let isMounted = true  // 메모리 릭 방지
+    let isMounted = true
 
     getPlatformStats().then(data => {
       if (isMounted) setStats(data)
     })
 
+    getHighRiskCompanies(5, 3).then(data => {
+      if (isMounted) setHighRiskCompanies(data)
+    })
+
     return () => {
-      isMounted = false  // cleanup
+      isMounted = false
     }
   }, [])
 
@@ -105,6 +112,37 @@ export default function HomePage() {
             </button>
           </div>
         </section>
+
+        {/* 주의필요기업 */}
+        {highRiskCompanies.length > 0 && (
+          <section style={{ marginBottom: '28px' }} aria-label="주의필요기업">
+            <h2 style={{
+              fontSize: '13px',
+              fontWeight: '600',
+              color: colors.gray500,
+              margin: '0 0 12px 0',
+              textTransform: 'uppercase',
+              letterSpacing: '0.02em',
+            }}>
+              주의필요기업
+            </h2>
+            <div style={{
+              display: 'flex',
+              gap: '10px',
+              overflowX: 'auto',
+              paddingBottom: '4px',
+              scrollbarWidth: 'none',
+            }}>
+              {highRiskCompanies.map((company) => (
+                <HighRiskCard
+                  key={company.id}
+                  company={company}
+                  onClick={() => navigate(`/report/${company.corp_code}`, { state: { company } })}
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* 통계 카드 그리드 */}
         <section style={{ marginBottom: '32px' }} aria-label="서비스 통계">
@@ -213,6 +251,92 @@ export default function HomePage() {
         </section>
       </main>
     </div>
+  )
+}
+
+function HighRiskCard({ company, onClick }: { company: CompanySearchResult; onClick: () => void }) {
+  const riskConfig = riskLevelConfig[(company.risk_level as RiskLevel) || 'HIGH']
+  const marketLabel = company.market === 'KOSPI' ? 'KOSPI' : company.market === 'KOSDAQ' ? 'KOSDAQ' : company.market || ''
+  const marketColor = company.market === 'KOSPI' ? '#3B82F6' : '#22C55E'
+
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        minWidth: '150px',
+        padding: '16px',
+        borderRadius: '16px',
+        backgroundColor: colors.white,
+        border: `1px solid ${colors.gray200}`,
+        textAlign: 'left',
+        cursor: 'pointer',
+        flexShrink: 0,
+      }}
+      aria-label={`${company.name} 상세보기`}
+    >
+      {/* 기업명 + 시장 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+        <span style={{
+          fontSize: '15px',
+          fontWeight: '700',
+          color: colors.gray900,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          maxWidth: '100px',
+        }}>
+          {company.name}
+        </span>
+        {marketLabel && (
+          <span style={{
+            fontSize: '10px',
+            fontWeight: '600',
+            color: marketColor,
+            backgroundColor: `${marketColor}14`,
+            padding: '2px 5px',
+            borderRadius: '4px',
+            flexShrink: 0,
+          }}>
+            {marketLabel}
+          </span>
+        )}
+      </div>
+
+      {/* 투자등급 */}
+      {company.investment_grade && (
+        <div style={{
+          fontSize: '12px',
+          fontWeight: '600',
+          color: colors.gray600,
+          marginBottom: '6px',
+        }}>
+          등급 {company.investment_grade}
+        </div>
+      )}
+
+      {/* CB + 위험 배지 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        {company.cb_count > 0 && (
+          <span style={{
+            fontSize: '11px',
+            fontWeight: '500',
+            color: colors.gray500,
+          }}>
+            CB {company.cb_count}건
+          </span>
+        )}
+        <span style={{
+          fontSize: '11px',
+          fontWeight: '600',
+          color: riskConfig?.color || colors.red500,
+          backgroundColor: `${riskConfig?.color || colors.red500}18`,
+          padding: '2px 6px',
+          borderRadius: '4px',
+        }}>
+          {riskConfig?.label || '위험'}
+        </span>
+      </div>
+    </button>
   )
 }
 
