@@ -11,6 +11,7 @@ import { useGraphStore, selectCanGoBack, selectCanGoForward } from '../store'
 import { getRaymondsIndexById } from '../api/raymondsIndex'
 import type { RaymondsIndexData } from '../types/raymondsIndex'
 import { getGradeColor } from '../types/raymondsIndex'
+import { getMLPrediction, type MLPrediction } from '../api/report'
 
 // URL 파라미터에서 날짜 파싱
 function parseDateFromUrl(dateStr: string | null): Date | null {
@@ -85,6 +86,9 @@ function GraphPage() {
 
   // RaymondsIndex 데이터
   const [raymondsIndex, setRaymondsIndex] = useState<RaymondsIndexData | null>(null)
+
+  // ML 악화확률 (WP) 데이터
+  const [mlPrediction, setMlPrediction] = useState<MLPrediction | null>(null)
 
   // 조회 제한 에러 정보
   const [queryLimitInfo, setQueryLimitInfo] = useState<QueryLimitError | null>(null)
@@ -203,6 +207,20 @@ function GraphPage() {
       }
     }
     loadRaymondsIndex()
+  }, [companyId])
+
+  // ML 악화확률(WP) 데이터 로드
+  useEffect(() => {
+    const loadMLPrediction = async () => {
+      if (!companyId) return
+      try {
+        const data = await getMLPrediction(companyId)
+        setMlPrediction(data)
+      } catch {
+        setMlPrediction(null)
+      }
+    }
+    loadMLPrediction()
   }, [companyId])
 
   // API 연결 상태
@@ -539,6 +557,31 @@ function GraphPage() {
 
           <div className="w-px h-8 bg-theme-border" />
 
+          {/* WP (악화확률) */}
+          <div className="flex items-center gap-2">
+            <span
+              className="text-sm font-medium text-text-muted uppercase tracking-wide cursor-help border-b border-dotted border-text-muted"
+              title="Worsening Probability — ML 모델 기반 향후 12개월 내 관계형리스크 악화 확률"
+            >
+              WP
+            </span>
+            {mlPrediction ? (
+              <div className="flex items-center gap-1.5">
+                <span
+                  className="text-2xl font-bold font-mono"
+                  style={{ color: mlPrediction.risk_level === 'CRITICAL' ? '#EF4444' : mlPrediction.risk_level === 'HIGH' ? '#F97316' : mlPrediction.risk_level === 'MEDIUM' ? '#FBBF24' : '#10B981' }}
+                >
+                  {(mlPrediction.deterioration_probability * 100).toFixed(0)}
+                  <span className="text-sm">%</span>
+                </span>
+              </div>
+            ) : (
+              <span className="text-text-muted text-sm">-</span>
+            )}
+          </div>
+
+          <div className="w-px h-8 bg-theme-border" />
+
           {/* 탐색 깊이 */}
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
@@ -705,6 +748,29 @@ function GraphPage() {
                   {raymondsIndex.grade}
                 </span>
               </div>
+            ) : (
+              <span className="text-text-muted text-sm">-</span>
+            )}
+          </div>
+
+          <div className="w-px h-10 bg-theme-border" />
+
+          {/* WP (악화확률) */}
+          <div className="flex flex-col items-center">
+            <span
+              className="text-[10px] text-text-muted uppercase cursor-help"
+              title="Worsening Probability"
+            >
+              WP
+            </span>
+            {mlPrediction ? (
+              <span
+                className="text-xl font-bold font-mono"
+                style={{ color: mlPrediction.risk_level === 'CRITICAL' ? '#EF4444' : mlPrediction.risk_level === 'HIGH' ? '#F97316' : mlPrediction.risk_level === 'MEDIUM' ? '#FBBF24' : '#10B981' }}
+              >
+                {(mlPrediction.deterioration_probability * 100).toFixed(0)}
+                <span className="text-xs">%</span>
+              </span>
             ) : (
               <span className="text-text-muted text-sm">-</span>
             )}
