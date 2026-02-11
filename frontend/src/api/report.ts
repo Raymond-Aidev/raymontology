@@ -537,6 +537,35 @@ export async function getCompanyReport(companyId: string): Promise<CompanyReport
 }
 
 // ============================================================================
+// ML 예측 API
+// ============================================================================
+
+export interface MLPrediction {
+  deterioration_probability: number  // 0.0 ~ 1.0
+  risk_level: string                 // LOW, MEDIUM, HIGH, CRITICAL
+}
+
+/**
+ * 기업의 관계형리스크 악화 확률(WP) 조회
+ * 실패 시 null 반환 (기존 UI 영향 없음)
+ */
+export async function getMLPrediction(companyId: string): Promise<MLPrediction | null> {
+  try {
+    const response = await apiClient.get<{
+      deterioration_probability: number
+      risk_level: string
+    }>(`/api/ml/predictions/${companyId}`)
+    return {
+      deterioration_probability: response.data.deterioration_probability,
+      risk_level: response.data.risk_level,
+    }
+  } catch {
+    console.warn('ML Prediction API 호출 실패 (무시)')
+    return null
+  }
+}
+
+// ============================================================================
 // 개별 데이터 API (필요 시 사용)
 // ============================================================================
 

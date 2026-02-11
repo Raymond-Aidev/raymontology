@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { RiskGauge, ScoreBreakdown, GradeCard, DataTabs, RiskSignalList, StockPriceCard, RaymondsIndexMiniCard } from '../components/report'
-import { getCompanyReport, type CompanyReportData } from '../api/report'
+import { RiskGauge, ScoreBreakdown, GradeCard, DataTabs, RiskSignalList, StockPriceCard, RaymondsIndexMiniCard, WPIndicator } from '../components/report'
+import { getCompanyReport, getMLPrediction, type CompanyReportData, type MLPrediction } from '../api/report'
 import { getRaymondsIndexByName } from '../api/raymondsIndex'
 import type { RaymondsIndexData } from '../types/raymondsIndex'
 import { RaymondsIndexCard, SubIndexRadar, InvestmentGapMeter, RiskFlagsPanel } from '../components/RaymondsIndex'
@@ -11,6 +11,7 @@ function ReportPage() {
   const { companyId } = useParams<{ companyId: string }>()
   const [reportData, setReportData] = useState<CompanyReportData | null>(null)
   const [raymondsIndex, setRaymondsIndex] = useState<RaymondsIndexData | null>(null)
+  const [mlPrediction, setMlPrediction] = useState<MLPrediction | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isApiConnected, setIsApiConnected] = useState<boolean | null>(null)
@@ -29,15 +30,14 @@ function ReportPage() {
         // API 연결 여부 판단 (더미 데이터가 아닌 경우)
         setIsApiConnected(data.calculatedAt !== new Date().toISOString().slice(0, 10))
 
-        // RaymondsIndex 데이터 로드 (별도로 - 실패해도 보고서는 표시)
+        // RaymondsIndex + ML Prediction 데이터 병렬 로드 (실패해도 보고서는 표시)
         if (data.companyName) {
-          try {
-            const indexData = await getRaymondsIndexByName(data.companyName)
-            setRaymondsIndex(indexData)
-          } catch {
-            // RaymondsIndex 로드 실패는 무시 (Optional 데이터)
-            console.log('RaymondsIndex 데이터 없음')
-          }
+          const [indexData, predictionData] = await Promise.all([
+            getRaymondsIndexByName(data.companyName).catch(() => null),
+            companyId ? getMLPrediction(companyId).catch(() => null) : Promise.resolve(null),
+          ])
+          setRaymondsIndex(indexData)
+          setMlPrediction(predictionData)
         }
       } catch (err) {
         setError('보고서 데이터를 불러오는데 실패했습니다')
@@ -181,8 +181,8 @@ function ReportPage() {
       <div className="bg-theme-card border border-theme-border rounded-xl shadow-card p-4 md:p-6 mb-4 md:mb-6">
         <h2 className="text-base md:text-lg font-bold text-text-primary mb-4 md:mb-6">관계형 리스크 대시보드</h2>
 
-        {/* 5개 박스 그리드: 종합리스크, 관계형리스크등급, RaymondsIndex, 주가차트, 구성요소 */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-4">
+        {/* 6개 박스 그리드: 종합리스크, 관계형리스크등급, WP, RaymondsIndex, 주가차트, 구성요소 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 md:gap-4">
           {/* 1. 종합 리스크 게이지 */}
           <div className="flex justify-center items-center">
             <div className="md:hidden">
@@ -198,7 +198,27 @@ function ReportPage() {
             <GradeCard grade={reportData.investmentGrade} />
           </div>
 
-          {/* 3. RaymondsIndex (데이터 있을 때만 표시) */}
+          {/* 3. WP (Worsening Probability) - 악화 확률 */}
+          <div className="flex justify-center items-center">
+            {mlPrediction ? (
+              <WPIndicator
+                probability={mlPrediction.deterioration_probability}
+                riskLevel={mlPrediction.risk_level}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center p-6 bg-theme-surface rounded-xl border border-theme-border text-center h-full min-h-[160px]">
+                <span
+                  className="text-sm text-text-secondary mb-2 cursor-help border-b border-dotted border-text-muted"
+                  title="Worsening Probability"
+                >
+                  WP
+                </span>
+                <span className="text-text-muted text-sm">데이터 없음</span>
+              </div>
+            )}
+          </div>
+
+          {/* 4. RaymondsIndex (데이터 있을 때만 표시) */}
           <div className="flex justify-center items-center">
             {raymondsIndex ? (
               <RaymondsIndexMiniCard
@@ -213,7 +233,7 @@ function ReportPage() {
             )}
           </div>
 
-          {/* 4. 최근 1년 주가 차트 */}
+          {/* 5. 최근 1년 주가 차트 */}
           <div className="flex justify-center items-center">
             {companyId && (
               <div className="bg-theme-surface/50 rounded-xl border border-theme-border/50 w-full h-full">
@@ -222,7 +242,7 @@ function ReportPage() {
             )}
           </div>
 
-          {/* 5. 관계형 리스크 구성 요소 */}
+          {/* 6. 관계형 리스크 구성 요소 */}
           <div className="flex justify-center items-center">
             <ScoreBreakdown scores={reportData.riskScore} />
           </div>
