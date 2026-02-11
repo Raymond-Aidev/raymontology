@@ -513,7 +513,7 @@ function GraphPage() {
 
           {/* RaymondsIndex */}
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-text-muted uppercase tracking-wide">RaymondsIndex</span>
+            <span className="text-sm font-medium text-text-muted uppercase tracking-wide">RIndex</span>
             {raymondsIndex ? (
               <div className="flex items-center gap-1.5">
                 <span
@@ -686,7 +686,7 @@ function GraphPage() {
 
           {/* RaymondsIndex */}
           <div className="flex flex-col items-center">
-            <span className="text-[10px] text-text-muted uppercase">RaymondsIndex</span>
+            <span className="text-[10px] text-text-muted uppercase">RIndex</span>
             {raymondsIndex ? (
               <div className="flex items-center gap-1">
                 <span
