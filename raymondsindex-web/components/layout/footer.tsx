@@ -28,7 +28,7 @@ export function Footer() {
               <h4 className="font-semibold text-gray-800 mb-3">서비스</h4>
               <ul className="space-y-2 text-sm text-gray-500">
                 <li><Link href="/screener" className="hover:text-gray-900 transition-colors">스크리너</Link></li>
-                <li><Link href="/methodology" className="hover:text-gray-900 transition-colors">평가 방법론</Link></li>
+                <li><Link href="/methodology" className="hover:text-gray-900 transition-colors">Whitepaper</Link></li>
               </ul>
             </div>
             <div>

@@ -13,7 +13,7 @@ const navItems = [
   { href: '/', label: '홈' },
   { href: '/screener', label: '스크리너' },
   { href: '/ma-target', label: '적대적 M&A' },
-  { href: '/methodology', label: '방법론' },
+  { href: '/methodology', label: 'Whitepaper' },
 ];
 
 export function Header() {

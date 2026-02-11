@@ -57,7 +57,7 @@ export default function HomePage() {
               href="/methodology"
               className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
             >
-              평가 방법론 <ArrowRight className="w-3 h-3" />
+              Whitepaper <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
         </div>

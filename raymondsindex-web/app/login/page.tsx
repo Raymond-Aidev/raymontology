@@ -157,7 +157,7 @@ export default function LoginPage() {
             </Link>
             {' · '}
             <Link href="/methodology" className="hover:text-gray-700 hover:underline transition-colors">
-              평가 방법론
+              Whitepaper
             </Link>
           </p>
         </div>
