@@ -559,12 +559,15 @@ function GraphPage() {
 
           {/* WP (악화확률) */}
           <div className="flex items-center gap-2">
-            <span
-              className="text-sm font-medium text-text-muted uppercase tracking-wide cursor-help border-b border-dotted border-text-muted"
-              title="Worsening Probability — ML 모델 기반 향후 12개월 내 관계형리스크 악화 확률"
-            >
-              WP
-            </span>
+            <div className="relative group">
+              <span className="text-sm font-medium text-text-muted uppercase tracking-wide cursor-help border-b border-dotted border-text-muted">
+                WP
+              </span>
+              <div className="absolute left-1/2 -translate-x-1/2 top-6 w-56 p-2.5 bg-theme-surface border border-theme-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                <p className="text-xs font-semibold text-text-primary mb-1">Worsening Probability</p>
+                <p className="text-xs text-text-secondary">ML 모델 기반 향후 12개월 내 관계형리스크 악화 확률</p>
+              </div>
+            </div>
             {mlPrediction ? (
               <div className="flex items-center gap-1.5">
                 <span
@@ -757,12 +760,15 @@ function GraphPage() {
 
           {/* WP (악화확률) */}
           <div className="flex flex-col items-center">
-            <span
-              className="text-[10px] text-text-muted uppercase cursor-help"
-              title="Worsening Probability"
-            >
-              WP
-            </span>
+            <div className="relative group">
+              <span className="text-[10px] text-text-muted uppercase cursor-help border-b border-dotted border-text-muted">
+                WP
+              </span>
+              <div className="absolute left-1/2 -translate-x-1/2 top-4 w-48 p-2 bg-theme-surface border border-theme-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                <p className="text-[10px] font-semibold text-text-primary">Worsening Probability</p>
+                <p className="text-[10px] text-text-secondary">악화 확률 (ML 예측)</p>
+              </div>
+            </div>
             {mlPrediction ? (
               <span
                 className="text-xl font-bold font-mono"
