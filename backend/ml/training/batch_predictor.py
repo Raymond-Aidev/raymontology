@@ -77,13 +77,15 @@ class BatchPredictor:
                 raise FileNotFoundError("학습된 모델이 없습니다. 먼저 학습을 실행하세요.")
     
     def predict_all(self, dry_run: bool = False) -> Dict:
-        """전체 기업 예측"""
+        """전체 기업 예측 (SPAC/REIT 제외)"""
         # 피처 로드
         feature_cols = ', '.join(FEATURE_NAMES)
         df = pd.read_sql(text(f"""
             SELECT mf.company_id, {feature_cols}
             FROM ml_features mf
+            JOIN companies c ON c.id = mf.company_id
             WHERE mf.feature_date = '2024-12-31'
+              AND c.company_type = 'NORMAL'
         """), self.conn)
         
         logger.info(f"예측 대상: {len(df)}개 기업")
@@ -92,20 +94,34 @@ class BatchPredictor:
             logger.warning("피처 데이터가 없습니다.")
             return {}
         
-        # 피처 추출
-        X = df[FEATURE_NAMES].fillna(0)
+        # v5.0: 중앙값 대치 (학습 시 저장된 중앙값 사용)
+        medians = self.model_data.get('feature_medians')
+        if medians is not None:
+            X = df[FEATURE_NAMES].fillna(medians)
+            logger.info("NULL 처리: 학습 시 중앙값으로 대치")
+        else:
+            X = df[FEATURE_NAMES].fillna(0)
+            logger.warning("NULL 처리: 중앙값 없음 → fillna(0) fallback")
         company_ids = df['company_id'].tolist()
         
         # 앙상블 예측
         predictions = []
         weights = []
-        
+        calibrators = self.model_data.get('calibrators')
+
         for name, model in self.models.items():
-            pred = model.predict_proba(X)[:, 1]
+            raw_pred = model.predict_proba(X)[:, 1]
+            # v5.1: calibrator가 있으면 Platt Scaling 적용
+            if calibrators and name in calibrators:
+                pred = calibrators[name].predict_proba(
+                    raw_pred.reshape(-1, 1))[:, 1]
+                logger.info(f"  {name}: Platt Scaling 적용")
+            else:
+                pred = raw_pred
             predictions.append(pred)
             auc = self.metrics.get(f'{name}_auc', 0.5)
             weights.append(auc)
-        
+
         weights = np.array(weights) / sum(weights)
         ensemble_pred = np.average(predictions, axis=0, weights=weights)
         
