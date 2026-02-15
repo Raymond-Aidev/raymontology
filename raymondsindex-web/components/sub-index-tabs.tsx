@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { GradeBadge } from './grade-badge';
 import { MarketBadge } from './market-badge';
@@ -14,10 +13,8 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { BarChart3, ArrowRight, TrendingDown, Building, Coins, Activity } from 'lucide-react';
+import { ArrowRight, TrendingDown, Building, Coins, Activity } from 'lucide-react';
 import { useSubIndexRanking } from '@/hooks/use-ranking';
-import type { RaymondsIndexResponse } from '@/lib/types';
 
 type SubIndexType = 'cei' | 'rii' | 'cgi' | 'mai';
 
@@ -65,120 +62,101 @@ const SUB_INDEX_CONFIG: SubIndexConfig[] = [
   },
 ];
 
-export function SubIndexTabs() {
-  const [activeTab, setActiveTab] = useState<SubIndexType>('cei');
+export function SubIndexCards() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {SUB_INDEX_CONFIG.map((config) => (
+        <SubIndexCard key={config.key} config={config} />
+      ))}
+    </div>
+  );
+}
+
+// 기존 export 호환 유지 (다른 곳에서 import 시 빌드 에러 방지)
+export { SubIndexCards as SubIndexTabs };
+
+interface SubIndexCardProps {
+  config: SubIndexConfig;
+}
+
+function SubIndexCard({ config }: SubIndexCardProps) {
+  const { data, isLoading } = useSubIndexRanking(config.key, 5, true);
+  const companies = data?.items || [];
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="flex items-center gap-1.5 text-sm">
-          <BarChart3 className="w-3.5 h-3.5 text-blue-500" />
-          Sub-Index별 위험기업 TOP 10
+          <config.icon className="w-3.5 h-3.5 text-blue-500" />
+          {config.fullName}
+          <span className="text-xs font-normal text-gray-400">({config.label})</span>
         </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as SubIndexType)}>
-          <TabsList className="grid grid-cols-4 mb-3">
-            {SUB_INDEX_CONFIG.map((config) => (
-              <TabsTrigger key={config.key} value={config.key} className="text-xs">
-                {config.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-          {SUB_INDEX_CONFIG.map((config) => (
-            <TabsContent key={config.key} value={config.key}>
-              <SubIndexTabContent config={config} />
-            </TabsContent>
-          ))}
-        </Tabs>
-      </CardContent>
-    </Card>
-  );
-}
-
-interface SubIndexTabContentProps {
-  config: SubIndexConfig;
-}
-
-function SubIndexTabContent({ config }: SubIndexTabContentProps) {
-  const { data, isLoading } = useSubIndexRanking(config.key, 10, true);
-
-  if (isLoading) {
-    return (
-      <div className="animate-pulse space-y-1.5">
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="h-8 bg-gray-200 rounded" />
-        ))}
-      </div>
-    );
-  }
-
-  const companies = data?.items || [];
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-xs text-gray-500">
-          <config.icon className="w-3 h-3 inline mr-1" />
-          {config.fullName} ({config.label}) - {config.description}
-        </p>
         <Button variant="ghost" size="sm" asChild className="h-6 text-xs">
           <Link href={`/screener?sort=${config.key}_asc`} className="flex items-center gap-1">
             더 보기 <ArrowRight className="w-3 h-3" />
           </Link>
         </Button>
-      </div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-10">#</TableHead>
-            <TableHead>기업명</TableHead>
-            <TableHead className="text-center">등급</TableHead>
-            <TableHead className="text-right">{config.label}</TableHead>
-            <TableHead className="text-right hidden sm:table-cell">종합</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {companies.map((company, index) => {
-            const subIndexScore = company[config.scoreKey];
-            return (
-              <TableRow key={company.id}>
-                <TableCell className="font-medium text-gray-500 text-xs">
-                  {index + 1}
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1.5">
-                    <Link
-                      href={`/company/${company.company_id}`}
-                      className="font-medium text-gray-900 hover:text-[#8B95E8] text-sm transition-colors truncate max-w-[120px]"
-                    >
-                      {company.company_name}
-                    </Link>
-                    {company.market && (
-                      <MarketBadge
-                        market={company.market}
-                        tradingStatus={company.trading_status}
-                        size="sm"
-                      />
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell className="text-center">
-                  <div className="flex justify-center">
-                    <GradeBadge grade={company.grade} size="sm" />
-                  </div>
-                </TableCell>
-                <TableCell className="text-right font-semibold text-sm text-orange-400">
-                  {subIndexScore !== null ? subIndexScore.toFixed(1) : '-'}
-                </TableCell>
-                <TableCell className="text-right text-xs text-gray-500 hidden sm:table-cell">
-                  {company.total_score.toFixed(1)}
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-    </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="animate-pulse space-y-1.5">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-7 bg-gray-200 rounded" />
+            ))}
+          </div>
+        ) : (
+          <>
+            <p className="text-[11px] text-gray-400 mb-2">{config.description}</p>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-8 px-1">#</TableHead>
+                  <TableHead className="px-1">기업명</TableHead>
+                  <TableHead className="text-center px-1">등급</TableHead>
+                  <TableHead className="text-right px-1">{config.label}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {companies.map((company, index) => {
+                  const subIndexScore = company[config.scoreKey];
+                  return (
+                    <TableRow key={company.id}>
+                      <TableCell className="font-medium text-gray-400 text-xs px-1">
+                        {index + 1}
+                      </TableCell>
+                      <TableCell className="px-1">
+                        <div className="flex items-center gap-1">
+                          <Link
+                            href={`/company/${company.company_id}`}
+                            className="font-medium text-gray-900 hover:text-[#8B95E8] text-xs transition-colors truncate max-w-[100px]"
+                          >
+                            {company.company_name}
+                          </Link>
+                          {company.market && (
+                            <MarketBadge
+                              market={company.market}
+                              tradingStatus={company.trading_status}
+                              size="sm"
+                            />
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center px-1">
+                        <div className="flex justify-center">
+                          <GradeBadge grade={company.grade} size="sm" />
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right font-semibold text-xs text-orange-400 px-1">
+                        {subIndexScore !== null ? subIndexScore.toFixed(1) : '-'}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }

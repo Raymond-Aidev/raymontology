@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useBottomRanking } from '@/hooks/use-ranking';
 import { useStatistics } from '@/hooks/use-statistics';
 import { RiskCompaniesTable } from '@/components/risk-companies-table';
-import { SubIndexTabs } from '@/components/sub-index-tabs';
+import { SubIndexCards } from '@/components/sub-index-tabs';
 import { VulnerableMACards } from '@/components/vulnerable-ma-cards';
 import { GradeDistribution } from '@/components/grade-distribution';
 import { KPICard, KPIGrid } from '@/components/kpi-card';
@@ -115,8 +115,8 @@ export default function HomePage() {
               isLoading={riskLoading}
             />
 
-            {/* Sub-Index별 위험기업 */}
-            <SubIndexTabs />
+            {/* Sub-Index별 위험기업 (4개 독립 카드) */}
+            <SubIndexCards />
           </div>
 
           {/* 오른쪽 사이드 패널 (1/3) */}

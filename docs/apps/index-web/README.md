@@ -36,7 +36,7 @@
 | `/ma-target` | `app/ma-target/page.tsx` | 적대적 M&A 스크리닝 ⭐ |
 | `/login` | `app/login/page.tsx` | 로그인 |
 | `/signup` | `app/signup/page.tsx` | 회원가입 |
-| `/admin` | `app/admin/page.tsx` | 관리자 (superuser 전용) |
+| `/admin` | `app/admin/page.tsx` | 관리자 (superuser 전용, **ML 대시보드 탭 포함** ⭐) |
 
 ---
 
@@ -72,7 +72,7 @@
 | `company-search-bar.tsx` | 기업 검색 (자동완성) |
 | `top-companies-table.tsx` | TOP 10 기업 테이블 |
 | `risk-companies-table.tsx` | 위험기업 TOP 10 (2열 그리드) ⭐ |
-| `sub-index-tabs.tsx` | Sub-Index별 위험기업 TOP 10 (4탭) ⭐ |
+| `sub-index-tabs.tsx` | Sub-Index별 위험기업 TOP 5 (4개 독립 카드, 2x2 그리드) ⭐ |
 | `vulnerable-ma-cards.tsx` | 적대적 M&A 취약기업 카드 ⭐ |
 | `stock-price-chart.tsx` | 주가 차트 |
 | `market-badge.tsx` | 시장 배지 (KOSPI/KOSDAQ/KONEX/ETF) |
@@ -131,11 +131,12 @@
 - [x] 지표 Tooltip 설명
 - [x] 위험신호 패널
 - [x] 시장 필터 (KOSPI/KOSDAQ/KONEX)
-- [x] 다크 모드 지원
+- [x] ~~다크 모드 지원~~ → **라이트 테마로 전환** (2026-02-09) ⭐
 - [x] **적대적 M&A 스크리닝** ⭐ (2026-01 신규, 2026-02 필터 직접 입력 지원)
 - [x] **기업 비교 기능** ⭐ (최대 4개 기업 비교)
 - [x] **CSV 내보내기** ⭐ (스크리너 결과 다운로드)
 - [x] **주가 차트** ⭐ (3년 추이)
+- [x] **ML 관리 대시보드** ⭐ (2026-02-08 추가, 관리자 전용)
 
 ### 구현 예정
 - [ ] 관심 기업 저장
@@ -281,19 +282,46 @@ NEXT_PUBLIC_API_URL=https://raymontology-production.up.railway.app/api
 ├─────────────────────────┬───────────────────────┤
 │ 위험기업 TOP 10 (2열)   │ M&A 취약기업 TOP 5    │
 │ (컴팩트 그리드 카드)    │                       │
-├─────────────────────────┤ 등급 분포 차트        │
-│ Sub-Index 탭 (4개)      │                       │
-│ CEI│RII│CGI│MAI        │ 빠른 탐색 링크        │
-└─────────────────────────┴───────────────────────┘
+├────────────┬────────────┤ 등급 분포 차트        │
+│ CEI TOP 5  │ RII TOP 5  │                       │
+├────────────┼────────────┤ 빠른 탐색 링크        │
+│ CGI TOP 5  │ MAI TOP 5  │                       │
+└────────────┴────────────┴───────────────────────┘
 ```
 
 | 영역 | 변경 전 | 변경 후 |
 |------|---------|---------|
 | 메인 테이블 | TOP 10 우수기업 | **위험기업 TOP 10** (2열 그리드) |
-| Sub-Index | 없음 | **CEI/RII/CGI/MAI별 최저점수 기업 TOP 10** |
+| Sub-Index | 탭 1개 (TOP 10) | **4개 독립 카드 2x2 그리드 (TOP 5)** |
 | 사이드 패널 | 없음 | **적대적 M&A 취약기업 TOP 5** |
 | KPI 카드 | A등급 이상 | **C등급 이하** (위험 기업 수) |
 
 ---
 
-*마지막 업데이트: 2026-02-03*
+## ML 관리 대시보드 (관리자 전용) ⭐신규
+
+`/admin` 페이지의 4번째 탭으로 추가 (2026-02-08).
+
+### 탭 구조
+```
+관리자 페이지: [Users] [Database] [Quality] [ML Management ⭐]
+```
+
+### ML 탭 서브패널 (4개)
+| 서브패널 | 설명 |
+|---------|------|
+| 모델 현황 | 활성 모델 지표 (AUC, Recall 등), 모델 버전 비교/전환 |
+| 예측 분포 | 확률 히스토그램, 등급별 분포, 시장별 분포 |
+| 피처 모니터링 | 32개 피처별 NULL 비율, 분포 통계, 건강 상태 |
+| 학습 제어 | 하이퍼파라미터 수정, Risk Level 임계값 조정, 학습 실행 |
+
+### 관련 파일
+| 파일 | 역할 |
+|------|------|
+| `app/admin/page.tsx` | 관리자 페이지 (TabType에 'ml' 추가) |
+| `app/admin/ml-tab.tsx` | ML 탭 컴포넌트 |
+| `backend/app/routes/ml_admin.py` | ML 관리 API (9개 엔드포인트) |
+
+---
+
+*마지막 업데이트: 2026-02-15*
